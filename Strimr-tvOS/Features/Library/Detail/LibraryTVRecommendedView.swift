@@ -4,7 +4,7 @@ struct LibraryTVRecommendedView: View {
     @Environment(MediaFocusModel.self) private var focusModel
 
     @State var viewModel: LibraryRecommendedViewModel
-    @Binding var heroMedia: MediaItem?
+    @Binding var heroMedia: PlexMediaItem?
     let onSelectMedia: (MediaDisplayItem) -> Void
 
     private let landscapeHubIdentifiers: [String] = [
@@ -13,7 +13,7 @@ struct LibraryTVRecommendedView: View {
 
     init(
         viewModel: LibraryRecommendedViewModel,
-        heroMedia: Binding<MediaItem?>,
+        heroMedia: Binding<PlexMediaItem?>,
         onSelectMedia: @escaping (MediaDisplayItem) -> Void = { _ in },
     ) {
         _viewModel = State(initialValue: viewModel)
@@ -105,7 +105,7 @@ struct LibraryTVRecommendedView: View {
         return landscapeHubIdentifiers.contains { identifier.contains($0) }
     }
 
-    private var defaultHeroMedia: MediaItem? {
+    private var defaultHeroMedia: PlexMediaItem? {
         for hub in viewModel.hubs where hub.hasItems {
             if let item = hub.items.compactMap(\.playableItem).first {
                 return item

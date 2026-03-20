@@ -36,10 +36,10 @@ enum PlayableItemType: String, Codable, Hashable {
 }
 
 struct PlayableMediaItem: Identifiable, Hashable {
-    private let item: MediaItem
+    private let item: PlexMediaItem
     let type: PlayableItemType
 
-    init?(mediaItem: MediaItem) {
+    init?(mediaItem: PlexMediaItem) {
         guard let playableType = PlayableItemType(plexType: mediaItem.type) else { return nil }
         item = mediaItem
         type = playableType
@@ -137,7 +137,7 @@ struct PlayableMediaItem: Identifiable, Hashable {
         type.plexType
     }
 
-    var mediaItem: MediaItem {
+    var mediaItem: PlexMediaItem {
         item
     }
 }

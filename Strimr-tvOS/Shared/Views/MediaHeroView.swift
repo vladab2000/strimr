@@ -4,7 +4,7 @@ import UIKit
 struct MediaHeroBackgroundView: View {
     @Environment(PlexAPIContext.self) private var plexApiContext
 
-    let media: MediaItem
+    let media: PlexMediaItem
 
     @State private var imageURL: URL?
 
@@ -58,7 +58,7 @@ struct MediaHeroBackgroundView: View {
 }
 
 struct MediaHeroContentView: View {
-    let media: MediaItem
+    let media: PlexMediaItem
     private let summaryLineLimit = 3
 
     var body: some View {

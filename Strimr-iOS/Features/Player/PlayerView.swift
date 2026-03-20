@@ -509,7 +509,7 @@ struct PlayerView: View {
         }
     }
 
-    private func handleEpisodeCompletion(for _: MediaItem) async {
+    private func handleEpisodeCompletion(for _: PlexMediaItem) async {
         await viewModel.markPlaybackFinished()
 
         guard settingsManager.playback.autoPlayNextEpisode else {

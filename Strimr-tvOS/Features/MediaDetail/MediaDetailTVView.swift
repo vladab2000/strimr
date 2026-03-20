@@ -4,7 +4,7 @@ import SwiftUI
 struct MediaDetailTVView: View {
     @EnvironmentObject private var coordinator: MainCoordinator
     @State var viewModel: MediaDetailViewModel
-    @State private var focusedMedia: MediaItem?
+    @State private var focusedMedia: PlexMediaItem?
     private let onPlay: (String, PlexItemType) -> Void
     private let onPlayFromStart: (String, PlexItemType) -> Void
     private let onShuffle: (String, PlexItemType) -> Void
@@ -325,7 +325,7 @@ private struct SeasonPillButton: View {
 }
 
 private struct EpisodeArtworkCard: View {
-    let episode: MediaItem
+    let episode: PlexMediaItem
     let imageURL: URL?
     let runtime: String?
     let progress: Double?

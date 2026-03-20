@@ -1,7 +1,7 @@
 import Foundation
 
 enum MediaDisplayItem: Identifiable, Hashable {
-    case playable(MediaItem)
+    case playable(PlexMediaItem)
     case collection(CollectionMediaItem)
     case playlist(PlaylistMediaItem)
 
@@ -172,7 +172,7 @@ enum MediaDisplayItem: Identifiable, Hashable {
         }
     }
 
-    var playableItem: MediaItem? {
+    var playableItem: PlexMediaItem? {
         switch self {
         case let .playable(item):
             item
@@ -188,7 +188,7 @@ extension MediaDisplayItem {
     init?(plexItem: PlexItem) {
         switch plexItem.type {
         case .movie, .show, .season, .episode:
-            self = .playable(MediaItem(plexItem: plexItem))
+            self = .playable(PlexMediaItem(plexItem: plexItem))
         case .collection:
             self = .collection(CollectionMediaItem(plexItem: plexItem))
         case .playlist:

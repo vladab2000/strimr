@@ -4,7 +4,7 @@ import Observation
 @MainActor
 @Observable
 final class PlayerViewModel {
-    var media: MediaItem?
+    var media: PlexMediaItem?
     var isLoading = false
     var errorMessage: String?
     var isBuffering = false
@@ -32,7 +32,7 @@ final class PlayerViewModel {
     @ObservationIgnored private var playQueueState: PlayQueueState
     @ObservationIgnored private let context: PlexAPIContext
     @ObservationIgnored private let shouldResumeFromOffsetFlag: Bool
-    @ObservationIgnored private let localMedia: MediaItem?
+    @ObservationIgnored private let localMedia: PlexMediaItem?
     @ObservationIgnored private let localPlaybackURL: URL?
     @ObservationIgnored private let shouldReportPlaybackToServer: Bool
     @ObservationIgnored private var activePartId: Int?
@@ -61,7 +61,7 @@ final class PlayerViewModel {
         shouldReportPlaybackToServer = true
     }
 
-    init(localMedia: MediaItem, localPlaybackURL: URL, context: PlexAPIContext) {
+    init(localMedia: PlexMediaItem, localPlaybackURL: URL, context: PlexAPIContext) {
         playQueueState = PlayQueueState(localRatingKey: localMedia.id)
         ratingKey = localMedia.id
         self.context = context
@@ -119,7 +119,7 @@ final class PlayerViewModel {
                 params: params,
             )
             let metadata = response.mediaContainer.metadata?.first
-            media = metadata.map(MediaItem.init)
+            media = metadata.map(PlexMediaItem.init)
             markers = metadata?.markers ?? []
             updatePartContext(from: metadata)
             resolvePreferredStreams(from: metadata)

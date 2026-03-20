@@ -4,28 +4,19 @@ import Observation
 @MainActor
 @Observable
 final class HomeViewModel {
-    var continueWatching: Hub?
-    var recentlyAdded: [Hub] = []
+    var latestVideos: [any MediaItem] = []
+    var latestSeries: [any MediaItem] = []
     var isLoading = false
     var errorMessage: String?
 
-    @ObservationIgnored private let context: PlexAPIContext
-    @ObservationIgnored private let settingsManager: SettingsManager
-    @ObservationIgnored private let libraryStore: LibraryStore
     @ObservationIgnored private var loadTask: Task<Void, Never>?
 
-    init(context: PlexAPIContext, settingsManager: SettingsManager, libraryStore: LibraryStore) {
-        self.context = context
-        self.settingsManager = settingsManager
-        self.libraryStore = libraryStore
-    }
-
     var hasContent: Bool {
-        (continueWatching?.hasItems ?? false) || recentlyAdded.contains(where: \.hasItems)
+        !latestVideos.isEmpty || !latestSeries.isEmpty
     }
 
     func load() async {
-        guard continueWatching == nil, recentlyAdded.isEmpty else { return }
+        guard latestVideos.isEmpty, latestSeries.isEmpty else { return }
         await reload()
     }
 
@@ -34,18 +25,13 @@ final class HomeViewModel {
 
         let task = Task { [weak self] in
             guard let self else { return }
-            await fetchHubs()
+            await fetchData()
         }
         loadTask = task
         await task.value
     }
 
-    private func fetchHubs() async {
-        guard let hubRepository = try? HubRepository(context: context) else {
-            resetState(error: String(localized: "errors.selectServer.loadContent"))
-            return
-        }
-
+    private func fetchData() async {
         isLoading = true
         errorMessage = nil
         defer {
@@ -53,51 +39,19 @@ final class HomeViewModel {
         }
 
         do {
-            let hubParams: HubRepository.HubParams? = await {
-                let hiddenLibraryIds = settingsManager.interface.hiddenLibraryIds
-                guard !hiddenLibraryIds.isEmpty else { return nil }
+            async let videosResponse = ApiClient.fetchMenu(urlPath: "/FMovies/latestd")
+            async let seriesResponse = ApiClient.fetchMenu(urlPath: "/FSeries/latestd")
 
-                if libraryStore.libraries.isEmpty {
-                    try? await libraryStore.loadLibraries()
-                }
-
-                let visibleSectionIds = libraryStore.libraries
-                    .filter { !hiddenLibraryIds.contains($0.id) }
-                    .compactMap(\.sectionId)
-
-                return HubRepository.HubParams(sectionIds: visibleSectionIds)
-            }()
-
-            async let continueResponse = hubRepository.getContinueWatchingHub(params: hubParams)
-            async let promotedResponse = hubRepository.getPromotedHub(
-                params: hubParams,
-                includeLibraryPlaylists: settingsManager.interface.displayPlaylists,
-            )
-
-            let continueHub = try await continueResponse.mediaContainer.hub?.first
-            let promotedHubs = try await promotedResponse.mediaContainer.hub ?? []
+            let videos = try await videosResponse
+            let series = try await seriesResponse
 
             guard !Task.isCancelled else { return }
 
-            continueWatching = continueHub.map(mapHub)
-            recentlyAdded = promotedHubs
-                .filter { $0.hubIdentifier.lowercased().contains("recentlyadded") && $0.size > 0 }
-                .map(mapHub)
+            latestVideos = videos.items
+            latestSeries = series.items
         } catch {
             guard !Task.isCancelled else { return }
-            ErrorReporter.capture(error)
-            resetState(error: error.localizedDescription)
+            errorMessage = error.localizedDescription
         }
-    }
-
-    private func mapHub(_ hub: PlexHub) -> Hub {
-        Hub(plexHub: hub)
-    }
-
-    private func resetState(error: String? = nil) {
-        continueWatching = nil
-        recentlyAdded = []
-        errorMessage = error
-        isLoading = false
     }
 }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct PlayerControlsTVView: View {
-    var media: MediaItem?
+    var media: PlexMediaItem?
     var isPaused: Bool
     var videoResolution: String?
     var supportsHDR: Bool

@@ -99,8 +99,8 @@ final class DownloadManager: NSObject, URLSessionDownloadDelegate {
         return FileManager.default.fileExists(atPath: fileURL.path) ? fileURL : nil
     }
 
-    func localMediaItem(for item: DownloadItem) -> MediaItem {
-        MediaItem(
+    func localMediaItem(for item: DownloadItem) -> PlexMediaItem {
+        PlexMediaItem(
             id: item.metadata.ratingKey,
             guid: item.metadata.guid,
             summary: item.metadata.summary,
@@ -145,7 +145,7 @@ final class DownloadManager: NSObject, URLSessionDownloadDelegate {
             )
             guard let plexItem = response.mediaContainer.metadata?.first else { return }
 
-            let mediaItem = MediaItem(plexItem: plexItem)
+            let mediaItem = PlexMediaItem(plexItem: plexItem)
             guard mediaItem.type == .movie || mediaItem.type == .episode else { return }
             guard let partPath = plexItem.media?.first?.parts.first?.key else { return }
 
@@ -297,7 +297,7 @@ final class DownloadManager: NSObject, URLSessionDownloadDelegate {
     }
 
     private func downloadPosterIfAvailable(
-        for mediaItem: MediaItem,
+        for mediaItem: PlexMediaItem,
         context: PlexAPIContext,
         destinationFolder: URL,
     ) async -> String? {

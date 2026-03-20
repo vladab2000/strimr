@@ -1,6 +1,6 @@
 import Foundation
 
-struct MediaItem: Identifiable, Hashable {
+struct PlexMediaItem: Identifiable, Hashable {
     let id: String
     let guid: String
     let summary: String?

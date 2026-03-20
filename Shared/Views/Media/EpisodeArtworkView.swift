@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct EpisodeArtworkView: View {
-    let episode: MediaItem
+    let episode: PlexMediaItem
     let imageURL: URL?
     let width: CGFloat
     let runtime: String?
