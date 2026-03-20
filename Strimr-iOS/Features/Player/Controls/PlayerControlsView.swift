@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct PlayerControlsView: View {
-    var media: MediaItem?
+    var media: PlexMediaItem?
     var isPaused: Bool
     var isBuffering: Bool
     var videoResolution: String?
@@ -152,7 +152,7 @@ private struct PlayerAuxiliaryControlsRow: View {
 }
 
 private struct PlayerControlsHeader: View {
-    var media: MediaItem?
+    var media: PlexMediaItem?
     var onDismiss: () -> Void
     var onShowSettings: () -> Void
     var isWatchTogether: Bool

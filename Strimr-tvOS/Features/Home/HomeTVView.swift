@@ -108,7 +108,7 @@ struct HomeTVView: View {
         }
     }
 
-    private var heroMedia: MediaItem? {
+    private var heroMedia: PlexMediaItem? {
         if let continueItem = viewModel.continueWatching?.items.compactMap(\.playableItem).first {
             return continueItem
         }

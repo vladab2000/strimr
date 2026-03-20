@@ -1,6 +1,6 @@
 import Foundation
 
-extension MediaItem {
+extension PlexMediaItem {
     var isFullyWatched: Bool {
         switch type {
         case .movie, .episode:

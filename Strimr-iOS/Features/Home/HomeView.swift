@@ -3,43 +3,26 @@ import SwiftUI
 @MainActor
 struct HomeView: View {
     @State var viewModel: HomeViewModel
-    let onSelectMedia: (MediaDisplayItem) -> Void
 
-    init(
-        viewModel: HomeViewModel,
-        onSelectMedia: @escaping (MediaDisplayItem) -> Void = { _ in },
-    ) {
+    init(viewModel: HomeViewModel = HomeViewModel()) {
         _viewModel = State(initialValue: viewModel)
-        self.onSelectMedia = onSelectMedia
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                if let hub = viewModel.continueWatching, hub.hasItems {
-                    MediaHubSection(title: hub.title) {
-                        MediaCarousel(
-                            layout: .landscape,
-                            items: hub.items,
-                            showsLabels: true,
-                            onSelectMedia: onSelectMedia,
-                        )
-                    }
+                if !viewModel.latestVideos.isEmpty {
+                    sectionView(
+                        title: String(localized: "home.latestVideos"),
+                        items: viewModel.latestVideos,
+                    )
                 }
 
-                if !viewModel.recentlyAdded.isEmpty {
-                    ForEach(viewModel.recentlyAdded) { hub in
-                        if hub.hasItems {
-                            MediaHubSection(title: hub.title) {
-                                MediaCarousel(
-                                    layout: .portrait,
-                                    items: hub.items,
-                                    showsLabels: true,
-                                    onSelectMedia: onSelectMedia,
-                                )
-                            }
-                        }
-                    }
+                if !viewModel.latestSeries.isEmpty {
+                    sectionView(
+                        title: String(localized: "home.latestSeries"),
+                        items: viewModel.latestSeries,
+                    )
                 }
 
                 if viewModel.isLoading, !viewModel.hasContent {
@@ -60,12 +43,25 @@ struct HomeView: View {
         }
         .navigationTitle("tabs.home")
         .navigationBarTitleDisplayMode(.inline)
-        .userMenuToolbar()
         .task {
             await viewModel.load()
         }
         .refreshable {
             await viewModel.reload()
+        }
+    }
+
+    @ViewBuilder
+    private func sectionView(title: String, items: [any MediaItem]) -> some View {
+        MediaHubSection(title: title) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(alignment: .top, spacing: 12) {
+                    ForEach(items, id: \.id) { item in
+                        StreamCinemaItemCard(item: item) {}
+                    }
+                }
+                .padding(.horizontal, 2)
+            }
         }
     }
 }

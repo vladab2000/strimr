@@ -1,7 +1,6 @@
 import Foundation
 
-extension MediaItem {
-    init(plexItem: PlexItem) {
+extension PlexMediaItem {
         self.init(
             id: plexItem.ratingKey,
             guid: plexItem.guid,

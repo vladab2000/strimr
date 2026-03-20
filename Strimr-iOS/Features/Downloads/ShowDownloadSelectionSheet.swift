@@ -111,7 +111,7 @@ struct ShowDownloadSelectionSheet: View {
         }
     }
 
-    private func episodeRow(_ episode: MediaItem) -> some View {
+    private func episodeRow(_ episode: PlexMediaItem) -> some View {
         let isDownloaded = isAlreadyDownloaded(episodeID: episode.id)
         let isSelected = selectedEpisodeIDs.contains(episode.id) && !isDownloaded
         return Button {
@@ -168,7 +168,7 @@ struct ShowDownloadSelectionSheet: View {
         return String(localized: "downloads.sheet.submit \(effectiveSelectionCount)")
     }
 
-    private func episodeNumberTitle(for episode: MediaItem) -> String {
+    private func episodeNumberTitle(for episode: PlexMediaItem) -> String {
         guard let index = episode.index else {
             return String(localized: "downloads.sheet.episodeUnknown")
         }

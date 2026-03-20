@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct EpisodeCardView: View {
-    let episode: MediaItem
+    let episode: PlexMediaItem
     let imageURL: URL?
     let runtime: String?
     let progress: Double?

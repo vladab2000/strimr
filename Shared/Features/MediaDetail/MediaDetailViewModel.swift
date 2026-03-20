@@ -8,13 +8,13 @@ final class MediaDetailViewModel {
     @ObservationIgnored private let context: PlexAPIContext
 
     var media: PlayableMediaItem
-    var onDeckItem: MediaItem?
+    var onDeckItem: PlexMediaItem?
     var heroImageURL: URL?
     var isLoading = false
     var errorMessage: String?
     var backdropGradient: [Color] = []
-    var seasons: [MediaItem] = []
-    var episodes: [MediaItem] = []
+    var seasons: [PlexMediaItem] = []
+    var episodes: [PlexMediaItem] = []
     var cast: [CastMember] = []
     var relatedHubs: [Hub] = []
     var selectedSeasonId: String?
@@ -67,7 +67,7 @@ final class MediaDetailViewModel {
                 resolveArtwork()
                 resolveGradient()
             }
-            onDeckItem = response.mediaContainer.metadata?.first?.onDeck?.metadata.map { MediaItem(plexItem: $0) }
+            onDeckItem = response.mediaContainer.metadata?.first?.onDeck?.metadata.map { PlexMediaItem(plexItem: $0) }
             await loadWatchlistStatus()
         } catch {
             errorMessage = error.localizedDescription
@@ -93,7 +93,7 @@ final class MediaDetailViewModel {
         await fetchEpisodes(for: id)
     }
 
-    func toggleWatchStatus(for target: MediaItem? = nil) async {
+    func toggleWatchStatus(for target: PlexMediaItem? = nil) async {
         let item = target ?? media.mediaItem
 
         guard let scrobbleRepository = try? ScrobbleRepository(context: context) else {
@@ -143,7 +143,7 @@ final class MediaDetailViewModel {
         } catch {}
     }
 
-    func imageURL(for media: MediaItem, width: Int = 320, height: Int = 180) -> URL? {
+    func imageURL(for media: PlexMediaItem, width: Int = 320, height: Int = 180) -> URL? {
         guard let imageRepository = try? ImageRepository(context: context) else { return nil }
 
         let path = media.thumbPath ?? media.parentThumbPath ?? media.grandparentThumbPath
@@ -209,7 +209,7 @@ final class MediaDetailViewModel {
         media.rating.map { String(format: "%.1f", $0) }
     }
 
-    var selectedSeason: MediaItem? {
+    var selectedSeason: PlexMediaItem? {
         seasons.first(where: { $0.id == selectedSeasonId })
     }
 
@@ -217,7 +217,7 @@ final class MediaDetailViewModel {
         selectedSeason?.title ?? String(localized: "media.detail.season")
     }
 
-    func runtimeText(for item: MediaItem) -> String? {
+    func runtimeText(for item: PlexMediaItem) -> String? {
         guard let duration = item.duration else { return nil }
         return duration.mediaDurationText()
     }
@@ -331,7 +331,7 @@ final class MediaDetailViewModel {
         isUpdatingWatchStatus(for: media.mediaItem)
     }
 
-    func isWatched(_ item: MediaItem) -> Bool {
+    func isWatched(_ item: PlexMediaItem) -> Bool {
         guard let playableType = PlayableItemType(plexType: item.type) else { return false }
 
         switch playableType {
@@ -346,31 +346,31 @@ final class MediaDetailViewModel {
         }
     }
 
-    func watchActionTitle(for item: MediaItem) -> String {
+    func watchActionTitle(for item: PlexMediaItem) -> String {
         isWatched(item)
             ? String(localized: "media.detail.watchAction.markUnwatched")
             : String(localized: "media.detail.watchAction.markWatched")
     }
 
-    func watchActionIcon(for item: MediaItem) -> String {
+    func watchActionIcon(for item: PlexMediaItem) -> String {
         isWatched(item) ? "checkmark.circle.fill" : "checkmark.circle"
     }
 
-    func isUpdatingWatchStatus(for item: MediaItem) -> Bool {
+    func isUpdatingWatchStatus(for item: PlexMediaItem) -> Bool {
         updatingWatchStatusIds.contains(item.id)
     }
 
-    func progressFraction(for item: MediaItem) -> Double? {
+    func progressFraction(for item: PlexMediaItem) -> Double? {
         guard let percentage = item.viewProgressPercentage else { return nil }
         return min(1, max(0, percentage / 100))
     }
 
-    private func hasProgress(for item: MediaItem?) -> Bool {
+    private func hasProgress(for item: PlexMediaItem?) -> Bool {
         guard let viewOffset = item?.viewOffset else { return false }
         return viewOffset > 0
     }
 
-    private func timeLeftText(for item: MediaItem?) -> String? {
+    private func timeLeftText(for item: PlexMediaItem?) -> String? {
         guard
             let item,
             let duration = item.duration,
@@ -386,7 +386,7 @@ final class MediaDetailViewModel {
         return String(localized: "media.detail.timeLeft \(remaining.mediaDurationText())")
     }
 
-    private func seasonEpisodeLabel(for item: MediaItem) -> String? {
+    private func seasonEpisodeLabel(for item: PlexMediaItem) -> String? {
         guard let season = item.parentIndex, let episode = item.index else { return nil }
         return String(localized: "media.detail.seasonEpisode \(season) \(episode)")
     }
@@ -404,7 +404,7 @@ final class MediaDetailViewModel {
 
         do {
             let response = try await metadataRepository.getMetadataChildren(ratingKey: media.metadataRatingKey)
-            let fetchedSeasons = (response.mediaContainer.metadata ?? []).map(MediaItem.init)
+            let fetchedSeasons = (response.mediaContainer.metadata ?? []).map(PlexMediaItem.init)
             seasons = fetchedSeasons
             episodes = []
 
@@ -442,7 +442,7 @@ final class MediaDetailViewModel {
 
         do {
             let response = try await metadataRepository.getMetadataChildren(ratingKey: seasonId)
-            let fetchedEpisodes = (response.mediaContainer.metadata ?? []).map(MediaItem.init)
+            let fetchedEpisodes = (response.mediaContainer.metadata ?? []).map(PlexMediaItem.init)
 
             guard selectedSeasonId == seasonId else { return }
             episodes = fetchedEpisodes
