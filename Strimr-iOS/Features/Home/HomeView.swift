@@ -57,6 +57,7 @@ struct HomeView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: 12) {
                     ForEach(items, id: \.id) { item in
+                        // TODO: Navigate to StreamCinema media detail on tap
                         StreamCinemaItemCard(item: item) {}
                     }
                 }
