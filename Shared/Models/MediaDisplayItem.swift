@@ -57,6 +57,10 @@ enum MediaDisplayItem: Identifiable, Hashable {
     var primaryLabel: String {
         title
     }
+    
+    var ultraBlurColors: Bool {
+        true
+    }
 
     var secondaryLabel: String? {
         switch self {

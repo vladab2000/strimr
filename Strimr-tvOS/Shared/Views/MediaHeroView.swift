@@ -2,16 +2,15 @@ import SwiftUI
 import UIKit
 
 struct MediaHeroBackgroundView: View {
-    @Environment(PlexAPIContext.self) private var plexApiContext
 
-    let media: MediaItem
+    let media: MediaDisplayItem
 
     @State private var imageURL: URL?
 
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                MediaBackdropGradient(colors: MediaBackdropGradient.colors(for: .playable(media)))
+                MediaBackdropGradient(colors: [])
                     .ignoresSafeArea()
 
                 HeroImageView(imageURL: imageURL)
@@ -32,33 +31,13 @@ struct MediaHeroBackgroundView: View {
     }
 
     private func loadImage() async {
-        let path = media.grandparentArtPath
-            ?? media.artPath
-            ?? media.grandparentThumbPath
-            ?? media.parentThumbPath
-            ?? media.thumbPath
-        guard let path else {
-            imageURL = nil
-            return
-        }
-
-        do {
-            let imageRepository = try ImageRepository(context: plexApiContext)
-            imageURL = imageRepository.transcodeImageURL(
-                path: path,
-                width: 3840,
-                height: 2160,
-                minSize: 1,
-                upscale: 1,
-            )
-        } catch {
-            imageURL = nil
-        }
+        imageURL = media.artURL
+            ?? media.thumbURL
     }
 }
 
 struct MediaHeroContentView: View {
-    let media: MediaItem
+    let media: MediaDisplayItem
     private let summaryLineLimit = 3
 
     var body: some View {
@@ -71,7 +50,7 @@ struct MediaHeroContentView: View {
                 .font(.title2.bold())
                 .lineLimit(2)
 
-            if let secondary = media.secondaryLabel, media.type != .movie, media.type != .show {
+            if let secondary = media.secondaryLabel, media.type != .video, media.type != .tvshow {
                 Text(secondary)
                     .font(.headline)
                     .foregroundStyle(.brandSecondary)
@@ -110,8 +89,7 @@ struct MediaHeroContentView: View {
 
     @ViewBuilder
     private var genresLine: some View {
-        let genres = media.genres
-        if !genres.isEmpty {
+        if let genres = media.genres, !genres.isEmpty {
             HStack(spacing: 12) {
                 ForEach(genres, id: \.self) { genre in
                     Text(genre)
@@ -125,24 +103,31 @@ struct MediaHeroContentView: View {
 
     private var metadataItems: [String] {
         var items: [String] = []
-        if let tertiary = media.tertiaryLabel {
+/*        if let tertiary = media.tertiaryLabel {
             items.append(tertiary)
-        }
+        }*/
         if let year = yearText {
             items.append(year)
         }
         if let runtime = runtimeText {
             items.append(runtime)
         }
-        if let contentRating = media.contentRating {
-            items.append(contentRating)
+        if let contentRating = media.rating {
+            items.append(String(format: "%.1f", contentRating))
         }
         return items
     }
 
     private var runtimeText: String? {
         guard let duration = media.duration else { return nil }
-        return duration.mediaDurationText()
+        let totalMinutes = duration / 60
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
     }
 
     private var yearText: String? {

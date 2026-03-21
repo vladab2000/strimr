@@ -51,31 +51,27 @@ struct HomeTVView: View {
     private var homeContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 32) {
-                if let hub = viewModel.continueWatching, hub.hasItems {
-                    MediaHubSection(title: hub.title) {
-                        MediaCarousel(
-                            layout: .landscape,
-                            items: hub.items,
-                            showsLabels: false,
-                            onSelectMedia: onSelectMedia,
-                        )
-                    }
-                }
+                if !viewModel.latestVideos.isEmpty {
+                     MediaHubSection(title: String(localized: "home.latestVideos")) {
+                         MediaCarousel(
+                             layout: .portrait,
+                             items: viewModel.latestVideos,
+                             showsLabels: true,
+                             onSelectMedia: onSelectMedia,
+                         )
+                     }
+                 }
 
-                if !viewModel.recentlyAdded.isEmpty {
-                    ForEach(viewModel.recentlyAdded) { hub in
-                        if hub.hasItems {
-                            MediaHubSection(title: hub.title) {
-                                MediaCarousel(
-                                    layout: .portrait,
-                                    items: hub.items,
-                                    showsLabels: false,
-                                    onSelectMedia: onSelectMedia,
-                                )
-                            }
-                        }
-                    }
-                }
+                 if !viewModel.latestShows.isEmpty {
+                     MediaHubSection(title: String(localized: "home.latestShows")) {
+                         MediaCarousel(
+                             layout: .portrait,
+                             items: viewModel.latestShows,
+                             showsLabels: true,
+                             onSelectMedia: onSelectMedia,
+                         )
+                     }
+                 }
 
                 if viewModel.isLoading, !viewModel.hasContent {
                     ProgressView("home.loading")
@@ -108,18 +104,8 @@ struct HomeTVView: View {
         }
     }
 
-    private var heroMedia: MediaItem? {
-        if let continueItem = viewModel.continueWatching?.items.compactMap(\.playableItem).first {
-            return continueItem
-        }
-
-        for hub in viewModel.recentlyAdded where hub.hasItems {
-            if let item = hub.items.compactMap(\.playableItem).first {
-                return item
-            }
-        }
-
-        return nil
+    private var heroMedia: MediaDisplayItem? {
+        viewModel.latestVideos.first ?? viewModel.latestShows.first
     }
 
     private func updateInitialFocus() {

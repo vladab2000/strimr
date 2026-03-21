@@ -191,11 +191,11 @@ struct PlayerView: View {
                 subtitleTracks = subtitles
 
                 settingsAudioTracks = audio.map {
-                    PlaybackSettingsTrack(track: $0, plexStream: nil)
+                    PlaybackSettingsTrack(track: $0)
                 }
 
                 settingsSubtitleTracks = subtitles.map {
-                    PlaybackSettingsTrack(track: $0, plexStream: nil)
+                    PlaybackSettingsTrack(track: $0)
                 }
 
                 if selectedAudioTrackID == nil,

@@ -58,168 +58,19 @@
 			);
 			target = E98A13B82ED8CBAD002F98B2 /* Strimr-iOS */;
 		};
-		E9C449F82EF322DE00D2895B /* Exceptions for "Shared" folder in "Strimr-tvOS" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"Extensions/Color+Hex.swift",
-				Extensions/ImageCornerColorSampler.swift,
-				"Extensions/TimeInterval+MediaFormat.swift",
-				Features/Auth/ProfileSelection/ProfileSwitcherViewModel.swift,
-				Features/Auth/ServerSelection/ServerSelectionViewModel.swift,
-				Features/CollectionDetail/CollectionDetailViewModel.swift,
-				Features/Home/HomeViewModel.swift,
-				Features/Integrations/SeerrPermissionService.swift,
-				Features/Integrations/SeerrSessionService.swift,
-				Features/Integrations/SeerrViewModel.swift,
-				Features/Library/LibraryBrowseControlsView.swift,
-				Features/Library/LibraryBrowseControlsViewModel.swift,
-				Features/Library/LibraryBrowseModels.swift,
-				Features/Library/LibraryPlaylistsViewModel.swift,
-				Features/Library/LibraryRecommendedViewModel.swift,
-				Features/Library/LibraryViewModel.swift,
-				Features/MainCoordinator.swift,
-				Features/MediaDetail/CastMember.swift,
-				Features/MediaDetail/CastSection.swift,
-				Features/MediaDetail/MediaDetailViewModel.swift,
-				Features/MediaDetail/RelatedHubsSection.swift,
-				Features/Player/Controls/PlayerBadge.swift,
-				Features/Player/Controls/PlayerTimelineView.swift,
-				Features/Player/ExternalPlaybackLauncher.swift,
-				Features/Player/PlaybackLauncher.swift,
-				Features/Player/PlaybackSettingsTrack.swift,
-				Features/Player/PlaybackSpeedOption.swift,
-				Features/Player/PlayerViewModel.swift,
-				Features/Player/PlayQueue/PlayQueueManager.swift,
-				Features/Player/PlayQueue/PlayQueueState.swift,
-				Features/PlaylistDetail/PlaylistDetailViewModel.swift,
-				Features/Search/SearchResultCard.swift,
-				Features/Search/SearchViewModel.swift,
-				Features/Seerr/SeerrDiscoverViewModel.swift,
-				Features/Seerr/SeerrManageRequestsViewModel.swift,
-				Features/Seerr/SeerrMediaDetailViewModel.swift,
-				Features/Seerr/SeerrMediaRequestAvailability.swift,
-				Features/Seerr/SeerrMediaRequestType.swift,
-				Features/Seerr/SeerrMediaRequestViewModel.swift,
-				Features/Seerr/SeerrPendingRequestsViewModel.swift,
-				Features/Seerr/SeerrSearchViewModel.swift,
-				Features/Settings/DisplayedLibrariesSectionView.swift,
-				Features/Settings/DisplayedLibrariesViewModel.swift,
-				Features/Settings/NavigationLibrariesSectionView.swift,
-				Features/Settings/NavigationLibrariesViewModel.swift,
-				Features/Settings/SettingsViewModel.swift,
-				Features/WatchTogether/Playback/WatchTogetherPlaybackSyncEngine.swift,
-				Features/WatchTogether/Playback/WatchTogetherPlayerEvent.swift,
-				Features/WatchTogether/WatchTogetherModels.swift,
-				Features/WatchTogether/WatchTogetherProtocol.swift,
-				Features/WatchTogether/WatchTogetherViewModel.swift,
-				Features/WatchTogether/WatchTogetherWebSocketClient.swift,
-				Library/MPV/MetalLayer.swift,
-				Library/MPV/MPVPlayerDelegate.swift,
-				Library/MPV/MPVPlayerView.swift,
-				Library/MPV/MPVPlayerViewController.swift,
-				Library/MPV/MPVProperty.swift,
-				Library/Player/PlayerCoordinating.swift,
-				Library/Player/PlayerFactory.swift,
-				Library/Player/PlayerOptions.swift,
-				Library/Player/PlayerProperty.swift,
-				Library/Player/PlayerTrack.swift,
-				Library/VLC/VLCPlayerDelegate.swift,
-				Library/VLC/VLCPlayerView.swift,
-				Library/VLC/VLCPlayerViewController.swift,
-				Models/AppSettings.swift,
-				Models/CollectionMediaItem.swift,
-				Models/Hub.swift,
-				"Models/Hub+Mapping.swift",
-				Models/Library.swift,
-				Models/MediaDisplayItem.swift,
-				Models/MediaItem.swift,
-				"Models/MediaItem+Mapping.swift",
-				"Models/MediaItem+WatchStatus.swift",
-				Models/PlayableMediaItem.swift,
-				Models/PlaybackPlayer.swift,
-				Models/PlaylistMediaItem.swift,
-				Models/Plex/PlexCloudModels.swift,
-				Models/Plex/PlexDiscoverModels.swift,
-				Models/Plex/PlexMediaModels.swift,
-				Models/Plex/PlexPlayQueueModels.swift,
-				Models/Plex/PlexTimelineModels.swift,
-				Models/Seerr/SeerrAuthRequests.swift,
-				Models/Seerr/SeerrMedia.swift,
-				Models/Seerr/SeerrPaginatedResponse.swift,
-				Models/Seerr/SeerrQuota.swift,
-				Models/Seerr/SeerrRequest.swift,
-				Models/Seerr/SeerrRequestCount.swift,
-				Models/Seerr/SeerrRequestPageResponse.swift,
-				Models/Seerr/SeerrRequestPayloads.swift,
-				Models/Seerr/SeerrServiceModels.swift,
-				Models/Seerr/SeerrSettings.swift,
-				Models/Seerr/SeerrUser.swift,
-				Monitoring/ErrorReporter.swift,
-				Networking/Plex/PlexAPI.swift,
-				Networking/Plex/PlexAPIContext.swift,
-				Networking/Plex/PlexCloudNetworkClient.swift,
-				Networking/Plex/PlexServerNetworkClient.swift,
-				Networking/PlexEndpoint.swift,
-				Networking/Seerr/SeerrAPI.swift,
-				Networking/Seerr/SeerrNetworkClient.swift,
-				Networking/Seerr/TMDBImageService.swift,
-				Repository/Plex/AuthRepository.swift,
-				Repository/Plex/CollectionRepository.swift,
-				Repository/Plex/DiscoverWatchlistRepository.swift,
-				Repository/Plex/HubRepository.swift,
-				Repository/Plex/ImageRepository.swift,
-				Repository/Plex/MediaRepository.swift,
-				Repository/Plex/MetadataRepository.swift,
-				Repository/Plex/PlaybackRepository.swift,
-				Repository/Plex/PlaylistRepository.swift,
-				Repository/Plex/PlayQueueRepository.swift,
-				Repository/Plex/ResourceRepository.swift,
-				Repository/Plex/ScrobbleRepository.swift,
-				Repository/Plex/SearchRepository.swift,
-				Repository/Plex/SectionRepository.swift,
-				Repository/Plex/UserRepository.swift,
-				Repository/Seerr/SeerrAuthRepository.swift,
-				Repository/Seerr/SeerrDiscoverRepository.swift,
-				Repository/Seerr/SeerrMediaRepository.swift,
-				Repository/Seerr/SeerrRequestRepository.swift,
-				Repository/Seerr/SeerrServiceRepository.swift,
-				Repository/Seerr/SeerrSettingsRepository.swift,
-				Session/SessionManager.swift,
-				Storage/Keychain.swift,
-				Store/LibraryStore.swift,
-				Store/SeerrStore.swift,
-				Store/SettingsManager.swift,
-				Views/FolderCard.swift,
-				Views/Media/Card/LandscapeMediaCard.swift,
-				Views/Media/Card/MediaCard.swift,
-				Views/Media/Card/PortraitMediaCard.swift,
-				Views/Media/EpisodeArtworkView.swift,
-				Views/Media/MediaBackdropGradient.swift,
-				Views/Media/MediaCarousel.swift,
-				Views/Media/MediaHubSection.swift,
-				Views/Media/MediaImageView.swift,
-				Views/Media/MediaImageViewModel.swift,
-				Views/Media/WatchStatusBadge.swift,
-				Views/Seerr/SeerrAvailabilityBadgeView.swift,
-				Views/Seerr/SeerrCastSection.swift,
-				Views/Seerr/SeerrEpisodeCardView.swift,
-				Views/Seerr/SeerrMediaArtworkView.swift,
-				Views/Seerr/SeerrMediaCard.swift,
-				Views/Seerr/SeerrMediaCarousel.swift,
-				Views/Seerr/SeerrMediaSection.swift,
-				Views/Seerr/SeerrRelatedSection.swift,
-				Views/Seerr/SeerrSearchCard.swift,
-				Views/Seerr/SeerrSeasonAvailabilityBadgeView.swift,
-				Views/Toast/ToastOverlay.swift,
-			);
-			target = E9C448F22EF3034900D2895B /* Strimr-tvOS */;
-		};
 		E9E4DB4E2EF44D900035147A /* Exceptions for "Strimr-tvOS" folder in "Strimr-tvOS" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
 			target = E9C448F22EF3034900D2895B /* Strimr-tvOS */;
+		};
+		F7549FFF2F6DC24D008A91DA /* Exceptions for "Config" folder in "Strimr-iOS" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Config-example.xcconfig",
+			);
+			target = E98A13B82ED8CBAD002F98B2 /* Strimr-iOS */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -242,14 +93,14 @@
 		};
 		E9C449012EF30A9500D2895B /* Shared */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				E9C449F82EF322DE00D2895B /* Exceptions for "Shared" folder in "Strimr-tvOS" target */,
-			);
 			path = Shared;
 			sourceTree = "<group>";
 		};
 		E9E70EF02F0D6FD7009C62B3 /* Config */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F7549FFF2F6DC24D008A91DA /* Exceptions for "Config" folder in "Strimr-iOS" target */,
+			);
 			path = Config;
 			sourceTree = "<group>";
 		};
@@ -353,6 +204,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				E9C448F42EF3034900D2895B /* Strimr-tvOS */,
+				E9C449012EF30A9500D2895B /* Shared */,
 			);
 			name = "Strimr-tvOS";
 			packageProductDependencies = (
@@ -371,7 +223,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2600;
-				LastUpgradeCheck = 2600;
+				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					E98A13B82ED8CBAD002F98B2 = {
 						CreatedOnToolsVersion = 26.0.1;
@@ -448,6 +300,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -477,7 +330,9 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 6HXSYFK6A7;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -499,6 +354,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -510,6 +366,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -539,7 +396,9 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 6HXSYFK6A7;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -554,6 +413,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 			};
@@ -568,7 +428,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 21;
-				DEVELOPMENT_TEAM = 6HXSYFK6A7;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
@@ -618,7 +478,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 21;
-				DEVELOPMENT_TEAM = 6HXSYFK6A7;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
@@ -668,7 +528,6 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 21;
-				DEVELOPMENT_TEAM = 6HXSYFK6A7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Strimr-tvOS/Info.plist";
@@ -705,7 +564,6 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 21;
-				DEVELOPMENT_TEAM = 6HXSYFK6A7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Strimr-tvOS/Info.plist";

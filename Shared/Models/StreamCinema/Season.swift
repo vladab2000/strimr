@@ -5,7 +5,7 @@
 //  Created by Vladimír Bárta on 09.03.2026.
 //
 
-struct Season: MediaItem, MediaInfo {
+struct Season: MediaItem, MediaInfo, Hashable {
     let id: String
     let name: String
     let type: String //= "season"
@@ -22,4 +22,12 @@ struct Season: MediaItem, MediaInfo {
     let season: Int?
     let episode: Int?
     let episodeTitle: String?
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    static func == (lhs: Season, rhs: Season) -> Bool {
+        lhs.id == rhs.id
+    }
 }

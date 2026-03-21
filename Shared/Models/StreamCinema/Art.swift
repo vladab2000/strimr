@@ -5,7 +5,7 @@
 //  Created by Vladimír Bárta on 22.02.2026.
 //
 
-struct Art: Decodable {
+struct Art: Decodable, Hashable {
     let banner: String?
     let fanart: String?
     let clearlogo: String?
