@@ -2,16 +2,13 @@ import SwiftUI
 
 struct PlayerView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(PlexAPIContext.self) private var context
     @Environment(SettingsManager.self) private var settingsManager
-    @Environment(WatchTogetherViewModel.self) private var watchTogetherViewModel
     @State var viewModel: PlayerViewModel
     let activePlayer: InternalPlaybackPlayer
     @State private var playerCoordinator: any PlayerCoordinating
     @State private var controlsVisible = true
     @State private var hideControlsWorkItem: DispatchWorkItem?
     @State private var isScrubbing = false
-    @State private var supportsHDR = false
     @State private var showingSettings = false
     @State private var audioTracks: [PlayerTrack] = []
     @State private var subtitleTracks: [PlayerTrack] = []
@@ -20,17 +17,10 @@ struct PlayerView: View {
     @State private var selectedAudioTrackID: Int?
     @State private var selectedSubtitleTrackID: Int?
     @State private var playbackRate: Float = 1.0
-    @State private var appliedPreferredAudio = false
-    @State private var appliedPreferredSubtitle = false
-    @State private var appliedResumeOffset = false
-    @State private var awaitingMediaLoad = false
     @State private var timelinePosition = 0.0
-    @State private var showingTerminationAlert = false
-    @State private var terminationAlertMessage = ""
     @State private var isRotationLocked = false
-    @State private var isShowingWatchTogetherExitPrompt = false
-    @State private var wasInWatchTogetherSession = false
     @State private var activePlaybackURL: URL?
+    @State private var awaitingMediaLoad = false
 
     private let controlsHideDelay: TimeInterval = 3.0
     private var seekBackwardInterval: Double {
@@ -49,12 +39,6 @@ struct PlayerView: View {
 
     var body: some View {
         @Bindable var bindableViewModel = viewModel
-        let activeMarker = bindableViewModel.activeSkipMarker
-        let skipTitle = activeMarker.flatMap { marker in
-            marker.isCredits
-                ? String(localized: "player.skip.credits")
-                : String(localized: "player.skip.intro")
-        }
 
         ZStack {
             Color.black.ignoresSafeArea()
@@ -68,14 +52,9 @@ struct PlayerView: View {
                         data: data,
                         isScrubbing: isScrubbing,
                     )
-
-                    if propertyName == .videoParamsSigPeak {
-                        let supportsHdr = (data as? Double ?? 1.0) > 1.0
-                        supportsHDR = supportsHdr
-                    }
                 },
                 onPlaybackEnded: {
-                    handlePlaybackEnded()
+                    dismissPlayer()
                 },
                 onMediaLoaded: {
                     handleMediaLoaded()
@@ -103,11 +82,9 @@ struct PlayerView: View {
 
                 if controlsVisible {
                     PlayerControlsView(
-                        media: bindableViewModel.media,
+                        title: bindableViewModel.title,
                         isPaused: bindableViewModel.isPaused,
                         isBuffering: bindableViewModel.isBuffering,
-                        videoResolution: bindableViewModel.media?.playbackResolutionLabel,
-                        supportsHDR: supportsHDR,
                         position: timelineBinding,
                         duration: bindableViewModel.duration,
                         bufferedAhead: bindableViewModel.bufferedAhead,
@@ -121,34 +98,17 @@ struct PlayerView: View {
                         seekBackwardSeconds: settingsManager.playback.seekBackwardSeconds,
                         seekForwardSeconds: settingsManager.playback.seekForwardSeconds,
                         onScrubbingChanged: handleScrubbing(editing:),
-                        skipMarkerTitle: skipTitle,
-                        onSkipMarker: activeMarker.map { marker in
-                            { skipMarker(to: marker) }
-                        },
                         isRotationLocked: isRotationLocked,
                         onToggleRotationLock: toggleRotationLock,
-                        isWatchTogether: watchTogetherViewModel.isInSession,
                     )
                     .transition(.opacity)
                 }
-
-                if !controlsVisible, let activeMarker, let skipTitle {
-                    skipOverlay(marker: activeMarker, title: skipTitle)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                }
-
-                ToastOverlay(toasts: watchTogetherViewModel.toasts)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
         }
         .onAppear {
             showControls(temporarily: true)
             playerCoordinator.setPlaybackRate(playbackRate)
-            startPlaybackIfNeeded(url: bindableViewModel.playbackURL)
-            if watchTogetherViewModel.isInSession {
-                watchTogetherViewModel.attachPlayerCoordinator(playerCoordinator)
-                wasInWatchTogetherSession = true
-            }
+            startPlayback(url: bindableViewModel.streamURL)
         }
         .onDisappear {
             viewModel.handleStop()
@@ -156,37 +116,10 @@ struct PlayerView: View {
             playerCoordinator.destruct()
             AppDelegate.orientationLock = .all
             isRotationLocked = false
-            if wasInWatchTogetherSession {
-                watchTogetherViewModel.detachPlayerCoordinator()
-            }
-        }
-        .task {
-            await bindableViewModel.load()
-        }
-        .onChange(of: bindableViewModel.playbackURL) { _, newURL in
-            startPlaybackIfNeeded(url: newURL)
         }
         .onChange(of: bindableViewModel.position) { _, newValue in
             guard !isScrubbing else { return }
             timelinePosition = newValue
-        }
-        .onChange(of: bindableViewModel.terminationMessage) { _, newValue in
-            guard let newValue else { return }
-            terminationAlertMessage = newValue
-            showingTerminationAlert = true
-            playerCoordinator.pause()
-        }
-        .onChange(of: watchTogetherViewModel.isInSession) { _, newValue in
-            guard wasInWatchTogetherSession, !newValue else { return }
-            watchTogetherViewModel.detachPlayerCoordinator()
-        }
-        .onChange(of: watchTogetherViewModel.sessionEndedSignal) { _, _ in
-            guard wasInWatchTogetherSession else { return }
-            dismissPlayer(force: true)
-        }
-        .onChange(of: watchTogetherViewModel.playbackStoppedSignal) { _, _ in
-            guard wasInWatchTogetherSession else { return }
-            dismissPlayer(force: true)
         }
         .sheet(isPresented: $showingSettings) {
             PlaybackSettingsView(
@@ -202,35 +135,6 @@ struct PlayerView: View {
             )
             .presentationDetents([.medium])
             .presentationBackground(.ultraThinMaterial)
-        }
-        .alert("player.termination.title", isPresented: $showingTerminationAlert) {
-            Button("player.termination.dismiss") {
-                dismissPlayer(force: true)
-            }
-        } message: {
-            Text(terminationAlertMessage)
-        }
-        .confirmationDialog("watchTogether.exit.title", isPresented: $isShowingWatchTogetherExitPrompt) {
-            if watchTogetherViewModel.isHost {
-                Button("watchTogether.exit.stopForAll") {
-                    watchTogetherViewModel.stopPlaybackForEveryone()
-                    dismissPlayer(force: true)
-                }
-
-                Button("watchTogether.exit.endForAll", role: .destructive) {
-                    watchTogetherViewModel.leaveSession(endForAll: true)
-                    dismissPlayer(force: true)
-                }
-            }
-
-            Button("watchTogether.exit.leave") {
-                watchTogetherViewModel.leaveSession(endForAll: false)
-                dismissPlayer(force: true)
-            }
-
-            Button("common.actions.cancel", role: .cancel) {}
-        } message: {
-            Text("watchTogether.exit.message")
         }
     }
 
@@ -255,10 +159,8 @@ struct PlayerView: View {
     }
 
     private func togglePlayPause() {
-        let wasPaused = viewModel.isPaused
         playerCoordinator.togglePlayback()
         showControls(temporarily: true)
-        watchTogetherViewModel.sendPlayPause(isCurrentlyPaused: wasPaused)
     }
 
     private func showSettings() {
@@ -289,20 +191,12 @@ struct PlayerView: View {
                 subtitleTracks = subtitles
 
                 settingsAudioTracks = audio.map {
-                    PlaybackSettingsTrack(
-                        track: $0,
-                        plexStream: viewModel.plexStream(forFFIndex: $0.ffIndex),
-                    )
+                    PlaybackSettingsTrack(track: $0, plexStream: nil)
                 }
 
                 settingsSubtitleTracks = subtitles.map {
-                    PlaybackSettingsTrack(
-                        track: $0,
-                        plexStream: viewModel.plexStream(forFFIndex: $0.ffIndex),
-                    )
+                    PlaybackSettingsTrack(track: $0, plexStream: nil)
                 }
-
-                applyPreferredTracksIfNeeded(audioTracks: audio, subtitleTracks: subtitles)
 
                 if selectedAudioTrackID == nil,
                    let activeAudio = audio.first(where: { $0.isSelected })?.id ?? audioTracks.first?.id
@@ -322,70 +216,33 @@ struct PlayerView: View {
     private func selectAudioTrack(_ id: Int?) {
         selectedAudioTrackID = id
         playerCoordinator.selectAudioTrack(id: id)
-
-        guard
-            let id,
-            let track = audioTracks.first(where: { $0.id == id })
-        else {
-            return
-        }
-
-        Task {
-            await viewModel.persistStreamSelection(for: track)
-        }
     }
 
     private func selectSubtitleTrack(_ id: Int?) {
         selectedSubtitleTrackID = id
         playerCoordinator.selectSubtitleTrack(id: id)
-
-        guard
-            let id,
-            let track = subtitleTracks.first(where: { $0.id == id })
-        else {
-            return
-        }
-
-        Task {
-            await viewModel.persistStreamSelection(for: track)
-        }
     }
 
     private func selectPlaybackRate(_ rate: Float) {
         playbackRate = rate
         playerCoordinator.setPlaybackRate(rate)
         showControls(temporarily: true)
-        watchTogetherViewModel.sendRateChange(rate)
     }
 
     private func jump(by seconds: Double) {
         playerCoordinator.seek(by: seconds)
         showControls(temporarily: true)
-        let newPosition = max(0, viewModel.position + seconds)
-        watchTogetherViewModel.sendSeek(to: newPosition)
-    }
-
-    private func applyResumeOffsetIfNeeded() {
-        guard viewModel.shouldResumeFromOffset else { return }
-        guard !appliedResumeOffset, let offset = viewModel.resumePosition, offset > 0 else { return }
-        appliedResumeOffset = true
-        playerCoordinator.seek(to: offset)
     }
 
     private func handleMediaLoaded() {
         guard awaitingMediaLoad else { return }
         awaitingMediaLoad = false
         refreshTracks()
-        applyResumeOffsetIfNeeded()
     }
 
-    private func dismissPlayer(force: Bool = false) {
+    private func dismissPlayer() {
         hideControlsWorkItem?.cancel()
-        if watchTogetherViewModel.isInSession, !force {
-            isShowingWatchTogetherExitPrompt = true
-        } else {
-            dismiss()
-        }
+        dismiss()
     }
 
     private func handleScrubbing(editing: Bool) {
@@ -401,20 +258,12 @@ struct PlayerView: View {
             playerCoordinator.seek(to: timelinePosition)
             viewModel.position = timelinePosition
             scheduleControlsHide()
-            watchTogetherViewModel.sendSeek(to: timelinePosition)
         }
     }
 
-    private func startPlaybackIfNeeded(url: URL?) {
-        guard let url else { return }
+    private func startPlayback(url: URL) {
         guard activePlaybackURL != url else { return }
-
         activePlaybackURL = url
-        appliedPreferredAudio = false
-        appliedPreferredSubtitle = false
-        selectedAudioTrackID = nil
-        selectedSubtitleTrackID = nil
-        appliedResumeOffset = false
         awaitingMediaLoad = true
         playerCoordinator.play(url)
         playerCoordinator.setPlaybackRate(playbackRate)
@@ -451,106 +300,5 @@ struct PlayerView: View {
 
         hideControlsWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + controlsHideDelay, execute: workItem)
-    }
-
-    private func applyPreferredTracksIfNeeded(audioTracks: [PlayerTrack], subtitleTracks: [PlayerTrack]) {
-        if !appliedPreferredAudio,
-           let preferredAudioIndex = viewModel.preferredAudioStreamFFIndex,
-           let track = audioTracks.first(where: { $0.ffIndex == preferredAudioIndex })
-        {
-            selectedAudioTrackID = track.id
-            playerCoordinator.selectAudioTrack(id: track.id)
-            appliedPreferredAudio = true
-        }
-
-        if !appliedPreferredSubtitle,
-           let preferredSubtitleIndex = viewModel.preferredSubtitleStreamFFIndex,
-           let track = subtitleTracks.first(where: { $0.ffIndex == preferredSubtitleIndex })
-        {
-            selectedSubtitleTrackID = track.id
-            playerCoordinator.selectSubtitleTrack(id: track.id)
-            appliedPreferredSubtitle = true
-        }
-    }
-
-    private func skipMarker(to marker: PlexMarker) {
-        playerCoordinator.seek(to: marker.endTime)
-        viewModel.position = marker.endTime
-        timelinePosition = marker.endTime
-        showControls(temporarily: true)
-        watchTogetherViewModel.sendSeek(to: marker.endTime)
-    }
-
-    private func skipOverlay(marker: PlexMarker, title: String) -> some View {
-        SkipMarkerButton(title: title) {
-            skipMarker(to: marker)
-        }
-        .padding(.trailing, 20)
-        .padding(.bottom, 24)
-    }
-
-    private func handlePlaybackEnded() {
-        guard let media = viewModel.media else {
-            dismissPlayer(force: true)
-            return
-        }
-
-        switch media.type {
-        case .movie:
-            Task {
-                await handleMovieCompletion()
-            }
-        case .episode:
-            Task {
-                await handleEpisodeCompletion(for: media)
-            }
-        default:
-            dismissPlayer(force: true)
-        }
-    }
-
-    private func handleEpisodeCompletion(for _: MediaItem) async {
-        await viewModel.markPlaybackFinished()
-
-        guard settingsManager.playback.autoPlayNextEpisode else {
-            await MainActor.run {
-                dismissPlayer(force: true)
-            }
-            return
-        }
-
-        guard let nextItem = await viewModel.nextItemInQueue() else {
-            await MainActor.run {
-                dismissPlayer(force: true)
-            }
-            return
-        }
-
-        await startPlayback(of: nextItem)
-    }
-
-    private func handleMovieCompletion() async {
-        await viewModel.markPlaybackFinished()
-
-        guard let nextItem = await viewModel.nextItemInQueue() else {
-            await MainActor.run {
-                dismissPlayer(force: true)
-            }
-            return
-        }
-
-        await startPlayback(of: nextItem)
-    }
-
-    private func startPlayback(of episode: PlexItem) async {
-        await MainActor.run {
-            viewModel = PlayerViewModel(
-                playQueue: viewModel.playQueue,
-                ratingKey: episode.ratingKey,
-                context: context,
-            )
-        }
-
-        await viewModel.load()
     }
 }

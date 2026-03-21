@@ -26,7 +26,6 @@ struct SearchView: View {
         }
         .navigationTitle("tabs.search")
         .navigationBarTitleDisplayMode(.inline)
-        .userMenuToolbar()
         .searchable(
             text: $bindableViewModel.query,
             placement: .navigationBarDrawer(displayMode: .always),
@@ -86,9 +85,10 @@ struct SearchView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(SearchFilter.allCases) { filter in
-                    let isSelected = viewModel.activeFilters.contains(filter)
+                    let isSelected = viewModel.activeFilter == filter
                     Button {
-                        viewModel.toggleFilter(filter)
+                        viewModel.activeFilter = filter
+                        viewModel.filterDidChange()
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: filter.systemImageName)

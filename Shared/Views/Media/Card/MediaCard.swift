@@ -1,9 +1,7 @@
 import SwiftUI
 
 struct MediaCard: View {
-    @Environment(PlexAPIContext.self) private var plexApiContext
     #if os(tvOS)
-        @Environment(MediaFocusModel.self) private var focusModel
         @FocusState private var isFocused: Bool
     #endif
 
@@ -12,10 +10,6 @@ struct MediaCard: View {
     let artworkKind: MediaImageViewModel.ArtworkKind
     let showsLabels: Bool
     let onTap: () -> Void
-
-    private var progress: Double? {
-        media.viewProgressPercentage.map { $0 / 100 }
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: labelSpacing) {
@@ -34,10 +28,6 @@ struct MediaCard: View {
                         .font(secondaryLabelFont)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
-                    Text(media.tertiaryLabel ?? "")
-                        .font(secondaryLabelFont)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
                 }
             }
         }
@@ -45,11 +35,6 @@ struct MediaCard: View {
         #if os(tvOS)
             .focusable()
             .focused($isFocused)
-            .onChange(of: isFocused) { _, focused in
-                if focused, let playableItem = media.playableItem {
-                    focusModel.focusedMedia = playableItem
-                }
-            }
             .onPlayPauseCommand(perform: onTap)
         #endif
             .onTapGesture(perform: onTap)
@@ -58,7 +43,6 @@ struct MediaCard: View {
     private var artwork: some View {
         MediaImageView(
             viewModel: MediaImageViewModel(
-                context: plexApiContext,
                 artworkKind: artworkKind,
                 media: media,
             ),
@@ -67,18 +51,6 @@ struct MediaCard: View {
         .clipShape(
             RoundedRectangle(cornerRadius: 14, style: .continuous),
         )
-        .overlay(alignment: .topTrailing) {
-            WatchStatusBadge(media: media)
-        }
-        .overlay(alignment: .bottomLeading) {
-            if let progress {
-                ProgressView(value: progress)
-                    .progressViewStyle(.linear)
-                    .tint(.brandPrimary)
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 10)
-            }
-        }
     }
 
     private var labelSpacing: CGFloat {

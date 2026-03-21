@@ -2,42 +2,17 @@ import SwiftUI
 
 struct PlaybackSettingsTrack: Identifiable, Hashable {
     let track: PlayerTrack
-    let plexStream: PlexPartStream?
 
     var id: Int {
         track.id
     }
 
-    private var plexCodec: String? {
-        plexStream?.codec.uppercased()
-    }
-
     var title: String {
-        guard plexStream != nil else { return track.displayName }
-
-        if let plexDisplayTitle = plexStream?.displayTitle, !plexDisplayTitle.isEmpty {
-            switch track.type {
-            case .subtitle:
-                if let plexCodec {
-                    return "\(plexDisplayTitle) (\(plexCodec))"
-                }
-                return plexDisplayTitle
-            default:
-                return plexDisplayTitle
-            }
-        }
-
-        return track.displayName
+        track.displayName
     }
 
     var subtitle: String? {
-        guard plexStream != nil else { return track.codec?.uppercased() }
-
-        if let plexTitle = plexStream?.title, !plexTitle.isEmpty {
-            return plexTitle
-        }
-
-        return plexCodec ?? track.codec?.uppercased()
+        track.codec?.uppercased()
     }
 }
 

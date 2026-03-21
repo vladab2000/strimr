@@ -24,14 +24,6 @@ final class SettingsManager {
         settings.playback
     }
 
-    var interface: InterfaceSettings {
-        settings.interface
-    }
-
-    var downloads: DownloadSettings {
-        settings.downloads
-    }
-
     func setAutoPlayNextEpisode(_ enabled: Bool) {
         settings.playback.autoPlayNextEpisode = enabled
         persist()
@@ -59,47 +51,6 @@ final class SettingsManager {
 
     func updatePlayback(_ transform: (inout PlaybackSettings) -> Void) {
         transform(&settings.playback)
-        persist()
-    }
-
-    func setHiddenLibraryIds(_ ids: [String]) {
-        settings.interface.hiddenLibraryIds = ids.sorted()
-        persist()
-    }
-
-    func setLibraryDisplayed(_ libraryId: String, displayed: Bool) {
-        var hiddenIds = Set(settings.interface.hiddenLibraryIds)
-        if displayed {
-            hiddenIds.remove(libraryId)
-        } else {
-            hiddenIds.insert(libraryId)
-        }
-        settings.interface.hiddenLibraryIds = hiddenIds.sorted()
-        persist()
-    }
-
-    func setNavigationLibraryIds(_ ids: [String]) {
-        settings.interface.navigationLibraryIds = ids
-        persist()
-    }
-
-    func setDisplayCollections(_ enabled: Bool) {
-        settings.interface.displayCollections = enabled
-        persist()
-    }
-
-    func setDisplayPlaylists(_ enabled: Bool) {
-        settings.interface.displayPlaylists = enabled
-        persist()
-    }
-
-    func setDisplaySeerrDiscoverTab(_ enabled: Bool) {
-        settings.interface.displaySeerrDiscoverTab = enabled
-        persist()
-    }
-
-    func setDownloadWiFiOnly(_ enabled: Bool) {
-        settings.downloads.wifiOnly = enabled
         persist()
     }
 

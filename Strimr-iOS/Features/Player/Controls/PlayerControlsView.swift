@@ -1,11 +1,9 @@
 import SwiftUI
 
 struct PlayerControlsView: View {
-    var media: MediaItem?
+    var title: String
     var isPaused: Bool
     var isBuffering: Bool
-    var videoResolution: String?
-    var supportsHDR: Bool
     @Binding var position: Double
     var duration: Double?
     var bufferedAhead: Double
@@ -19,57 +17,25 @@ struct PlayerControlsView: View {
     var seekBackwardSeconds: Int
     var seekForwardSeconds: Int
     var onScrubbingChanged: (Bool) -> Void
-    var skipMarkerTitle: String?
-    var onSkipMarker: (() -> Void)?
     var isRotationLocked: Bool
     var onToggleRotationLock: () -> Void
-    var isWatchTogether: Bool
-    private var playbackBadges: [PlayerControlBadge] {
-        var badges: [PlayerControlBadge] = []
-
-        if let videoResolution {
-            badges.append(
-                PlayerControlBadge(
-                    id: "resolution",
-                    title: videoResolution,
-                    systemImage: nil,
-                ),
-            )
-        }
-
-        if supportsHDR {
-            badges.append(
-                PlayerControlBadge(
-                    id: "hdr",
-                    title: String(localized: "player.badge.hdr"),
-                    systemImage: "sparkles",
-                ),
-            )
-        }
-
-        return badges
-    }
 
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
                 PlayerControlsHeader(
-                    media: media,
+                    title: title,
                     onDismiss: onDismiss,
                     onShowSettings: onShowSettings,
-                    isWatchTogether: isWatchTogether,
                 )
 
                 Spacer(minLength: 0)
 
                 VStack(spacing: 18) {
-                    PlayerAuxiliaryControlsRow(
-                        isRotationLocked: isRotationLocked,
-                        onToggleRotationLock: onToggleRotationLock,
-                        skipMarkerTitle: skipMarkerTitle,
-                        onSkipMarker: onSkipMarker,
-                        badges: playbackBadges,
-                    )
+                    HStack {
+                        RotationLockButton(isLocked: isRotationLocked, action: onToggleRotationLock)
+                        Spacer()
+                    }
                     .padding(.horizontal, 24)
                     .opacity(isScrubbing ? 0 : 1)
                     .allowsHitTesting(!isScrubbing)
@@ -103,59 +69,10 @@ struct PlayerControlsView: View {
     }
 }
 
-private struct PlayerControlBadge: Identifiable {
-    var id: String
-    var title: String
-    var systemImage: String?
-}
-
-private struct PlayerAuxiliaryControlsRow: View {
-    var isRotationLocked: Bool
-    var onToggleRotationLock: () -> Void
-    var skipMarkerTitle: String?
-    var onSkipMarker: (() -> Void)?
-    var badges: [PlayerControlBadge]
-
-    var body: some View {
-        HStack(alignment: .bottom, spacing: 16) {
-            RotationLockButton(isLocked: isRotationLocked, action: onToggleRotationLock)
-
-            Spacer(minLength: 12)
-
-            VStack(alignment: .trailing, spacing: 8) {
-                if hasSkipMarker {
-                    if !badges.isEmpty {
-                        badgesRow
-                    }
-                    if let skipMarkerTitle, let onSkipMarker {
-                        SkipMarkerButton(title: skipMarkerTitle, action: onSkipMarker)
-                    }
-                } else if !badges.isEmpty {
-                    badgesRow
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .trailing)
-        }
-    }
-
-    private var hasSkipMarker: Bool {
-        skipMarkerTitle != nil && onSkipMarker != nil
-    }
-
-    private var badgesRow: some View {
-        HStack(spacing: 8) {
-            ForEach(badges) { badge in
-                PlayerBadge(badge.title, systemImage: badge.systemImage)
-            }
-        }
-    }
-}
-
 private struct PlayerControlsHeader: View {
-    var media: MediaItem?
+    var title: String
     var onDismiss: () -> Void
     var onShowSettings: () -> Void
-    var isWatchTogether: Bool
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -171,33 +88,10 @@ private struct PlayerControlsHeader: View {
                     )
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                if let title = media?.primaryLabel {
-                    Text(title)
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
-                }
-
-                if let subtitle = media?.tertiaryLabel {
-                    Text(subtitle)
-                        .font(.callout)
-                        .foregroundStyle(.white.opacity(0.8))
-                        .lineLimit(2)
-                }
-
-                if isWatchTogether {
-                    Text("watchTogether.badge")
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(Color.white.opacity(0.15)),
-                        )
-                        .foregroundStyle(.white.opacity(0.9))
-                }
-            }
+            Text(title)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(.white)
+                .lineLimit(2)
 
             Spacer()
 

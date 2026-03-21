@@ -1,9 +1,8 @@
 import SwiftUI
 
 struct PlayerControlsTVView: View {
-    var media: MediaItem?
+    var title: String
     var isPaused: Bool
-    var videoResolution: String?
     var supportsHDR: Bool
     @Binding var position: Double
     var duration: Double?
@@ -19,23 +18,11 @@ struct PlayerControlsTVView: View {
     var seekBackwardSeconds: Int
     var seekForwardSeconds: Int
     var onScrubbingChanged: (Bool) -> Void
-    var skipMarkerTitle: String?
-    var onSkipMarker: (() -> Void)?
     var onUserInteraction: () -> Void
-    var isWatchTogether: Bool
     @FocusState private var focusedControl: FocusTarget?
+
     private var playbackBadges: [PlayerControlBadge] {
         var badges: [PlayerControlBadge] = []
-
-        if let videoResolution {
-            badges.append(
-                PlayerControlBadge(
-                    id: "resolution",
-                    title: videoResolution,
-                    systemImage: nil,
-                ),
-            )
-        }
 
         if supportsHDR {
             badges.append(
@@ -54,31 +41,10 @@ struct PlayerControlsTVView: View {
         VStack(spacing: 16) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
-                    if let title = media?.primaryLabel {
-                        Text(title)
-                            .font(.title2.weight(.semibold))
-                            .foregroundStyle(.white)
-                            .lineLimit(2)
-                    }
-
-                    if let subtitle = media?.tertiaryLabel {
-                        Text(subtitle)
-                            .font(.callout)
-                            .foregroundStyle(.white.opacity(0.8))
-                            .lineLimit(2)
-                    }
-
-                    if isWatchTogether {
-                        Text("watchTogether.badge")
-                            .font(.caption.weight(.semibold))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(
-                                Capsule(style: .continuous)
-                                    .fill(Color.white.opacity(0.15)),
-                            )
-                            .foregroundStyle(.white.opacity(0.9))
-                    }
+                    Text(title)
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
                 }
 
                 Spacer()
@@ -88,8 +54,6 @@ struct PlayerControlsTVView: View {
 
             if !isScrubbing {
                 PlayerAuxiliaryControlsTVRow(
-                    skipMarkerTitle: skipMarkerTitle,
-                    onSkipMarker: onSkipMarker,
                     badges: playbackBadges,
                 )
                 .padding(.horizontal, 24)
@@ -170,36 +134,17 @@ private struct PlayerControlBadge: Identifiable {
 }
 
 private struct PlayerAuxiliaryControlsTVRow: View {
-    var skipMarkerTitle: String?
-    var onSkipMarker: (() -> Void)?
     var badges: [PlayerControlBadge]
 
     var body: some View {
         HStack {
             Spacer()
-            VStack(alignment: .trailing, spacing: 8) {
-                if hasSkipMarker {
-                    if !badges.isEmpty {
-                        badgesRow
+            if !badges.isEmpty {
+                HStack(spacing: 8) {
+                    ForEach(badges) { badge in
+                        PlayerBadge(badge.title, systemImage: badge.systemImage)
                     }
-                    if let skipMarkerTitle, let onSkipMarker {
-                        SkipMarkerButton(title: skipMarkerTitle, action: onSkipMarker)
-                    }
-                } else if !badges.isEmpty {
-                    badgesRow
                 }
-            }
-        }
-    }
-
-    private var hasSkipMarker: Bool {
-        skipMarkerTitle != nil && onSkipMarker != nil
-    }
-
-    private var badgesRow: some View {
-        HStack(spacing: 8) {
-            ForEach(badges) { badge in
-                PlayerBadge(badge.title, systemImage: badge.systemImage)
             }
         }
     }

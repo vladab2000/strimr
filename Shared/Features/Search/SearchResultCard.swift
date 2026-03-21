@@ -2,7 +2,6 @@ import Foundation
 import SwiftUI
 
 struct SearchResultCard: View {
-    @Environment(PlexAPIContext.self) private var plexApiContext
     let media: MediaDisplayItem
     let onTap: () -> Void
 
@@ -11,7 +10,6 @@ struct SearchResultCard: View {
             HStack(alignment: .top, spacing: 12) {
                 MediaImageView(
                     viewModel: MediaImageViewModel(
-                        context: plexApiContext,
                         artworkKind: .thumb,
                         media: media,
                     ),
@@ -21,9 +19,6 @@ struct SearchResultCard: View {
                 .overlay {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .strokeBorder(Color.primary.opacity(0.08))
-                }
-                .overlay(alignment: .topTrailing) {
-                    WatchStatusBadge(media: media)
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -62,7 +57,7 @@ struct SearchResultCard: View {
 }
 
 private struct TypeBadge: View {
-    let type: PlexItemType
+    let type: SCItemType
 
     var body: some View {
         Text(label)
@@ -79,38 +74,30 @@ private struct TypeBadge: View {
 
     private var label: String {
         switch type {
-        case .movie:
+        case .video:
             String(localized: "search.badge.movie")
-        case .show:
+        case .tvshow:
             String(localized: "search.badge.show")
         case .season:
             String(localized: "search.badge.season")
         case .episode:
             String(localized: "search.badge.episode")
-        case .collection:
-            String(localized: "search.badge.collection")
-        case .playlist:
-            String(localized: "search.badge.playlist")
-        case .unknown:
+        case .folder, .stream, .unknown:
             String(localized: "search.badge.unknown")
         }
     }
 
     private var color: Color {
         switch type {
-        case .movie:
+        case .video:
             .brandPrimary
-        case .show:
+        case .tvshow:
             .mint
         case .season:
             .orange
         case .episode:
             .purple
-        case .collection:
-            .teal
-        case .playlist:
-            .indigo
-        case .unknown:
+        case .folder, .stream, .unknown:
             .gray
         }
     }
@@ -119,22 +106,15 @@ private struct TypeBadge: View {
 private extension SearchResultCard {
     var subtitle: String {
         switch media.type {
-        case .movie:
-            media.playableItem?.year.map(String.init) ?? String(localized: "search.fallback.movie")
-        case .show:
-            media.secondaryLabel ?? String(localized: "search.fallback.show")
+        case .video:
+            media.year.map(String.init) ?? ""
+        case .tvshow:
+            media.secondaryLabel ?? ""
         case .season:
             media.secondaryLabel ?? media.title
         case .episode:
-            media.tertiaryLabel
-                ?? media.secondaryLabel
-                ?? media.playableItem?.parentTitle
-                ?? String(localized: "search.fallback.episode")
-        case .collection:
-            media.secondaryLabel ?? String(localized: "search.fallback.collection")
-        case .playlist:
-            media.secondaryLabel ?? String(localized: "search.fallback.playlist")
-        case .unknown:
+            media.secondaryLabel ?? ""
+        case .folder, .stream, .unknown:
             media.title
         }
     }

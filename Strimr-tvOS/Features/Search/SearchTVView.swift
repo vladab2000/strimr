@@ -81,9 +81,10 @@ struct SearchTVView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 32) {
                 ForEach(SearchFilter.allCases) { filter in
-                    let isSelected = viewModel.activeFilters.contains(filter)
+                    let isSelected = viewModel.activeFilter == filter
                     Button {
-                        viewModel.toggleFilter(filter)
+                        viewModel.activeFilter = filter
+                        viewModel.filterDidChange()
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: filter.systemImageName)

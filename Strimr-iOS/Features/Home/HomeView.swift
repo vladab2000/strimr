@@ -16,29 +16,25 @@ struct HomeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                if let hub = viewModel.continueWatching, hub.hasItems {
-                    MediaHubSection(title: hub.title) {
+                if !viewModel.latestVideos.isEmpty {
+                    MediaHubSection(title: String(localized: "home.latestVideos")) {
                         MediaCarousel(
-                            layout: .landscape,
-                            items: hub.items,
+                            layout: .portrait,
+                            items: viewModel.latestVideos,
                             showsLabels: true,
                             onSelectMedia: onSelectMedia,
                         )
                     }
                 }
 
-                if !viewModel.recentlyAdded.isEmpty {
-                    ForEach(viewModel.recentlyAdded) { hub in
-                        if hub.hasItems {
-                            MediaHubSection(title: hub.title) {
-                                MediaCarousel(
-                                    layout: .portrait,
-                                    items: hub.items,
-                                    showsLabels: true,
-                                    onSelectMedia: onSelectMedia,
-                                )
-                            }
-                        }
+                if !viewModel.latestShows.isEmpty {
+                    MediaHubSection(title: String(localized: "home.latestShows")) {
+                        MediaCarousel(
+                            layout: .portrait,
+                            items: viewModel.latestShows,
+                            showsLabels: true,
+                            onSelectMedia: onSelectMedia,
+                        )
                     }
                 }
 
@@ -60,7 +56,6 @@ struct HomeView: View {
         }
         .navigationTitle("tabs.home")
         .navigationBarTitleDisplayMode(.inline)
-        .userMenuToolbar()
         .task {
             await viewModel.load()
         }
