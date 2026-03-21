@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MediaCard: View {
     #if os(tvOS)
+        @Environment(MediaFocusModel.self) private var focusModel
         @FocusState private var isFocused: Bool
     #endif
 
@@ -35,6 +36,11 @@ struct MediaCard: View {
         #if os(tvOS)
             .focusable()
             .focused($isFocused)
+            .onChange(of: isFocused) { _, focused in
+                            if focused {
+                                focusModel.focusedMedia = media
+                            }
+                        }
             .onPlayPauseCommand(perform: onTap)
         #endif
             .onTapGesture(perform: onTap)
