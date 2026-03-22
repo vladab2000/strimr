@@ -11,6 +11,7 @@ final class MainCoordinator: ObservableObject {
 
     enum Route: Hashable {
         case mediaDetail(MediaDisplayItem)
+        case streamSelection(MediaDisplayItem)
     }
 
     @Published var tab: Tab = .home
@@ -48,8 +49,18 @@ final class MainCoordinator: ObservableObject {
     }
 
     func showMediaDetail(_ media: MediaDisplayItem) {
-        let route = Route.mediaDetail(media)
+        if media.type == .video || media.type == .episode {
+            showStreamSelection(media)
+            return
+        }
+        appendRoute(.mediaDetail(media))
+    }
 
+    func showStreamSelection(_ media: MediaDisplayItem) {
+        appendRoute(.streamSelection(media))
+    }
+
+    private func appendRoute(_ route: Route) {
         switch tab {
         case .home:
             homePath.append(route)

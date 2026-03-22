@@ -23,9 +23,9 @@ final class MediaDetailViewModel {
 
     var runtimeText: String? {
         guard let duration = media.duration else { return nil }
-        return TimeInterval(duration).mediaDurationText()
+        return duration.mediaDurationText()
     }
-
+    
     var yearText: String? {
         media.year.map(String.init)
     }
@@ -62,7 +62,7 @@ final class MediaDetailViewModel {
     func progressFraction(for item: MediaDisplayItem) -> Double? {
 /*        guard let percentage = item.viewProgressPercentage else { return nil }
         return min(1, max(0, percentage / 100))*/
-        return 0
+        return nil
     }
 
     private func fetchSeasons() async {

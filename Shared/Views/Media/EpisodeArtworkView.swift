@@ -11,7 +11,7 @@ struct EpisodeArtworkView: View {
     let episode: MediaDisplayItem
     let imageURL: URL?
     let width: CGFloat
-//    let runtime: String?
+    let runtime: String?
     let progress: Double?
     private let aspectRatio: CGFloat = 16 / 9
 
@@ -35,7 +35,7 @@ struct EpisodeArtworkView: View {
             .aspectRatio(aspectRatio, contentMode: .fit)
             .background(Color.black)
 
-/*            if let runtime {
+            if let runtime {
                 Label {
                     Text(runtime)
                         .font(.caption2)
@@ -48,7 +48,7 @@ struct EpisodeArtworkView: View {
                 .padding(.vertical, 4)
                 .background(.ultraThinMaterial, in: Capsule())
                 .padding(10)
-            }*/
+            }
         }
         .overlay(alignment: .bottomLeading) {
             if let progress {

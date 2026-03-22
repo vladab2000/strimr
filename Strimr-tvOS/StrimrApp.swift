@@ -6,7 +6,13 @@ struct StrimrApp: App {
     @State private var mediaFocusModel: MediaFocusModel
 
     init() {
-        _settingsManager = State(initialValue: SettingsManager())
+        let defaults: UserDefaults
+        if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PLAYGROUNDS"] == "1" {
+            defaults = UserDefaults(suiteName: "strimr.preview") ?? .init()
+        } else {
+            defaults = .standard
+        }
+        _settingsManager = State(initialValue: SettingsManager(userDefaults: defaults))
         _mediaFocusModel = State(initialValue: MediaFocusModel())
     }
 

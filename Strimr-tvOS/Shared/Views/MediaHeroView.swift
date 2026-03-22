@@ -88,16 +88,22 @@ struct MediaHeroContentView: View {
 
     @ViewBuilder
     private var metadataLine: some View {
-        let items = metadataItems
-        if !items.isEmpty {
-            HStack(spacing: 16) {
-                ForEach(items.indices, id: \.self) { index in
-                    Text(items[index])
-                }
+        HStack(spacing: 16) {
+    /*        if let tertiary = media.tertiaryLabel {
+                items.append(tertiary)
+            }*/
+            if let year = yearText {
+                Text(year)
             }
-            .font(.subheadline)
-            .foregroundStyle(.brandSecondary)
+            if let runtime = runtimeText {
+                Label(runtime, systemImage: "clock.fill")
+            }
+            if let contentRating = media.rating {
+                Label(String(format: "%.1f", contentRating), systemImage: "star.fill")
+            }
         }
+        .font(.subheadline)
+        .foregroundStyle(.brandSecondary)
     }
 
     @ViewBuilder
@@ -114,33 +120,9 @@ struct MediaHeroContentView: View {
         }
     }
 
-    private var metadataItems: [String] {
-        var items: [String] = []
-/*        if let tertiary = media.tertiaryLabel {
-            items.append(tertiary)
-        }*/
-        if let year = yearText {
-            items.append(year)
-        }
-        if let runtime = runtimeText {
-            items.append(runtime)
-        }
-        if let contentRating = media.rating {
-            items.append(String(format: "%.1f", contentRating))
-        }
-        return items
-    }
-
     private var runtimeText: String? {
         guard let duration = media.duration else { return nil }
-        let totalMinutes = duration / 60
-        let hours = totalMinutes / 60
-        let minutes = totalMinutes % 60
-        if hours > 0 {
-            return "\(hours)h \(minutes)m"
-        } else {
-            return "\(minutes)m"
-        }
+        return duration.mediaDurationText()
     }
 
     private var yearText: String? {

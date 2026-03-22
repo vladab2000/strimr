@@ -60,12 +60,16 @@ struct MainTabView: View {
         case let .mediaDetail(media):
             MediaDetailView(
                 viewModel: MediaDetailViewModel(media: media),
-                onPlay: { item in
+                onSelectMedia: coordinator.showMediaDetail
+            )
+        case let .streamSelection(media):
+            StreamSelectionView(
+                viewModel: StreamSelectionViewModel(media: media),
+                onPlay: { stream in
                     Task {
-                        await playbackLauncher.play(item: item)
+                        await playbackLauncher.play(stream: stream)
                     }
-                },
-                onSelectMedia: coordinator.showMediaDetail,
+                }
             )
         }
     }

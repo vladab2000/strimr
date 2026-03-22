@@ -5,16 +5,13 @@ struct MediaDetailView: View {
     @State var viewModel: MediaDetailViewModel
     @State private var isSummaryExpanded = false
     private let heroHeight: CGFloat = 320
-    private let onPlay: (MediaDisplayItem) -> Void
     private let onSelectMedia: (MediaDisplayItem) -> Void
 
     init(
         viewModel: MediaDetailViewModel,
-        onPlay: @escaping (MediaDisplayItem) -> Void = { _ in },
-        onSelectMedia: @escaping (MediaDisplayItem) -> Void = { _ in },
+        onSelectMedia: @escaping (MediaDisplayItem) -> Void = { _ in }
     ) {
         _viewModel = State(initialValue: viewModel)
-        self.onPlay = onPlay
         self.onSelectMedia = onSelectMedia
     }
 
@@ -34,21 +31,6 @@ struct MediaDetailView: View {
 
                     metadataBadges
                         .padding(.horizontal, 16)
-
-                    // Play button
-                    if vm.media.type == .video || vm.media.type == .episode {
-                        Button {
-                            onPlay(vm.media)
-                        } label: {
-                            Label("common.actions.play", systemImage: "play.fill")
-                                .font(.headline)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.brandPrimary)
-                        .padding(.horizontal, 16)
-                    }
 
                     // Summary
                     if let summary = vm.media.summary, !summary.isEmpty {
@@ -206,7 +188,7 @@ struct MediaDetailView: View {
 
     private func episodeRow(_ episode: MediaDisplayItem) -> some View {
         Button {
-            onPlay(episode)
+            onSelectMedia(episode)
         } label: {
             HStack(alignment: .top, spacing: 12) {
                 if let url = episode.thumbURL {

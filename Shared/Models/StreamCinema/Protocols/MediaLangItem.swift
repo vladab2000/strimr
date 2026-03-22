@@ -14,7 +14,13 @@ protocol MediaLangItem {
 }
 
 extension MediaLangItem {
-    var langString: AttributedString? {
+    var isCZLang: Bool {
+        if let langs, langs.contains("CZ") {
+            return true
+        }
+        return false
+    }
+    var langString: String? {
         guard let langs, !langs.isEmpty else { return nil }
         var arr = langs
         // Najdi jazyk CZ (case-insensitive) a dej jej na začátek
@@ -22,24 +28,21 @@ extension MediaLangItem {
             let cz = arr.remove(at: idx)
             arr.insert(cz, at: 0)
         }
-        var result = AttributedString("")
+        return arr.joined(separator: ", ")
         
-        if let first = arr.first, first.caseInsensitiveCompare("CZ") == .orderedSame {
-            var note = AttributedString("♫ ")
-            note.foregroundColor = .yellow
+/*        if let first = arr.first, first.caseInsensitiveCompare("CZ") == .orderedSame {
+            var note = String("♫ ")
             result.append(note)
-            var czStr = AttributedString(first)
-            czStr.foregroundColor = .yellow
-            czStr.font = .boldSystemFont(ofSize: 25)
+            var czStr = String(first)
             result.append(czStr)
-            if arr.count > 1 { result.append(AttributedString(", ")) }
+            if arr.count > 1 { result.append(", ") }
         }
         // Zbývající jazyky v defaultní barvě
         for (idx, lang) in arr.enumerated() where idx != 0 {
-            result.append(AttributedString(lang))
-            if idx < arr.count-1 { result.append(AttributedString(", ")) }
+            result.append(lang)
+            if idx < arr.count-1 { result.append(", ") }
         }
         
-        return result
+        return result*/
     }
 }

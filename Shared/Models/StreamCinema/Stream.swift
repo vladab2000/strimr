@@ -7,7 +7,16 @@
 
 import Foundation
 
-struct Stream: MediaItem, MediaLangItem {
+struct Stream: MediaItem, MediaLangItem, Hashable {
+
+    static func == (lhs: Stream, rhs: Stream) -> Bool {
+        lhs.url == rhs.url
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(url)
+    }
+
     var id: String { url ?? ""}
     let type: String //= "stream"
     let name: String
@@ -48,4 +57,19 @@ extension Stream {
         return 4
     }
 
+    static let preview1 = Stream(
+        type: "stream",
+        name: "Preview 1",
+        description: nil,
+        url: "url123",
+        art: nil,
+        quality: "1080p",
+        fps: 25.0,
+        audioInfo: ["lc 5.1 CZ"],
+        videoInfo: "AVC1 SDR",
+        size: "12345 MB",
+        bitrate: "1236548",
+        langs: ["CZ", "EN"],
+    )
+    
 }

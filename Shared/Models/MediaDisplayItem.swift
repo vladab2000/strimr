@@ -26,10 +26,10 @@ enum MediaDisplayItem: Identifiable, Hashable {
 
     var title: String {
         switch self {
-        case let .video(item): item.name
-        case let .tvshow(item): item.name
-        case let .season(item): item.name
-        case let .episode(item): item.name
+        case let .video(item): item.originalTitle ?? item.name
+        case let .tvshow(item): item.originalTitle ?? item.name
+        case let .season(item): item.originalTitle ?? item.name
+        case let .episode(item): item.originalTitle ?? item.name
         }
     }
 
@@ -106,13 +106,14 @@ enum MediaDisplayItem: Identifiable, Hashable {
         }
     }
 
-    var duration: Int? {
+    var duration: TimeInterval? {
         switch self {
-        case let .video(item): item.duration
-        case let .tvshow(item): item.duration
-        case let .season(item): item.duration
-        case let .episode(item): item.duration
+        case let .video(item): if let seconds = item.duration { return TimeInterval(seconds) }
+        case let .tvshow(item): if let seconds = item.duration { return TimeInterval(seconds) }
+        case let .season(item): if let seconds = item.duration { return TimeInterval(seconds) }
+        case let .episode(item): if let seconds = item.duration { return TimeInterval(seconds) }
         }
+        return nil
     }
 
     var genres: [String]? {
