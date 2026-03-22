@@ -10,7 +10,7 @@ struct SearchResultCard: View {
             HStack(alignment: .top, spacing: 12) {
                 MediaImageView(
                     viewModel: MediaImageViewModel(
-                        artworkKind: .thumb,
+                        artworkKind: .poster,
                         media: media,
                     ),
                 )

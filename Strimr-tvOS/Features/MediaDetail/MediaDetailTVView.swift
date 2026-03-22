@@ -6,15 +6,18 @@ struct MediaDetailTVView: View {
     @State var viewModel: MediaDetailViewModel
     @State private var focusedMedia: MediaDisplayItem?
     private let onPlay: (MediaDisplayItem) -> Void
+    private let onPlayFromStart: (String, MediaDisplayItem) -> Void
     private let onSelectMedia: (MediaDisplayItem) -> Void
 
     init(
         viewModel: MediaDetailViewModel,
         onPlay: @escaping (MediaDisplayItem) -> Void = { _ in },
+        onPlayFromStart: @escaping (String, MediaDisplayItem) -> Void = { _, _ in },
         onSelectMedia: @escaping (MediaDisplayItem) -> Void = { _ in },
     ) {
         _viewModel = State(initialValue: viewModel)
         self.onPlay = onPlay
+        self.onPlayFromStart = onPlayFromStart
         self.onSelectMedia = onSelectMedia
     }
 
@@ -22,7 +25,7 @@ struct MediaDetailTVView: View {
         @Bindable var bindableViewModel = viewModel
 
         GeometryReader { proxy in
-            ZStack {
+            ZStack(alignment: .leading) {
                 MediaHeroBackgroundView(media: bindableViewModel.media)
 
                 ScrollView {
@@ -35,6 +38,10 @@ struct MediaDetailTVView: View {
                         if bindableViewModel.media.type == .tvshow {
                             seasonsSection
                         }
+                        
+/*                        CastSection(viewModel: bindableViewModel)
+                        RelatedHubsSection(viewModel: bindableViewModel, onSelectMedia: onSelectMedia)
+*/
                     }
                 }
             }
@@ -51,11 +58,16 @@ struct MediaDetailTVView: View {
                 focusedMedia = bindableViewModel.media
             }
         }
+/*        .onChange(of: bindableViewModel.media) { oldValue, newValue in
+            if focusedMedia == nil || focusedMedia?.id == oldValue.id {
+                focusedMedia = newValue.mediaItem
+            }
+        }*/
         .toolbar(.hidden, for: .tabBar)
     }
 
     private var playButton: some View {
-        Button(action: { onPlay(viewModel.media) }) {
+        Button(action: handlePlay) {
             HStack(spacing: 12) {
                 Image(systemName: "play.fill")
                     .font(.title3.weight(.semibold))
@@ -63,6 +75,14 @@ struct MediaDetailTVView: View {
                     Text("common.actions.play")
                         .font(.headline)
                         .fontWeight(.semibold)
+/*                    Text(viewModel.primaryActionTitle)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    if let detail = viewModel.primaryActionDetail {
+                        Text(detail)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }*/
                 }
             }
             .frame(maxWidth: 520, alignment: .leading)
@@ -76,9 +96,67 @@ struct MediaDetailTVView: View {
     private var buttonsRow: some View {
         HStack(spacing: 16) {
             playButton
+            playFromStartButton
+/*            watchToggleButton
+
+            if viewModel.shouldShowWatchlistButton {
+                watchlistToggleButton
+            }*/
         }
     }
 
+    private var playFromStartButton: some View {
+        Button(action: handlePlayFromStart) {
+            Image(systemName: "arrow.counterclockwise")
+                .font(.title2.weight(.semibold))
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.regular)
+        .tint(.secondary)
+        .accessibilityLabel(Text("media.detail.playFromStart"))
+    }
+    
+/*    private var watchToggleButton: some View {
+        Button {
+            Task {
+                await viewModel.toggleWatchStatus()
+            }
+        } label: {
+            if viewModel.isUpdatingWatchStatus {
+                ProgressView()
+                    .tint(.brandSecondaryForeground)
+            } else {
+                Image(systemName: viewModel.watchActionIcon)
+                    .font(.title2.weight(.semibold))
+            }
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.regular)
+        .tint(.secondary)
+        .disabled(viewModel.isLoading || viewModel.isUpdatingWatchStatus)
+    }*/
+    
+/*    private var watchlistToggleButton: some View {
+        Button {
+            Task {
+                await viewModel.toggleWatchlistStatus()
+            }
+        } label: {
+            if viewModel.isLoadingWatchlistStatus || viewModel.isUpdatingWatchlistStatus {
+                ProgressView()
+                    .tint(.brandSecondaryForeground)
+            } else {
+                Image(systemName: viewModel.watchlistActionIcon)
+                    .font(.title2.weight(.semibold))
+            }
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.regular)
+        .tint(.secondary)
+        .disabled(viewModel.isLoading || viewModel.isLoadingWatchlistStatus || viewModel.isUpdatingWatchlistStatus)
+        .accessibilityLabel(Text(viewModel.watchlistActionTitle))
+    }*/
+    
     private var seasonsSection: some View {
         VStack(alignment: .leading, spacing: 20) {
             seasonSelector
@@ -137,6 +215,8 @@ struct MediaDetailTVView: View {
                     ForEach(viewModel.episodes) { episode in
                         EpisodeArtworkCard(
                             episode: episode,
+                            imageURL: episode.thumbURL,
+                            progress: viewModel.progressFraction(for: episode),
                             width: 460,
                             onPlay: {
                                 onPlay(episode)
@@ -151,6 +231,20 @@ struct MediaDetailTVView: View {
                 .padding(.vertical, 4)
             }
             .focusSection()
+        }
+    }
+    
+    private func handlePlay() {
+        Task {
+            //guard let ratingKey = await viewModel.playbackRatingKey() else { return }
+            onPlay(viewModel.media/*ratingKey, playbackType*/)
+        }
+    }
+
+    private func handlePlayFromStart() {
+        Task {
+            //guard let ratingKey = await viewModel.playbackRatingKey() else { return }
+            onPlayFromStart("", viewModel.media /*ratingKey, playbackType*/)
         }
     }
 }
@@ -201,6 +295,8 @@ private struct SeasonPillButton: View {
 
 private struct EpisodeArtworkCard: View {
     let episode: MediaDisplayItem
+    let imageURL: URL?
+    let progress: Double?
     let width: CGFloat
     let onPlay: () -> Void
     let onFocus: () -> Void
@@ -210,62 +306,12 @@ private struct EpisodeArtworkCard: View {
     private let aspectRatio: CGFloat = 16 / 9
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ZStack(alignment: .topLeading) {
-                AsyncImage(url: episode.thumbURL) { phase in
-                    switch phase {
-                    case let .success(image):
-                        image
-                            .resizable()
-                            .scaledToFit()
-                    case .empty:
-                        Color.gray.opacity(0.15)
-                    case .failure:
-                        Color.gray.opacity(0.15)
-                    @unknown default:
-                        Color.gray.opacity(0.15)
-                    }
-                }
-                .frame(width: width)
-                .aspectRatio(aspectRatio, contentMode: .fit)
-                .background(Color.black)
-
-                if let duration = episode.duration {
-                    let minutes = duration / 60
-                    Label {
-                        Text("\(minutes)m")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                    } icon: {
-                        Image(systemName: "clock")
-                            .font(.caption2)
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(.ultraThinMaterial, in: Capsule())
-                    .padding(10)
-                }
-            }
-            .frame(width: width)
-            .clipped()
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay {
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(.white.opacity(0.05))
-            }
-
-            Text(episode.title)
-                .font(.callout.weight(.semibold))
-                .lineLimit(2)
-
-            if let summary = episode.summary {
-                Text(summary)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(3)
-            }
-        }
-        .frame(width: width)
+        EpisodeArtworkView(
+            episode: episode,
+            imageURL: imageURL,
+            width: width,
+            progress: progress,
+        )
         .focusable()
         .focused($isFocused)
         .scaleEffect(isFocused ? 1.12 : 1)

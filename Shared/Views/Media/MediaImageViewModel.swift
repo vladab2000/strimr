@@ -5,7 +5,7 @@ import Observation
 @Observable
 final class MediaImageViewModel {
     enum ArtworkKind: String {
-        case thumb
+        case poster
         case art
     }
 
@@ -20,10 +20,10 @@ final class MediaImageViewModel {
 
     func load() async {
         imageURL = switch artworkKind {
-        case .thumb:
-            media.thumbURL
+        case .poster:
+            media.posterURL
         case .art:
-            media.artURL
+            media.funartURL
         }
     }
 }

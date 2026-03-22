@@ -43,15 +43,28 @@ enum MediaDisplayItem: Identifiable, Hashable {
     }
 
     var thumbURL: URL? {
-        let art = artValue
-        if let poster = art?.poster, let url = URL(string: poster) { return url }
-        if let thumb = art?.thumb, let url = URL(string: thumb) { return url }
+        if let thumb = artValue?.thumb, let url = URL(string: thumb) { return url }
         return nil
     }
 
-    var artURL: URL? {
+    var funartURL: URL? {
         if let fanart = artValue?.fanart, let url = URL(string: fanart) { return url }
-        return thumbURL
+        return nil
+    }
+
+    var bannerURL: URL? {
+        if let banner = artValue?.banner, let url = URL(string: banner) { return url }
+        return nil
+    }
+
+    var posterURL: URL? {
+        if let poster = artValue?.poster, let url = URL(string: poster) { return url }
+        return nil
+    }
+
+    var clearlogoURL: URL? {
+        if let clearlogo = artValue?.clearlogo, let url = URL(string: clearlogo) { return url }
+        return nil
     }
 
     var primaryLabel: String {
@@ -143,5 +156,12 @@ enum MediaDisplayItem: Identifiable, Hashable {
         } else {
             return nil
         }
+    }
+    
+    var tvShow: TvShow? {
+        if case .tvshow(let show) = self {
+            return show
+        }
+        return nil
     }
 }

@@ -878,7 +878,6 @@
       }
     },
     "media.detail.playFromStart" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

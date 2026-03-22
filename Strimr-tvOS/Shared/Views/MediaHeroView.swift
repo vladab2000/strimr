@@ -31,7 +31,7 @@ struct MediaHeroBackgroundView: View {
     }
 
     private func loadImage() async {
-        imageURL = media.artURL
+        imageURL = media.funartURL
             ?? media.thumbURL
     }
 }
@@ -46,9 +46,22 @@ struct MediaHeroContentView: View {
 
     private var heroContent: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(media.primaryLabel)
-                .font(.title2.bold())
-                .lineLimit(2)
+            if let clearlogoURL = media.clearlogoURL {
+                AsyncImage(url: clearlogoURL) { phase in
+                    if case .success(let image) = phase {
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: 400, maxHeight: 120)
+                    }
+                    
+                }
+            }
+            else {
+                Text(media.primaryLabel)
+                    .font(.title2.bold())
+                    .lineLimit(2)
+            }
 
             if let secondary = media.secondaryLabel, media.type != .video, media.type != .tvshow {
                 Text(secondary)

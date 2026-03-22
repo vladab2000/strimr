@@ -18,7 +18,7 @@ final class MediaDetailViewModel {
     }
 
     var heroImageURL: URL? {
-        media.artURL
+        media.bannerURL
     }
 
     var runtimeText: String? {
@@ -58,6 +58,12 @@ final class MediaDetailViewModel {
         episodes = []
         await fetchEpisodes(for: id)
     }
+    
+    func progressFraction(for item: MediaDisplayItem) -> Double? {
+/*        guard let percentage = item.viewProgressPercentage else { return nil }
+        return min(1, max(0, percentage / 100))*/
+        return 0
+    }
 
     private func fetchSeasons() async {
         guard let urlPath = media.url else { return }
@@ -70,21 +76,27 @@ final class MediaDetailViewModel {
             let fetchedSeasons = response.items
                 .compactMap { MediaDisplayItem(from: $0) }
                 .filter { $0.type == .season }
+            
+            if fetchedSeasons.isEmpty {
+                let season = Season.create(from: media.tvShow)
+                seasons = [.season(season)]
 
-            seasons = fetchedSeasons
-
-            guard !fetchedSeasons.isEmpty else {
-                selectedSeasonId = nil
-                episodes = []
-                return
+                let fetchedEpisodes = response.items
+                    .compactMap { MediaDisplayItem(from: $0) }
+                    .filter { $0.type == .episode }
+                
+                episodes = fetchedEpisodes
             }
 
-            let firstSeasonId = fetchedSeasons.first?.id
+            let firstSeasonId = seasons.first?.id
             selectedSeasonId = firstSeasonId
 
-            if let seasonId = firstSeasonId {
-                await fetchEpisodes(for: seasonId)
+            if !fetchedSeasons.isEmpty {
+                if let seasonId = firstSeasonId {
+                    await fetchEpisodes(for: seasonId)
+                }
             }
+
         } catch {
             seasons = []
             selectedSeasonId = nil

@@ -43,7 +43,7 @@ struct PortraitMediaCard: View {
         MediaCard(
             size: CGSize(width: resolvedWidth, height: resolvedHeight),
             media: media,
-            artworkKind: .thumb,
+            artworkKind: .poster,
             showsLabels: showsLabels,
             onTap: onTap,
         )
