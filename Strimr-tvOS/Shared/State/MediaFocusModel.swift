@@ -3,9 +3,9 @@ import Observation
 @MainActor
 @Observable
 final class MediaFocusModel {
-    var focusedMedia: MediaDisplayItem?
+    var focusedMedia: Media?
 
-    init(focusedMedia: MediaDisplayItem? = nil) {
+    init(focusedMedia: Media? = nil) {
         self.focusedMedia = focusedMedia
     }
 }

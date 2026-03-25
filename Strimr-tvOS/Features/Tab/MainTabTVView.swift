@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MainTabTVView: View {
     @Environment(SettingsManager.self) var settingsManager
+    @Environment(WatchHistoryManager.self) var watchHistoryManager
     @StateObject var coordinator = MainCoordinator()
     @State var homeViewModel: HomeViewModel
 
@@ -15,7 +16,7 @@ struct MainTabTVView: View {
                 NavigationStack(path: coordinator.pathBinding(for: .home)) {
                     HomeTVView(
                         viewModel: homeViewModel,
-                        onSelectMedia: coordinator.showMediaDetail,
+                        onSelectMedia: coordinator.showMediaDetail
                     )
                     .navigationDestination(for: MainCoordinator.Route.self) { route in
                         destination(for: route)
@@ -48,13 +49,13 @@ struct MainTabTVView: View {
             }
         }
         .environmentObject(coordinator)
-        .fullScreenCover(isPresented: $coordinator.isPresentingPlayer, onDismiss: coordinator.resetPlayer) {
+        .fullScreenCover(isPresented: $coordinator.isPresentingPlayer, onDismiss: {
+            coordinator.resetPlayer()
+            Task { await watchHistoryManager.load() }
+        }) {
             if let streamURL = coordinator.selectedStreamURL {
                 PlayerTVWrapper(
-                    viewModel: PlayerViewModel(
-                        streamURL: streamURL,
-                        title: coordinator.selectedStreamTitle
-                    ),
+                    viewModel: makePlayerViewModel(streamURL: streamURL),
                     onExit: coordinator.resetPlayer,
                 )
             }
@@ -72,9 +73,13 @@ struct MainTabTVView: View {
         case let .streamSelection(media):
             StreamSelectionTVView(
                 viewModel: StreamSelectionViewModel(media: media),
-                onPlay: { stream in
+                onPlay: { stream, resumePosition in
                     Task {
-                        await playbackLauncher.play(stream: stream)
+                        await playbackLauncher.play(
+                            stream: stream,
+                            media: media,
+                            resumePosition: resumePosition
+                        )
                     }
                 }
             )
@@ -82,8 +87,30 @@ struct MainTabTVView: View {
     }
 
     private var playbackLauncher: PlaybackLauncher {
-        PlaybackLauncher(
-            coordinator: coordinator
-        )
+        PlaybackLauncher(coordinator: coordinator, watchHistoryManager: watchHistoryManager)
+    }
+
+    private func makePlayerViewModel(streamURL: URL) -> PlayerViewModel {
+        let vm = PlayerViewModel(streamURL: streamURL, title: coordinator.selectedStreamTitle)
+        vm.mediaUrl = coordinator.selectedMediaUrl
+        vm.resumePosition = coordinator.selectedResumePosition
+
+        let mediaUrl = coordinator.selectedMediaUrl
+        let season = coordinator.selectedSeasonNumber
+        let episode = coordinator.selectedEpisodeNumber
+        let manager = watchHistoryManager
+
+        vm.onSavePosition = { position in
+            guard let mediaUrl else { return }
+            Task { @MainActor in
+                await manager.updatePosition(
+                    url: mediaUrl,
+                    season: season,
+                    episode: episode,
+                    position: position
+                )
+            }
+        }
+        return vm
     }
 }

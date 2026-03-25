@@ -4,9 +4,9 @@ struct MediaCarousel: View {
     enum Layout { case portrait, landscape }
 
     let layout: Layout
-    let items: [MediaDisplayItem]
+    let items: [Media]
     let showsLabels: Bool
-    let onSelectMedia: (MediaDisplayItem) -> Void
+    let onSelectMedia: (Media) -> Void
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -28,7 +28,7 @@ struct MediaCarousel: View {
     }
 
     @ViewBuilder
-    private func card(for media: MediaDisplayItem) -> some View {
+    private func card(for media: Media) -> some View {
         switch layout {
         case .portrait:
             PortraitMediaCard(media: media, showsLabels: showsLabels) {

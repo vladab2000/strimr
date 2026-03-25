@@ -4,6 +4,7 @@ import SwiftUI
 struct StrimrApp: App {
     @State private var settingsManager: SettingsManager
     @State private var mediaFocusModel: MediaFocusModel
+    @State private var watchHistoryManager = WatchHistoryManager()
 
     init() {
         let defaults: UserDefaults
@@ -21,7 +22,9 @@ struct StrimrApp: App {
             ContentView()
                 .environment(settingsManager)
                 .environment(mediaFocusModel)
+                .environment(watchHistoryManager)
                 .preferredColorScheme(.dark)
+                .task { await watchHistoryManager.load() }
         }
     }
 }

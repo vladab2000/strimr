@@ -5,11 +5,11 @@ struct MediaDetailView: View {
     @State var viewModel: MediaDetailViewModel
     @State private var isSummaryExpanded = false
     private let heroHeight: CGFloat = 320
-    private let onSelectMedia: (MediaDisplayItem) -> Void
+    private let onSelectMedia: (Media) -> Void
 
     init(
         viewModel: MediaDetailViewModel,
-        onSelectMedia: @escaping (MediaDisplayItem) -> Void = { _ in }
+        onSelectMedia: @escaping (Media) -> Void = { _ in }
     ) {
         _viewModel = State(initialValue: viewModel)
         self.onSelectMedia = onSelectMedia
@@ -54,7 +54,7 @@ struct MediaDetailView: View {
                 }
 
                 // Seasons & Episodes (for TV shows)
-                if vm.media.type == .tvshow {
+                if vm.media.itemType == .tvshow {
                     seasonsSection
                 }
             }
@@ -186,7 +186,7 @@ struct MediaDetailView: View {
         }
     }
 
-    private func episodeRow(_ episode: MediaDisplayItem) -> some View {
+    private func episodeRow(_ episode: Media) -> some View {
         Button {
             onSelectMedia(episode)
         } label: {

@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct Stream: MediaItem, MediaLangItem, Hashable {
+struct Stream: Codable, Hashable, Identifiable {
 
     static func == (lhs: Stream, rhs: Stream) -> Bool {
         lhs.url == rhs.url
@@ -17,12 +17,8 @@ struct Stream: MediaItem, MediaLangItem, Hashable {
         hasher.combine(url)
     }
 
-    var id: String { url ?? ""}
-    let type: String //= "stream"
-    let name: String
-    let description: String?
+    var id: String { url ?? "" }
     let url: String?
-    let art: Art?
     let quality: String?
     let fps: Double?
     let audioInfo: [String]?
@@ -32,9 +28,8 @@ struct Stream: MediaItem, MediaLangItem, Hashable {
     let langs: [String]?
 }
 
-
 extension Stream {
-    
+
     var sizeMb: Int {
         guard let s = size else { return 0 }
         let lowered = s.lowercased()
@@ -48,7 +43,7 @@ extension Stream {
             return Int(Double(s) ?? 0)
         }
     }
-    
+
     var qualityRank: Int {
         let quality = quality?.lowercased() ?? ""
         if quality.contains("1080") { return 1 }
@@ -57,19 +52,31 @@ extension Stream {
         return 4
     }
 
+    var isCZLang: Bool {
+        if let langs, langs.contains("CZ") {
+            return true
+        }
+        return false
+    }
+
+    var langString: String? {
+        guard let langs, !langs.isEmpty else { return nil }
+        var arr = langs
+        if let idx = arr.firstIndex(where: { $0.caseInsensitiveCompare("CZ") == .orderedSame }) {
+            let cz = arr.remove(at: idx)
+            arr.insert(cz, at: 0)
+        }
+        return arr.joined(separator: ", ")
+    }
+
     static let preview1 = Stream(
-        type: "stream",
-        name: "Preview 1",
-        description: nil,
         url: "url123",
-        art: nil,
         quality: "1080p",
         fps: 25.0,
         audioInfo: ["lc 5.1 CZ"],
         videoInfo: "AVC1 SDR",
         size: "12345 MB",
         bitrate: "1236548",
-        langs: ["CZ", "EN"],
+        langs: ["CZ", "EN"]
     )
-    
 }

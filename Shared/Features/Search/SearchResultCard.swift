@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 
 struct SearchResultCard: View {
-    let media: MediaDisplayItem
+    let media: Media
     let onTap: () -> Void
 
     var body: some View {
@@ -29,7 +29,7 @@ struct SearchResultCard: View {
 
                         Spacer(minLength: 8)
 
-                        TypeBadge(type: media.type)
+                        TypeBadge(type: media.itemType)
                     }
 
                     Text(subtitle)
@@ -74,7 +74,7 @@ private struct TypeBadge: View {
 
     private var label: String {
         switch type {
-        case .video:
+        case .movie:
             String(localized: "search.badge.movie")
         case .tvshow:
             String(localized: "search.badge.show")
@@ -89,7 +89,7 @@ private struct TypeBadge: View {
 
     private var color: Color {
         switch type {
-        case .video:
+        case .movie:
             .brandPrimary
         case .tvshow:
             .mint
@@ -105,8 +105,8 @@ private struct TypeBadge: View {
 
 private extension SearchResultCard {
     var subtitle: String {
-        switch media.type {
-        case .video:
+        switch media.itemType {
+        case .movie:
             media.year.map(String.init) ?? ""
         case .tvshow:
             media.secondaryLabel ?? ""

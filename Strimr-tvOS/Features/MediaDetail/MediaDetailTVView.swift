@@ -4,12 +4,12 @@ import SwiftUI
 struct MediaDetailTVView: View {
     @EnvironmentObject private var coordinator: MainCoordinator
     @State var viewModel: MediaDetailViewModel
-    @State private var focusedMedia: MediaDisplayItem?
-    private let onSelectMedia: (MediaDisplayItem) -> Void
+    @State private var focusedMedia: Media?
+    private let onSelectMedia: (Media) -> Void
 
     init(
         viewModel: MediaDetailViewModel,
-        onSelectMedia: @escaping (MediaDisplayItem) -> Void = { _ in }
+        onSelectMedia: @escaping (Media) -> Void = { _ in }
     ) {
         _viewModel = State(initialValue: viewModel)
         self.onSelectMedia = onSelectMedia
@@ -27,7 +27,7 @@ struct MediaDetailTVView: View {
                         MediaHeroContentView(media: focusedMedia ?? bindableViewModel.media)
                             .frame(maxWidth: proxy.size.width * 0.60, alignment: .leading)
 
-                        if bindableViewModel.media.type == .tvshow {
+                        if bindableViewModel.media.itemType == .tvshow {
                             seasonsSection
                         }
                         
@@ -184,7 +184,7 @@ private struct SeasonPillButton: View {
 }
 
 private struct EpisodeArtworkCard: View {
-    let episode: MediaDisplayItem
+    let episode: Media
     let imageURL: URL?
     let runtime: String?
     let progress: Double?

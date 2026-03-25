@@ -2,12 +2,13 @@ import SwiftUI
 
 @MainActor
 struct HomeView: View {
+    @Environment(WatchHistoryManager.self) private var watchHistoryManager
     @State var viewModel: HomeViewModel
-    let onSelectMedia: (MediaDisplayItem) -> Void
+    let onSelectMedia: (Media) -> Void
 
     init(
         viewModel: HomeViewModel,
-        onSelectMedia: @escaping (MediaDisplayItem) -> Void = { _ in },
+        onSelectMedia: @escaping (Media) -> Void = { _ in },
     ) {
         _viewModel = State(initialValue: viewModel)
         self.onSelectMedia = onSelectMedia
@@ -16,6 +17,17 @@ struct HomeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
+                if !viewModel.continueWatching.isEmpty {
+                    MediaHubSection(title: String(localized: "home.continueWatching")) {
+                        MediaCarousel(
+                            layout: .landscape,
+                            items: viewModel.continueWatching,
+                            showsLabels: true,
+                            onSelectMedia: onSelectMedia,
+                        )
+                    }
+                }
+
                 if !viewModel.latestVideos.isEmpty {
                     MediaHubSection(title: String(localized: "home.latestVideos")) {
                         MediaCarousel(
@@ -57,7 +69,11 @@ struct HomeView: View {
         .navigationTitle("tabs.home")
         .navigationBarTitleDisplayMode(.inline)
         .task {
+            viewModel.watchHistoryManager = watchHistoryManager
             await viewModel.load()
+        }
+        .onAppear {
+            viewModel.refreshContinueWatching()
         }
         .refreshable {
             await viewModel.reload()

@@ -3,7 +3,7 @@ import UIKit
 
 struct MediaHeroBackgroundView: View {
 
-    let media: MediaDisplayItem
+    let media: Media
 
     @State private var imageURL: URL?
 
@@ -37,7 +37,7 @@ struct MediaHeroBackgroundView: View {
 }
 
 struct MediaHeroContentView: View {
-    let media: MediaDisplayItem
+    let media: Media
     private let summaryLineLimit = 3
 
     var body: some View {
@@ -63,7 +63,7 @@ struct MediaHeroContentView: View {
                     .lineLimit(2)
             }
 
-            if let secondary = media.secondaryLabel, media.type != .video, media.type != .tvshow {
+            if let secondary = media.secondaryLabel, media.itemType != .movie, media.itemType != .tvshow {
                 Text(secondary)
                     .font(.headline)
                     .foregroundStyle(.brandSecondary)
@@ -121,8 +121,7 @@ struct MediaHeroContentView: View {
     }
 
     private var runtimeText: String? {
-        guard let duration = media.duration else { return nil }
-        return duration.mediaDurationText()
+        media.durationText
     }
 
     private var yearText: String? {

@@ -3,13 +3,14 @@ import SwiftUI
 @MainActor
 struct HomeTVView: View {
     @Environment(MediaFocusModel.self) private var focusModel
+    @Environment(WatchHistoryManager.self) private var watchHistoryManager
 
     @State var viewModel: HomeViewModel
-    let onSelectMedia: (MediaDisplayItem) -> Void
+    let onSelectMedia: (Media) -> Void
 
     init(
         viewModel: HomeViewModel,
-        onSelectMedia: @escaping (MediaDisplayItem) -> Void = { _ in },
+        onSelectMedia: @escaping (Media) -> Void = { _ in },
     ) {
         _viewModel = State(initialValue: viewModel)
         self.onSelectMedia = onSelectMedia
@@ -38,7 +39,11 @@ struct HomeTVView: View {
             }
         }
         .task {
+            viewModel.watchHistoryManager = watchHistoryManager
             await viewModel.load()
+        }
+        .onAppear {
+            viewModel.refreshContinueWatching()
         }
         .onChange(of: heroMedia?.id) { _, _ in
             updateInitialFocus()
@@ -51,6 +56,17 @@ struct HomeTVView: View {
     private var homeContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 32) {
+                if !viewModel.continueWatching.isEmpty {
+                    MediaHubSection(title: String(localized: "home.continueWatching")) {
+                        MediaCarousel(
+                            layout: .landscape,
+                            items: viewModel.continueWatching,
+                            showsLabels: true,
+                            onSelectMedia: onSelectMedia,
+                        )
+                    }
+                }
+
                 if !viewModel.latestVideos.isEmpty {
                      MediaHubSection(title: String(localized: "home.latestVideos")) {
                          MediaCarousel(
@@ -104,8 +120,8 @@ struct HomeTVView: View {
         }
     }
 
-    private var heroMedia: MediaDisplayItem? {
-        viewModel.latestVideos.first ?? viewModel.latestShows.first
+    private var heroMedia: Media? {
+        viewModel.continueWatching.first ?? viewModel.latestVideos.first ?? viewModel.latestShows.first
     }
 
     private func updateInitialFocus() {

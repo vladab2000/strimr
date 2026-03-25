@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct EpisodeArtworkView: View {
-    let episode: MediaDisplayItem
+    let episode: Media
     let imageURL: URL?
     let width: CGFloat
     let runtime: String?

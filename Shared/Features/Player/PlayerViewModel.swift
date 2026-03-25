@@ -14,6 +14,12 @@ final class PlayerViewModel {
     var bufferedAhead = 0.0
     var isPaused = false
 
+    var mediaUrl: String?
+    var resumePosition: Double?
+    var onSavePosition: ((Int) -> Void)?
+
+    private var lastSaveTime: Date = .distantPast
+
     init(streamURL: URL, title: String) {
         self.streamURL = streamURL
         self.title = title
@@ -32,6 +38,7 @@ final class PlayerViewModel {
         case .timePos:
             guard !isScrubbing else { return }
             position = data as? Double ?? 0.0
+            periodicSave()
         case .duration:
             duration = data as? Double
         case .demuxerCacheDuration:
@@ -42,6 +49,12 @@ final class PlayerViewModel {
     }
 
     func handleStop() {
-        // No timeline reporting needed for StreamCinema
+        onSavePosition?(Int(position))
+    }
+
+    private func periodicSave() {
+        guard Date().timeIntervalSince(lastSaveTime) >= 15 else { return }
+        lastSaveTime = Date()
+        onSavePosition?(Int(position))
     }
 }

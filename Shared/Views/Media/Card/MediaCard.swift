@@ -7,7 +7,7 @@ struct MediaCard: View {
     #endif
 
     let size: CGSize
-    let media: MediaDisplayItem
+    let media: Media
     let artworkKind: MediaImageViewModel.ArtworkKind
     let showsLabels: Bool
     let onTap: () -> Void
@@ -57,6 +57,26 @@ struct MediaCard: View {
         .clipShape(
             RoundedRectangle(cornerRadius: 14, style: .continuous),
         )
+        .overlay(alignment: .bottom) {
+            if let progress = media.progressFraction {
+                GeometryReader { geo in
+                    VStack {
+                        Spacer()
+                        ZStack(alignment: .leading) {
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.4))
+                                .frame(height: 4)
+                            Rectangle()
+                                .fill(Color.brandPrimary)
+                                .frame(width: geo.size.width * progress, height: 4)
+                        }
+                    }
+                }
+                .clipShape(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                )
+            }
+        }
     }
 
     private var labelSpacing: CGFloat {

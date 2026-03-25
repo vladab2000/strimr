@@ -5,11 +5,11 @@ struct StreamSelectionView: View {
     @State var viewModel: StreamSelectionViewModel
     @State private var isSummaryExpanded = false
     private let heroHeight: CGFloat = 320
-    private let onPlay: (Stream) -> Void
+    private let onPlay: (Stream, Double?) -> Void
     
     init(
         viewModel: StreamSelectionViewModel,
-        onPlay: @escaping (Stream) -> Void = { _ in }
+        onPlay: @escaping (Stream, Double?) -> Void = { _, _ in }
     ) {
         _viewModel =  State(initialValue: viewModel)
         self.onPlay = onPlay
@@ -55,6 +55,9 @@ struct StreamSelectionView: View {
         .toolbar(.hidden, for: .tabBar)
         .task {
             await viewModel.loadStreams()
+            if case let .autoPlay(stream, resumePosition) = viewModel.autoPlayResult {
+                onPlay(stream, resumePosition)
+            }
         }
     }
 
@@ -165,7 +168,7 @@ struct StreamSelectionView: View {
 
     private func streamRow(_ stream: Stream) -> some View {
         Button {
-            onPlay(stream)
+            onPlay(stream, nil)
         } label: {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {

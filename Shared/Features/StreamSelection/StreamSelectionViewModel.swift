@@ -4,13 +4,19 @@ import Observation
 @MainActor
 @Observable
 final class StreamSelectionViewModel {
-    let media: MediaDisplayItem
+    enum AutoPlayResult: Equatable {
+        case none
+        case autoPlay(stream: Stream, resumePosition: Double?)
+    }
+
+    let media: Media
     var streams: [Stream] = []
     var isLoading = false
     var isResolvingStream = false
     var errorMessage: String?
+    var autoPlayResult: AutoPlayResult = .none
 
-    init(media: MediaDisplayItem) {
+    init(media: Media) {
         self.media = media
     }
 
@@ -27,8 +33,7 @@ final class StreamSelectionViewModel {
     }
 
     var runtimeText: String? {
-        guard let duration = media.duration else { return nil }
-        return TimeInterval(duration).mediaDurationText()
+        media.durationText
     }
 
     var genresText: String? {
@@ -37,32 +42,22 @@ final class StreamSelectionViewModel {
     }
 
     func loadStreams() async {
+        // First try inline streams from media
+        if let inlineStreams = media.streams, !inlineStreams.isEmpty {
+            streams = sortedStreams(inlineStreams)
+            checkAutoPlay()
+            return
+        }
+
         guard let urlPath = media.url else { return }
         isLoading = true
         defer { isLoading = false }
         do {
-            let response = try await ApiClient.fetchMenu(urlPath: urlPath)
+            let items = try await ApiClient.fetchMenu(urlPath: urlPath)
             
-            let allStreams = response.items.compactMap { $0 as? Stream }
-            
-            // Rozdělení podle jazyků
-            let groupedByLang = Dictionary(grouping: allStreams) { (stream: Stream) in
-                (stream.langs?.first { $0.range(of: "cz", options: .caseInsensitive) != nil } != nil) ? "CZ" : (stream.langs?.first ?? "")
-            }
-                                    
-            func filteredAndSorted(_ streams: [Stream]) -> [Stream] {
-                // odstraníme 4K pokud existuje 1080p nebo 720p stejného jazyka
-                let hasLowerRes = streams.contains { $0.qualityRank == 1 || $0.qualityRank == 2 }
-                let filtered = hasLowerRes ? streams.filter { $0.qualityRank != 3 } : streams
-                return filtered.sorted { (lhs, rhs) in
-                    if lhs.qualityRank != rhs.qualityRank { return lhs.qualityRank < rhs.qualityRank }
-                    return lhs.sizeMb < rhs.sizeMb
-                }
-            }
-            
-            let czStreams = filteredAndSorted(groupedByLang["CZ"] ?? [])
-            let otherLangStreams = groupedByLang.filter { $0.key != "CZ" }.flatMap { filteredAndSorted($0.value) }
-            streams = czStreams + otherLangStreams
+            let allStreams = items.flatMap { $0.streams ?? [] }
+            streams = sortedStreams(allStreams)
+            checkAutoPlay()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -79,6 +74,41 @@ final class StreamSelectionViewModel {
         } catch {
             errorMessage = error.localizedDescription
             return nil
+        }
+    }
+
+    private func sortedStreams(_ allStreams: [Stream]) -> [Stream] {
+        let groupedByLang = Dictionary(grouping: allStreams) { (stream: Stream) in
+            (stream.langs?.first { $0.range(of: "cz", options: .caseInsensitive) != nil } != nil) ? "CZ" : (stream.langs?.first ?? "")
+        }
+                                        
+        func filteredAndSorted(_ streams: [Stream]) -> [Stream] {
+            let hasLowerRes = streams.contains { $0.qualityRank == 1 || $0.qualityRank == 2 }
+            let filtered = hasLowerRes ? streams.filter { $0.qualityRank != 3 } : streams
+            return filtered.sorted { (lhs, rhs) in
+                if lhs.qualityRank != rhs.qualityRank { return lhs.qualityRank < rhs.qualityRank }
+                return lhs.sizeMb < rhs.sizeMb
+            }
+        }
+        
+        let czStreams = filteredAndSorted(groupedByLang["CZ"] ?? [])
+        let otherLangStreams = groupedByLang.filter { $0.key != "CZ" }.flatMap { filteredAndSorted($0.value) }
+        return czStreams + otherLangStreams
+    }
+
+    private func checkAutoPlay() {
+        // Auto-play: resume from saved position on first stream
+        if media.watchCompleted != true,
+           let position = media.watchPosition, position > 0,
+           let stream = streams.first {
+            autoPlayResult = .autoPlay(stream: stream, resumePosition: Double(position))
+            return
+        }
+
+        // Auto-play: single stream
+        if streams.count == 1, let stream = streams.first {
+            autoPlayResult = .autoPlay(stream: stream, resumePosition: nil)
+            return
         }
     }
 }

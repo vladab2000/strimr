@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MainTabView: View {
     @Environment(SettingsManager.self) var settingsManager
+    @Environment(WatchHistoryManager.self) var watchHistoryManager
     @StateObject var coordinator = MainCoordinator()
     @State var homeViewModel: HomeViewModel
 
@@ -15,7 +16,7 @@ struct MainTabView: View {
                 NavigationStack(path: coordinator.pathBinding(for: .home)) {
                     HomeView(
                         viewModel: homeViewModel,
-                        onSelectMedia: coordinator.showMediaDetail,
+                        onSelectMedia: coordinator.showMediaDetail
                     )
                     .navigationDestination(for: MainCoordinator.Route.self) {
                         destination(for: $0)
@@ -42,13 +43,13 @@ struct MainTabView: View {
             }
         }
         .environmentObject(coordinator)
-        .fullScreenCover(isPresented: $coordinator.isPresentingPlayer, onDismiss: coordinator.resetPlayer) {
+        .fullScreenCover(isPresented: $coordinator.isPresentingPlayer, onDismiss: {
+            coordinator.resetPlayer()
+            Task { await watchHistoryManager.load() }
+        }) {
             if let streamURL = coordinator.selectedStreamURL {
                 PlayerWrapper(
-                    viewModel: PlayerViewModel(
-                        streamURL: streamURL,
-                        title: coordinator.selectedStreamTitle,
-                    ),
+                    viewModel: makePlayerViewModel(streamURL: streamURL),
                 )
             }
         }
@@ -65,9 +66,13 @@ struct MainTabView: View {
         case let .streamSelection(media):
             StreamSelectionView(
                 viewModel: StreamSelectionViewModel(media: media),
-                onPlay: { stream in
+                onPlay: { stream, resumePosition in
                     Task {
-                        await playbackLauncher.play(stream: stream)
+                        await playbackLauncher.play(
+                            stream: stream,
+                            media: media,
+                            resumePosition: resumePosition
+                        )
                     }
                 }
             )
@@ -75,6 +80,30 @@ struct MainTabView: View {
     }
 
     private var playbackLauncher: PlaybackLauncher {
-        PlaybackLauncher(coordinator: coordinator)
+        PlaybackLauncher(coordinator: coordinator, watchHistoryManager: watchHistoryManager)
+    }
+
+    private func makePlayerViewModel(streamURL: URL) -> PlayerViewModel {
+        let vm = PlayerViewModel(streamURL: streamURL, title: coordinator.selectedStreamTitle)
+        vm.mediaId = coordinator.selectedMediaId
+        vm.resumePosition = coordinator.selectedResumePosition
+
+        let mediaId = coordinator.selectedMediaId
+        let season = coordinator.selectedSeasonNumber
+        let episode = coordinator.selectedEpisodeNumber
+        let manager = watchHistoryManager
+
+        vm.onSavePosition = { position in
+            guard let mediaId else { return }
+            Task { @MainActor in
+                await manager.updatePosition(
+                    id: mediaId,
+                    season: season,
+                    episode: episode,
+                    position: position
+                )
+            }
+        }
+        return vm
     }
 }

@@ -30,7 +30,7 @@ enum SearchFilter: String, CaseIterable, Identifiable {
     func matches(_ type: SCItemType) -> Bool {
         switch self {
         case .movies:
-            type == .video
+            type == .movie
         case .shows:
             type == .tvshow || type == .season || type == .episode
         }
@@ -50,7 +50,7 @@ enum SearchFilter: String, CaseIterable, Identifiable {
 @Observable
 final class SearchViewModel {
     var query: String = ""
-    var items: [MediaDisplayItem] = []
+    var items: [Media] = []
     var isLoading = false
     var errorMessage: String?
     var activeFilter: SearchFilter = .movies
@@ -61,7 +61,7 @@ final class SearchViewModel {
         searchTask?.cancel()
     }
 
-    var filteredItems: [MediaDisplayItem] {
+    var filteredItems: [Media] {
         items
     }
 
@@ -108,9 +108,9 @@ final class SearchViewModel {
         do {
             let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
             let urlPath = activeFilter.menuPath + "?search=" + (trimmedQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? trimmedQuery)
-            let response = try await ApiClient.fetchMenu(urlPath: urlPath)
+            let result = try await ApiClient.fetchMenu(urlPath: urlPath)
             guard !Task.isCancelled else { return }
-            items = response.items.compactMap { MediaDisplayItem(from: $0) }
+            items = result.filter { $0.itemType.isSupported }
         } catch {
             guard !Task.isCancelled else { return }
             items = []

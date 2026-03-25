@@ -4,16 +4,16 @@ import Observation
 @MainActor
 @Observable
 final class MediaDetailViewModel {
-    var media: MediaDisplayItem
+    var media: Media
     var isLoading = false
     var errorMessage: String?
-    var seasons: [MediaDisplayItem] = []
-    var episodes: [MediaDisplayItem] = []
+    var seasons: [Media] = []
+    var episodes: [Media] = []
     var selectedSeasonId: String?
     var isLoadingSeasons = false
     var isLoadingEpisodes = false
 
-    init(media: MediaDisplayItem) {
+    init(media: Media) {
         self.media = media
     }
 
@@ -22,8 +22,7 @@ final class MediaDetailViewModel {
     }
 
     var runtimeText: String? {
-        guard let duration = media.duration else { return nil }
-        return duration.mediaDurationText()
+        media.durationText
     }
     
     var yearText: String? {
@@ -48,7 +47,7 @@ final class MediaDetailViewModel {
     }
 
     func loadDetails() async {
-        guard media.type == .tvshow else { return }
+        guard media.itemType == .tvshow else { return }
         await fetchSeasons()
     }
 
@@ -59,10 +58,8 @@ final class MediaDetailViewModel {
         await fetchEpisodes(for: id)
     }
     
-    func progressFraction(for item: MediaDisplayItem) -> Double? {
-/*        guard let percentage = item.viewProgressPercentage else { return nil }
-        return min(1, max(0, percentage / 100))*/
-        return nil
+    func progressFraction(for item: Media) -> Double? {
+        item.progressFraction
     }
 
     private func fetchSeasons() async {
@@ -72,20 +69,20 @@ final class MediaDetailViewModel {
         defer { isLoadingSeasons = false }
 
         do {
-            let response = try await ApiClient.fetchMenu(urlPath: urlPath)
-            let fetchedSeasons = response.items
-                .compactMap { MediaDisplayItem(from: $0) }
-                .filter { $0.type == .season }
+            let items = try await ApiClient.fetchMenu(urlPath: urlPath)
+            let fetchedSeasons = items
+                .filter { $0.itemType == .season }
             
             if fetchedSeasons.isEmpty {
-                let season = Season.create(from: media.tvShow)
-                seasons = [.season(season)]
+                let season = Media.createSeason(from: media)
+                seasons = [season]
 
-                let fetchedEpisodes = response.items
-                    .compactMap { MediaDisplayItem(from: $0) }
-                    .filter { $0.type == .episode }
+                let fetchedEpisodes = items
+                    .filter { $0.itemType == .episode }
                 
                 episodes = fetchedEpisodes
+            } else {
+                seasons = fetchedSeasons
             }
 
             let firstSeasonId = seasons.first?.id
@@ -114,8 +111,8 @@ final class MediaDetailViewModel {
         defer { isLoadingEpisodes = false }
 
         do {
-            let response = try await ApiClient.fetchMenu(urlPath: urlPath)
-            let fetchedEpisodes = response.items.compactMap { MediaDisplayItem(from: $0) }
+            let items = try await ApiClient.fetchMenu(urlPath: urlPath)
+            let fetchedEpisodes = items.filter { $0.itemType.isSupported }
 
             guard selectedSeasonId == seasonId else { return }
             episodes = fetchedEpisodes

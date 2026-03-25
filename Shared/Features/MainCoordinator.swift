@@ -10,8 +10,8 @@ final class MainCoordinator: ObservableObject {
     }
 
     enum Route: Hashable {
-        case mediaDetail(MediaDisplayItem)
-        case streamSelection(MediaDisplayItem)
+        case mediaDetail(Media)
+        case streamSelection(Media)
     }
 
     @Published var tab: Tab = .home
@@ -21,6 +21,10 @@ final class MainCoordinator: ObservableObject {
 
     @Published var selectedStreamURL: URL?
     @Published var selectedStreamTitle: String = ""
+    @Published var selectedMediaUrl: String?
+    @Published var selectedSeasonNumber: Int?
+    @Published var selectedEpisodeNumber: Int?
+    @Published var selectedResumePosition: Double?
     @Published var isPresentingPlayer = false
 
     func pathBinding(for tab: Tab) -> Binding<NavigationPath> {
@@ -48,15 +52,15 @@ final class MainCoordinator: ObservableObject {
         )
     }
 
-    func showMediaDetail(_ media: MediaDisplayItem) {
-        if media.type == .video || media.type == .episode {
+    func showMediaDetail(_ media: Media) {
+        if media.itemType == .movie || media.itemType == .episode {
             showStreamSelection(media)
             return
         }
         appendRoute(.mediaDetail(media))
     }
 
-    func showStreamSelection(_ media: MediaDisplayItem) {
+    func showStreamSelection(_ media: Media) {
         appendRoute(.streamSelection(media))
     }
 
@@ -71,15 +75,30 @@ final class MainCoordinator: ObservableObject {
         }
     }
 
-    func showPlayer(streamURL: URL, title: String) {
+    func showPlayer(
+        streamURL: URL,
+        title: String,
+        mediaUrl: String? = nil,
+        seasonNumber: Int? = nil,
+        episodeNumber: Int? = nil,
+        resumePosition: Double? = nil
+    ) {
         selectedStreamURL = streamURL
         selectedStreamTitle = title
+        selectedMediaUrl = mediaUrl
+        selectedSeasonNumber = seasonNumber
+        selectedEpisodeNumber = episodeNumber
+        selectedResumePosition = resumePosition
         isPresentingPlayer = true
     }
 
     func resetPlayer() {
         selectedStreamURL = nil
         selectedStreamTitle = ""
+        selectedMediaUrl = nil
+        selectedSeasonNumber = nil
+        selectedEpisodeNumber = nil
+        selectedResumePosition = nil
         isPresentingPlayer = false
     }
 }

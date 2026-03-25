@@ -1,7 +1,7 @@
 import Foundation
 
 enum SCItemType: String, Codable, Hashable {
-    case video
+    case movie
     case tvshow
     case season
     case episode

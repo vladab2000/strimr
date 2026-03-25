@@ -10,10 +10,10 @@ final class MediaImageViewModel {
     }
 
     var artworkKind: ArtworkKind
-    var media: MediaDisplayItem
+    var media: Media
     private(set) var imageURL: URL?
 
-    init(artworkKind: ArtworkKind, media: MediaDisplayItem) {
+    init(artworkKind: ArtworkKind, media: Media) {
         self.artworkKind = artworkKind
         self.media = media
     }

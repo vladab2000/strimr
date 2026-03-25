@@ -3,11 +3,11 @@ import SwiftUI
 struct StreamSelectionTVView: View {
     @EnvironmentObject private var coordinator: MainCoordinator
     @State var viewModel: StreamSelectionViewModel
-    private let onPlay: (Stream) -> Void
+    private let onPlay: (Stream, Double?) -> Void
     
     init(
         viewModel: StreamSelectionViewModel,
-        onPlay: @escaping (Stream) -> Void = { _ in }
+        onPlay: @escaping (Stream, Double?) -> Void = { _, _ in }
     ) {
         _viewModel =  State(initialValue: viewModel)
         self.onPlay = onPlay
@@ -30,6 +30,9 @@ struct StreamSelectionTVView: View {
         }
         .task {
             await viewModel.loadStreams()
+            if case let .autoPlay(stream, resumePosition) = viewModel.autoPlayResult {
+                onPlay(stream, resumePosition)
+            }
         }
         .toolbar(.hidden, for: .tabBar)
     }
@@ -57,7 +60,7 @@ struct StreamSelectionTVView: View {
                                 stream: stream,
                                 isResolving: viewModel.isResolvingStream,
                                 onSelect: {
-                                    onPlay(stream)
+                                    onPlay(stream, nil)
                                 }
                             )
                         }

@@ -53,7 +53,7 @@ struct MediaBackdropGradient: View {
 }
 
 extension MediaBackdropGradient {
-    static func colors(for media: MediaDisplayItem) -> [Color] {
+    static func colors(for media: Media) -> [Color] {
 /*        guard let blur = media.ultraBlurColors else { return [] }
         return [
             Color(hex: blur.topLeft),
