@@ -80,3 +80,24 @@ extension Stream {
         langs: ["CZ", "EN"]
     )
 }
+enum StreamSorter {
+    static func sorted(_ allStreams: [Stream]) -> [Stream] {
+        let groupedByLang = Dictionary(grouping: allStreams) { (stream: Stream) in
+            (stream.langs?.first { $0.range(of: "cz", options: .caseInsensitive) != nil } != nil) ? "CZ" : (stream.langs?.first ?? "")
+        }
+
+        func filteredAndSorted(_ streams: [Stream]) -> [Stream] {
+            let hasLowerRes = streams.contains { $0.qualityRank == 1 || $0.qualityRank == 2 }
+            let filtered = hasLowerRes ? streams.filter { $0.qualityRank != 3 } : streams
+            return filtered.sorted { (lhs, rhs) in
+                if lhs.qualityRank != rhs.qualityRank { return lhs.qualityRank < rhs.qualityRank }
+                return lhs.sizeMb < rhs.sizeMb
+            }
+        }
+
+        let czStreams = filteredAndSorted(groupedByLang["CZ"] ?? [])
+        let otherLangStreams = groupedByLang.filter { $0.key != "CZ" }.flatMap { filteredAndSorted($0.value) }
+        return czStreams + otherLangStreams
+    }
+}
+

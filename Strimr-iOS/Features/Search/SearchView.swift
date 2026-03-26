@@ -87,8 +87,7 @@ struct SearchView: View {
                 ForEach(SearchFilter.allCases) { filter in
                     let isSelected = viewModel.activeFilter == filter
                     Button {
-                        viewModel.activeFilter = filter
-                        viewModel.filterDidChange()
+                        viewModel.selectFilter(filter)
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: filter.systemImageName)

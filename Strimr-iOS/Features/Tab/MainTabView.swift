@@ -11,6 +11,7 @@ struct MainTabView: View {
     }
 
     var body: some View {
+        let _ = coordinator.playbackLauncher = playbackLauncher
         TabView(selection: $coordinator.tab) {
             Tab("tabs.home", systemImage: "house.fill", value: MainCoordinator.Tab.home) {
                 NavigationStack(path: coordinator.pathBinding(for: .home)) {
@@ -42,6 +43,14 @@ struct MainTabView: View {
                 }
             }
         }
+        .overlay {
+            if coordinator.isLoadingStreams {
+                ProgressView()
+                    .controlSize(.large)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(.ultraThinMaterial)
+            }
+        }
         .environmentObject(coordinator)
         .fullScreenCover(isPresented: $coordinator.isPresentingPlayer, onDismiss: {
             coordinator.resetPlayer()
@@ -63,9 +72,9 @@ struct MainTabView: View {
                 viewModel: MediaDetailViewModel(media: media),
                 onSelectMedia: coordinator.showMediaDetail
             )
-        case let .streamSelection(media):
+        case let .streamSelection(media, streams):
             StreamSelectionView(
-                viewModel: StreamSelectionViewModel(media: media),
+                viewModel: StreamSelectionViewModel(media: media, streams: streams),
                 onPlay: { stream, resumePosition in
                     Task {
                         await playbackLauncher.play(
@@ -85,19 +94,19 @@ struct MainTabView: View {
 
     private func makePlayerViewModel(streamURL: URL) -> PlayerViewModel {
         let vm = PlayerViewModel(streamURL: streamURL, title: coordinator.selectedStreamTitle)
-        vm.mediaId = coordinator.selectedMediaId
+        vm.mediaUrl = coordinator.selectedMediaUrl
         vm.resumePosition = coordinator.selectedResumePosition
 
-        let mediaId = coordinator.selectedMediaId
+        let mediaUrl = coordinator.selectedMediaUrl
         let season = coordinator.selectedSeasonNumber
         let episode = coordinator.selectedEpisodeNumber
         let manager = watchHistoryManager
 
         vm.onSavePosition = { position in
-            guard let mediaId else { return }
+            guard let mediaUrl else { return }
             Task { @MainActor in
                 await manager.updatePosition(
-                    id: mediaId,
+                    url: mediaUrl,
                     season: season,
                     episode: episode,
                     position: position

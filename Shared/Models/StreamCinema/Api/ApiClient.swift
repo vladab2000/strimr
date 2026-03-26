@@ -64,6 +64,37 @@ struct ApiClient {
         }
     }
 
+    // MARK: - Search
+
+    static func fetchSearch(text: String, type: String) async throws -> [Media] {
+        var components = URLComponents(url: URL(string: "\(baseURL)search")!, resolvingAgainstBaseURL: false)!
+        components.queryItems = [
+            URLQueryItem(name: "text", value: text),
+            URLQueryItem(name: "type", value: type),
+        ]
+        let url = components.url!
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            do {
+                return try decoder.decode([Media].self, from: data)
+            } catch {
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("Chyba při deserializaci search, data z API:")
+                    print(jsonString)
+                } else {
+                    print("Chyba při deserializaci search, data nejsou validní UTF-8.")
+                }
+                throw error
+            }
+        } catch {
+            print("Chyba během síťového požadavku na \(url): \(error)")
+            throw error
+        }
+    }
+
     // MARK: - Watch History
 
     static func fetchContinueWatching() async throws -> [Media] {

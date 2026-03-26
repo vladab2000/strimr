@@ -242,6 +242,12 @@
     },
     "media.placeholder.noArtwork" : {
       "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bez obrázku"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -396,6 +402,12 @@
     },
     "player.status.buffering" : {
       "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Načítání"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -406,6 +418,12 @@
     },
     "search.badge.episode" : {
       "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EPIZODA"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -416,6 +434,12 @@
     },
     "search.badge.movie" : {
       "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FILM"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -426,6 +450,12 @@
     },
     "search.badge.season" : {
       "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SÉRIE"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -436,6 +466,12 @@
     },
     "search.badge.show" : {
       "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SERiÁL"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -446,6 +482,12 @@
     },
     "search.badge.unknown" : {
       "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NEZNÁMÝ"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",

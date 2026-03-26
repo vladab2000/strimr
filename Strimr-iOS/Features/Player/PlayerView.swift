@@ -238,6 +238,11 @@ struct PlayerView: View {
         guard awaitingMediaLoad else { return }
         awaitingMediaLoad = false
         refreshTracks()
+
+        if let resume = viewModel.resumePosition, resume > 0 {
+            playerCoordinator.seek(to: resume)
+            viewModel.resumePosition = nil
+        }
     }
 
     private func dismissPlayer() {

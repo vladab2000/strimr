@@ -53,12 +53,6 @@ struct StreamSelectionView: View {
         }
         .ignoresSafeArea(edges: .top)
         .toolbar(.hidden, for: .tabBar)
-        .task {
-            await viewModel.loadStreams()
-            if case let .autoPlay(stream, resumePosition) = viewModel.autoPlayResult {
-                onPlay(stream, resumePosition)
-            }
-        }
     }
 
     // MARK: - Hero
@@ -141,11 +135,7 @@ struct StreamSelectionView: View {
                 .font(.headline)
                 .padding(.horizontal, 16)
 
-            if viewModel.isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
-                    .padding()
-            } else if viewModel.streams.isEmpty {
+            if viewModel.streams.isEmpty {
                 Text("streamSelection.noStreams")
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 16)

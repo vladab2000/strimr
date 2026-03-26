@@ -28,12 +28,6 @@ struct StreamSelectionTVView: View {
                 }
             }
         }
-        .task {
-            await viewModel.loadStreams()
-            if case let .autoPlay(stream, resumePosition) = viewModel.autoPlayResult {
-                onPlay(stream, resumePosition)
-            }
-        }
         .toolbar(.hidden, for: .tabBar)
     }
 
@@ -46,10 +40,7 @@ struct StreamSelectionTVView: View {
                 .font(.title3.weight(.semibold))
                 .focusable()
 
-            if viewModel.isLoading {
-                ProgressView()
-                    .focusable()
-            } else if viewModel.streams.isEmpty {
+            if viewModel.streams.isEmpty {
                 Text("streamSelection.noStreams")
                     .foregroundStyle(.secondary)
             } else {

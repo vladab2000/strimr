@@ -36,12 +36,12 @@ enum SearchFilter: String, CaseIterable, Identifiable {
         }
     }
 
-    var menuPath: String {
+    var apiType: String {
         switch self {
         case .movies:
-            "/FMovies/search"
+            "movie"
         case .shows:
-            "/FSeries/search"
+            "series"
         }
     }
 }
@@ -53,7 +53,7 @@ final class SearchViewModel {
     var items: [Media] = []
     var isLoading = false
     var errorMessage: String?
-    var activeFilter: SearchFilter = .movies
+    var activeFilter: SearchFilter?
 
     @ObservationIgnored private var searchTask: Task<Void, Never>?
 
@@ -66,26 +66,30 @@ final class SearchViewModel {
     }
 
     var hasQuery: Bool {
-        !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        query.trimmingCharacters(in: .whitespacesAndNewlines).count >= 3
     }
 
     func queryDidChange() {
+        // Only re-search if filter is already selected
+        guard activeFilter != nil else { return }
         scheduleSearch(immediate: false)
     }
 
-    func filterDidChange() {
+    func selectFilter(_ filter: SearchFilter) {
+        activeFilter = filter
         guard hasQuery else { return }
         scheduleSearch(immediate: true)
     }
 
     func submitSearch() {
+        guard activeFilter != nil else { return }
         scheduleSearch(immediate: true)
     }
 
     private func scheduleSearch(immediate: Bool) {
         searchTask?.cancel()
 
-        guard hasQuery else {
+        guard hasQuery, activeFilter != nil else {
             resetState()
             return
         }
@@ -106,9 +110,9 @@ final class SearchViewModel {
         defer { isLoading = false }
 
         do {
+            guard let filter = activeFilter else { return }
             let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
-            let urlPath = activeFilter.menuPath + "?search=" + (trimmedQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? trimmedQuery)
-            let result = try await ApiClient.fetchMenu(urlPath: urlPath)
+            let result = try await ApiClient.fetchSearch(text: trimmedQuery, type: filter.apiType)
             guard !Task.isCancelled else { return }
             items = result.filter { $0.itemType.isSupported }
         } catch {

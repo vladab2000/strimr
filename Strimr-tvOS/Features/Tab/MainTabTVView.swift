@@ -11,6 +11,7 @@ struct MainTabTVView: View {
     }
 
     var body: some View {
+        let _ = coordinator.playbackLauncher = playbackLauncher
         TabView(selection: $coordinator.tab) {
             Tab("tabs.home", systemImage: "house.fill", value: MainCoordinator.Tab.home) {
                 NavigationStack(path: coordinator.pathBinding(for: .home)) {
@@ -48,6 +49,13 @@ struct MainTabTVView: View {
                 }
             }
         }
+        .overlay {
+            if coordinator.isLoadingStreams {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(.ultraThinMaterial)
+            }
+        }
         .environmentObject(coordinator)
         .fullScreenCover(isPresented: $coordinator.isPresentingPlayer, onDismiss: {
             coordinator.resetPlayer()
@@ -70,9 +78,9 @@ struct MainTabTVView: View {
                 viewModel: MediaDetailViewModel(media: media),
                 onSelectMedia: coordinator.showMediaDetail
             )
-        case let .streamSelection(media):
+        case let .streamSelection(media, streams):
             StreamSelectionTVView(
-                viewModel: StreamSelectionViewModel(media: media),
+                viewModel: StreamSelectionViewModel(media: media, streams: streams),
                 onPlay: { stream, resumePosition in
                     Task {
                         await playbackLauncher.play(
