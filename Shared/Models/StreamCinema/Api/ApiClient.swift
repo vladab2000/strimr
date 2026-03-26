@@ -152,4 +152,50 @@ struct ApiClient {
         let (_, _) = try await URLSession.shared.data(for: request)
     }
 
+    // MARK: - Favorites
+
+    static func fetchFavorites() async throws -> [Media] {
+        let url = URL(string: "\(baseURL)favorites")!
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            do {
+                return try decoder.decode([Media].self, from: data)
+            } catch {
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("Chyba při deserializaci favorites, data z API:")
+                    print(jsonString)
+                } else {
+                    print("Chyba při deserializaci favorites, data nejsou validní UTF-8.")
+                }
+                throw error
+            }
+        } catch {
+            print("Chyba během síťového požadavku na \(url): \(error)")
+            throw error
+        }
+    }
+
+    static func addFavorite(media: Media) async throws {
+        let url = URL(string: "\(baseURL)favorites/add")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        request.httpBody = try JSONEncoder().encode(media)
+        let (_, _) = try await URLSession.shared.data(for: request)
+    }
+
+    static func removeFavorite(media: Media) async throws {
+        let url = URL(string: "\(baseURL)favorites/remove")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        request.httpBody = try JSONEncoder().encode(media)
+        let (_, _) = try await URLSession.shared.data(for: request)
+    }
+
 }

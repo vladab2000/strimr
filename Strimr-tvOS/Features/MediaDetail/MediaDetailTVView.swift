@@ -3,6 +3,7 @@ import SwiftUI
 
 struct MediaDetailTVView: View {
     @EnvironmentObject private var coordinator: MainCoordinator
+    @Environment(FavoritesManager.self) private var favoritesManager
     @State var viewModel: MediaDetailViewModel
     @State private var focusedMedia: Media?
     private let onSelectMedia: (Media) -> Void
@@ -26,6 +27,10 @@ struct MediaDetailTVView: View {
                     VStack(alignment: .leading, spacing: 32) {
                         MediaHeroContentView(media: focusedMedia ?? bindableViewModel.media)
                             .frame(maxWidth: proxy.size.width * 0.60, alignment: .leading)
+
+                        if bindableViewModel.media.itemType == .movie || bindableViewModel.media.itemType == .tvshow {
+                            favoriteButton
+                        }
 
                         if bindableViewModel.media.itemType == .tvshow {
                             seasonsSection
@@ -58,7 +63,37 @@ struct MediaDetailTVView: View {
         .toolbar(.hidden, for: .tabBar)
     }
 
-    
+    // MARK: - Favorite Button
+
+    private var favoriteButton: some View {
+        let isFav = favoritesManager.isFavorite(viewModel.media)
+        return Button {
+            Task {
+                if isFav {
+                    await favoritesManager.remove(viewModel.media)
+                } else {
+                    await favoritesManager.add(viewModel.media)
+                }
+            }
+        } label: {
+            Label(
+                isFav
+                    ? String(localized: "library.removeFromLibrary")
+                    : String(localized: "library.addToLibrary"),
+                systemImage: isFav ? "heart.fill" : "heart"
+            )
+            .font(.headline)
+            .foregroundStyle(isFav ? .red : .brandSecondary)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(
+                Capsule(style: .continuous)
+                    .fill((isFav ? Color.red : Color.brandSecondary).opacity(0.15))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
     private var seasonsSection: some View {
         VStack(alignment: .leading, spacing: 20) {
             seasonSelector

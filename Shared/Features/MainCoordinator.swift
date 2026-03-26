@@ -5,6 +5,7 @@ import SwiftUI
 final class MainCoordinator: ObservableObject {
     enum Tab: Hashable {
         case home
+        case library
         case search
         case more
     }
@@ -16,6 +17,7 @@ final class MainCoordinator: ObservableObject {
 
     @Published var tab: Tab = .home
     @Published var homePath = NavigationPath()
+    @Published var libraryPath = NavigationPath()
     @Published var searchPath = NavigationPath()
     @Published var morePath = NavigationPath()
 
@@ -37,6 +39,8 @@ final class MainCoordinator: ObservableObject {
                 switch tab {
                 case .home:
                     self.homePath
+                case .library:
+                    self.libraryPath
                 case .search:
                     self.searchPath
                 case .more:
@@ -47,6 +51,8 @@ final class MainCoordinator: ObservableObject {
                 switch tab {
                 case .home:
                     self.homePath = newValue
+                case .library:
+                    self.libraryPath = newValue
                 case .search:
                     self.searchPath = newValue
                 case .more:
@@ -113,6 +119,8 @@ final class MainCoordinator: ObservableObject {
         switch tab {
         case .home:
             homePath.append(route)
+        case .library:
+            libraryPath.append(route)
         case .search:
             searchPath.append(route)
         case .more:

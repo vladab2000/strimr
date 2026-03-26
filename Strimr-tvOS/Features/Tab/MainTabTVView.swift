@@ -25,6 +25,17 @@ struct MainTabTVView: View {
                 }
             }
 
+            Tab("tabs.library", systemImage: "books.vertical.fill", value: MainCoordinator.Tab.library) {
+                NavigationStack(path: coordinator.pathBinding(for: .library)) {
+                    LibraryTVView(
+                        onSelectMedia: coordinator.showMediaDetail
+                    )
+                    .navigationDestination(for: MainCoordinator.Route.self) { route in
+                        destination(for: route)
+                    }
+                }
+            }
+
             Tab("tabs.search", systemImage: "magnifyingglass", value: MainCoordinator.Tab.search, role: .search) {
                 NavigationStack(path: coordinator.pathBinding(for: .search)) {
                     SearchTVView(

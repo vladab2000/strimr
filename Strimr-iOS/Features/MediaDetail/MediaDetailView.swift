@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MediaDetailView: View {
     @EnvironmentObject private var coordinator: MainCoordinator
+    @Environment(FavoritesManager.self) private var favoritesManager
     @State var viewModel: MediaDetailViewModel
     @State private var isSummaryExpanded = false
     private let heroHeight: CGFloat = 320
@@ -31,6 +32,11 @@ struct MediaDetailView: View {
 
                     metadataBadges
                         .padding(.horizontal, 16)
+
+                    if vm.media.itemType == .movie || vm.media.itemType == .tvshow {
+                        favoriteButton
+                            .padding(.horizontal, 16)
+                    }
 
                     // Summary
                     if let summary = vm.media.summary, !summary.isEmpty {
@@ -135,6 +141,37 @@ struct MediaDetailView: View {
                     .lineLimit(1)
             }
         }
+    }
+
+    // MARK: - Favorite Button
+
+    private var favoriteButton: some View {
+        let isFav = favoritesManager.isFavorite(viewModel.media)
+        return Button {
+            Task {
+                if isFav {
+                    await favoritesManager.remove(viewModel.media)
+                } else {
+                    await favoritesManager.add(viewModel.media)
+                }
+            }
+        } label: {
+            Label(
+                isFav
+                    ? String(localized: "library.removeFromLibrary")
+                    : String(localized: "library.addToLibrary"),
+                systemImage: isFav ? "heart.fill" : "heart"
+            )
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(isFav ? .red : .brandPrimary)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(
+                Capsule(style: .continuous)
+                    .fill((isFav ? Color.red : Color.brandPrimary).opacity(0.15))
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Seasons Section

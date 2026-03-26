@@ -5,6 +5,7 @@ struct StrimrApp: App {
     @State private var settingsManager: SettingsManager
     @State private var mediaFocusModel: MediaFocusModel
     @State private var watchHistoryManager = WatchHistoryManager()
+    @State private var favoritesManager = FavoritesManager()
 
     init() {
         let defaults: UserDefaults
@@ -23,8 +24,10 @@ struct StrimrApp: App {
                 .environment(settingsManager)
                 .environment(mediaFocusModel)
                 .environment(watchHistoryManager)
+                .environment(favoritesManager)
                 .preferredColorScheme(.dark)
                 .task { await watchHistoryManager.load() }
+                .task { await favoritesManager.load() }
         }
     }
 }
