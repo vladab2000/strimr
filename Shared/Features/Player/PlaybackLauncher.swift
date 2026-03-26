@@ -12,8 +12,7 @@ struct PlaybackLauncher {
         guard let urlPath = stream.url else { return }
 
         do {
-            let response = try await ApiClient.fetchStream(urlPath: urlPath)
-            let urlStr = response.resolved.isEmpty ? response.input : response.resolved
+            let urlStr = try await ApiClient.fetchStream(urlPath: urlPath)
             guard let streamURL = URL(string: urlStr) else { return }
 
             // Create watch record on server before showing player

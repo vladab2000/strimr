@@ -24,6 +24,7 @@ struct Media: Codable, Hashable, Identifiable {
     let country: [String]?
     let description: String?
     let season: Int?
+    let seasonTitle: String?
     let episode: Int?
     let episodeTitle: String?
     let art: Art?
@@ -41,7 +42,7 @@ struct Media: Codable, Hashable, Identifiable {
         case name, url, mediaType, year, rating, duration
         case langs, genres, country
         case description
-        case season, episode, episodeTitle
+        case season, seasonTitle, episode, episodeTitle
         case art, streams
         case watchPosition, watchCompleted, watchDuration, updatedUtc
     }
@@ -74,7 +75,14 @@ struct Media: Codable, Hashable, Identifiable {
     var secondaryLabel: String? {
         switch itemType {
         case .episode:
-            episodeIdentifier
+            if let episodeIdentifier, let episodeTitle, !episodeTitle.isEmpty && !episodeIdentifier.isEmpty {
+                episodeIdentifier + " - " + episodeTitle
+            }
+            else {
+                episodeIdentifier
+            }
+        case .season:
+            seasonTitle
         default:
             year.map(String.init)
         }
@@ -181,7 +189,7 @@ struct Media: Codable, Hashable, Identifiable {
         return Media(
             type: "season",
             _id: UUID().uuidString,
-            name: name,
+            name: media?.title,
             url: nil,
             mediaType: "season",
             year: media?.year,
@@ -192,6 +200,7 @@ struct Media: Codable, Hashable, Identifiable {
             country: media?.country,
             description: media?.description,
             season: seasonNo,
+            seasonTitle: name,
             episode: media?.episode,
             episodeTitle: media?.episodeTitle,
             art: media?.art,
@@ -220,9 +229,7 @@ extension Media {
         genres: ["Komedie"],
         country: nil,
         description: "In the late 1980s, in a working-class neighborhood on the outskirts of Bilbao, Basque Country, Spain. A girls' rhythmic gymnastics team has the opportunity to compete in a tournament in Berlin; but since the girls' mothers cannot take time off work, it is the fathers who must accompany them on the trip.",
-        season: nil,
-        episode: nil,
-        episodeTitle: nil,
+        season: nil, seasonTitle: nil, episode: nil, episodeTitle: nil,
         art: Art.preview1,
         streams: nil,
         watchPosition: nil, watchCompleted: nil, watchDuration: nil, updatedUtc: nil
@@ -240,7 +247,7 @@ extension Media {
         genres: ["Animovaný", "Komedie", "Rodinný", "Fantasy", "Krátkometrážní"],
         country: nil,
         description: "Po událostech ve filmu Ledové království chtějí Anna s Elsou začít v Arendellu nový život a udělat si hrad trochu útulnějším.",
-        season: nil, episode: nil, episodeTitle: nil,
+        season: nil, seasonTitle: nil, episode: nil, episodeTitle: nil,
         art: Art.preview2,
         streams: nil,
         watchPosition: nil, watchCompleted: nil, watchDuration: nil, updatedUtc: nil
@@ -258,7 +265,7 @@ extension Media {
         genres: ["Drama"],
         country: nil,
         description: "Tři zcela odlišní hrdinové a jejich rodiny vezmou diváky na emocionální a zábavnou jízdu.",
-        season: nil, episode: nil, episodeTitle: nil,
+        season: nil, seasonTitle: nil, episode: nil, episodeTitle: nil,
         art: Art.preview3,
         streams: nil,
         watchPosition: nil, watchCompleted: nil, watchDuration: nil, updatedUtc: nil
@@ -276,7 +283,7 @@ extension Media {
         genres: ["Komedie"],
         country: nil,
         description: "Film se odehrává v budoucnosti na vzdálené planetě.",
-        season: nil, episode: nil, episodeTitle: nil,
+        season: nil, seasonTitle: nil, episode: nil, episodeTitle: nil,
         art: Art.preview4,
         streams: nil,
         watchPosition: nil, watchCompleted: nil, watchDuration: nil, updatedUtc: nil
@@ -295,7 +302,7 @@ extension Media {
         genres: ["Drama", "Komedie"],
         country: nil,
         description: "As a woman's life unravels, she becomes obsessed with her captivating new colleague.",
-        season: 1, episode: 1, episodeTitle: "We Have Always Lived in the Castle",
+        season: 1, seasonTitle: "Season 1", episode: 1, episodeTitle: "We Have Always Lived in the Castle",
         art: Art.previewTvShow1,
         streams: nil,
         watchPosition: nil, watchCompleted: nil, watchDuration: nil, updatedUtc: nil
@@ -313,7 +320,7 @@ extension Media {
         genres: ["Western"],
         country: nil,
         description: "With the Yellowstone Ranch behind him, Kayce Dutton joins an elite unit of U.S. Marshals.",
-        season: 1, episode: 1, episodeTitle: "Piya Wiconi",
+        season: 1, seasonTitle: "Season 1", episode: 1, episodeTitle: "Piya Wiconi",
         art: Art.previewTvShow2,
         streams: nil,
         watchPosition: nil, watchCompleted: nil, watchDuration: nil, updatedUtc: nil
@@ -331,7 +338,7 @@ extension Media {
         genres: ["Akční", "Dobrodružný", "Mysteriózní"],
         country: nil,
         description: "Sherlock Holmes is a disgraced young man – raw and unfiltered – when he finds himself wrapped up in a murder case that threatens his liberty.",
-        season: 6, episode: 1, episodeTitle: "The Case of the Killing Jar",
+        season: 6, seasonTitle: "Season 1", episode: 1, episodeTitle: "The Case of the Killing Jar",
         art: Art.previewTvShow3,
         streams: nil,
         watchPosition: nil, watchCompleted: nil, watchDuration: nil, updatedUtc: nil
@@ -349,7 +356,7 @@ extension Media {
         genres: ["Komedie"],
         country: nil,
         description: "Ever since he can remember, Toni has wanted nothing more than to leave his hometown of Kacken and become a famous rapper.",
-        season: 1, episode: 2, episodeTitle: "Hi, My Name Is",
+        season: 1, seasonTitle: "Season 1", episode: 2, episodeTitle: "Hi, My Name Is",
         art: Art.previewTvShow4,
         streams: nil,
         watchPosition: nil, watchCompleted: nil, watchDuration: nil, updatedUtc: nil
@@ -368,7 +375,7 @@ extension Media {
         genres: ["Akční", "Dobrodružný", "Mysteriózní"],
         country: nil,
         description: "Sherlock Holmes is a disgraced young man.",
-        season: 6, episode: 1, episodeTitle: "The Case of the Killing Jar",
+        season: 6, seasonTitle: "Season 6", episode: 1, episodeTitle: "The Case of the Killing Jar",
         art: Art.previewTvShow3,
         streams: nil,
         watchPosition: nil, watchCompleted: nil, watchDuration: nil, updatedUtc: nil

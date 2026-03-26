@@ -82,7 +82,7 @@ struct MediaDetailTVView: View {
                 HStack(spacing: 16) {
                     ForEach(viewModel.seasons) { season in
                         SeasonPillButton(
-                            title: season.title,
+                            title: season.seasonTitle ?? season.title,
                             isSelected: season.id == viewModel.selectedSeasonId,
                             onSelect: {
                                 Task { await viewModel.selectSeason(id: season.id) }

@@ -37,26 +37,19 @@ struct ApiClient {
         }
     }
     
-    static func fetchStream(urlPath: String = "/") async throws -> ApiStreamResponse {
+    static func fetchStream(urlPath: String = "/") async throws -> String {
         let endpointUrl = URL(string: "\(baseURL)stream")!
         var components = URLComponents(url: endpointUrl, resolvingAgainstBaseURL: false)!
         components.queryItems = [URLQueryItem(name: "url", value: urlPath)]
         let url = components.url!
         
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
-            do {
-                return try decoder.decode(ApiStreamResponse.self, from: data)
-            } catch {
-                if let jsonString = String(data: data, encoding: .utf8) {
-                    print("Chyba při deserializaci streamu, data z API:")
-                    print(jsonString)
-                } else {
-                    print("Chyba při deserializaci streamu, data nejsou validní UTF-8.")
-                }
-                throw error
+            if let decodedString = String(data: data, encoding: .utf8) {
+                return decodedString
+            } else {
+                print("Chyba při deserializaci stringu")
+                throw URLError(.cannotDecodeContentData)
             }
         } catch {
             print("Chyba během síťového požadavku na \(url): \(error)")
