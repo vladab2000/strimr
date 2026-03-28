@@ -11,6 +11,7 @@ struct MediaCarousel: View {
     #if os(tvOS)
         @Binding var selectedID: Media.ID?
         @FocusState private var focusedID: Media.ID?
+        @Environment(MediaFocusModel.self) private var focusModel
     #endif
 
     var body: some View {
@@ -34,12 +35,13 @@ struct MediaCarousel: View {
         .focusSection()
         .onAppear {
             if focusedID == nil {
-                focusedID = selectedID ?? items.first?.id
+                let validID = selectedID.flatMap { id in items.first(where: { $0.id == id })?.id }
+                focusedID = validID ?? items.first?.id
             }
         }
-        .onChange(of: focusedID) { _, newValue in
-            if let newValue {
-                selectedID = newValue
+        .onChange(of: focusModel.focusedMedia?.id) { _, newID in
+            if let newID, items.contains(where: { $0.id == newID }) {
+                selectedID = newID
             }
         }
         #endif

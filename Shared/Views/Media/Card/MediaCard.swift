@@ -34,6 +34,7 @@ struct MediaCard: View {
         }
         .frame(width: size.width, alignment: .leading)
         #if os(tvOS)
+            .focusable()
             .focused($isFocused)
             .onChange(of: isFocused) { _, focused in
                             if focused {
