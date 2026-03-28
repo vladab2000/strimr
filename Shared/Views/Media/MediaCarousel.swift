@@ -34,14 +34,19 @@ struct MediaCarousel: View {
         #if os(tvOS)
         .focusSection()
         .onAppear {
+            print("[MediaCarousel:\(layout)] onAppear — selectedID=\(String(describing: selectedID)), focusedID=\(String(describing: focusedID)), items=[\(items.map { "'\($0.primaryLabel)'" }.joined(separator: ", "))]")
             if focusedID == nil {
                 let validID = selectedID.flatMap { id in items.first(where: { $0.id == id })?.id }
                 focusedID = validID ?? items.first?.id
+                print("[MediaCarousel:\(layout)] onAppear — setting focusedID=\(String(describing: focusedID)) (selectedID was valid: \(validID != nil))")
             }
         }
         .onChange(of: focusModel.focusedMedia?.id) { _, newID in
-            if let newID, items.contains(where: { $0.id == newID }) {
+            let belongs = newID.map { id in items.contains(where: { $0.id == id }) } ?? false
+            print("[MediaCarousel:\(layout)] focusModel.focusedMedia → '\(focusModel.focusedMedia?.primaryLabel ?? "nil")' (id: \(newID ?? "nil")) — belongs=\(belongs), selectedID=\(String(describing: selectedID))")
+            if let newID, belongs {
                 selectedID = newID
+                print("[MediaCarousel:\(layout)] selectedID updated to \(newID)")
             }
         }
         #endif
