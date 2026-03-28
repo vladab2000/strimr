@@ -70,6 +70,20 @@ final class MainCoordinator: ObservableObject {
         appendRoute(.mediaDetail(media))
     }
 
+    func resumePlayback(media: Media) {
+        Task {
+            isLoadingStreams = true
+            defer { isLoadingStreams = false }
+            let streams = await fetchStreams(for: media)
+            guard let firstStream = streams.first else { return }
+            await playbackLauncher?.play(
+                stream: firstStream,
+                media: media,
+                resumePosition: media.watchPosition.map(Double.init)
+            )
+        }
+    }
+
     private func loadStreamsAndNavigate(_ media: Media) async {
         isLoadingStreams = true
         defer { isLoadingStreams = false }
