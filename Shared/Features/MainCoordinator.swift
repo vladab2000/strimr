@@ -75,26 +75,6 @@ final class MainCoordinator: ObservableObject {
         defer { isLoadingStreams = false }
 
         let streams = await fetchStreams(for: media)
-
-        // Resume from saved position on first stream
-        if media.watchCompleted != true,
-           let position = media.watchPosition, position > 0,
-           let stream = streams.first {
-            await playbackLauncher?.play(
-                stream: stream,
-                media: media,
-                resumePosition: Double(position)
-            )
-            return
-        }
-
-        // Single stream → play directly
-        if streams.count == 1, let stream = streams.first {
-            await playbackLauncher?.play(stream: stream, media: media)
-            return
-        }
-
-        // Multiple streams → show selection screen with pre-loaded streams
         appendRoute(.streamSelection(media: media, streams: streams))
     }
 
