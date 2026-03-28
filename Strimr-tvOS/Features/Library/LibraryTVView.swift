@@ -6,6 +6,11 @@ struct LibraryTVView: View {
     @Environment(FavoritesManager.self) private var favoritesManager
     let onSelectMedia: (Media) -> Void
 
+    #if os(tvOS)
+    @State private var favoriteMoviesSelectedID: Media.ID?
+    @State private var favoriteShowsSelectedID: Media.ID?
+    #endif
+
     var body: some View {
         ZStack {
             Color("Background")
@@ -48,6 +53,7 @@ struct LibraryTVView: View {
                         MediaCarousel(
                             layout: .portrait,
                             items: favoritesManager.favoriteMovies,
+                            selectedID: $favoriteMoviesSelectedID,
                             showsLabels: true,
                             onSelectMedia: onSelectMedia,
                         )
@@ -59,6 +65,7 @@ struct LibraryTVView: View {
                         MediaCarousel(
                             layout: .portrait,
                             items: favoritesManager.favoriteShows,
+                            selectedID: $favoriteShowsSelectedID,
                             showsLabels: true,
                             onSelectMedia: onSelectMedia,
                         )

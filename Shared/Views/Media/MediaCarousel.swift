@@ -9,8 +9,8 @@ struct MediaCarousel: View {
     let onSelectMedia: (Media) -> Void
 
     #if os(tvOS)
+        @Binding var selectedID: Media.ID?
         @FocusState private var focusedID: Media.ID?
-        @State private var lastFocusedID: Media.ID?
     #endif
 
     var body: some View {
@@ -32,19 +32,14 @@ struct MediaCarousel: View {
         }
         #if os(tvOS)
         .focusSection()
-        .onChange(of: focusedID) { oldValue, newValue in
+        .onAppear {
+            if focusedID == nil {
+                focusedID = selectedID ?? items.first?.id
+            }
+        }
+        .onChange(of: focusedID) { _, newValue in
             if let newValue {
-                if oldValue == nil,
-                   let target = lastFocusedID ?? items.first?.id,
-                   newValue != target,
-                   items.contains(where: { $0.id == target })
-                {
-                    Task { @MainActor in
-                        focusedID = target
-                    }
-                } else {
-                    lastFocusedID = newValue
-                }
+                selectedID = newValue
             }
         }
         #endif
