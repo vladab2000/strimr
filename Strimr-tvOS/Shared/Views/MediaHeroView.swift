@@ -89,9 +89,6 @@ struct MediaHeroContentView: View {
     @ViewBuilder
     private var metadataLine: some View {
         HStack(spacing: 16) {
-    /*        if let tertiary = media.tertiaryLabel {
-                items.append(tertiary)
-            }*/
             if let year = yearText {
                 Text(year)
             }
@@ -101,9 +98,17 @@ struct MediaHeroContentView: View {
             if let contentRating = media.rating {
                 Label(String(format: "%.1f", contentRating), systemImage: "star.fill")
             }
+            if let langs = media.langString, !langs.isEmpty {
+                HStack(spacing: 8) {
+                    Image(systemName: "globe")
+                        .foregroundStyle(Color(media.isCZLang ? .green : .secondaryLabel))
+                    Text(langs)
+                }
+            }
         }
         .font(.subheadline)
         .foregroundStyle(.brandSecondary)
+        .lineLimit(1)
     }
 
     @ViewBuilder

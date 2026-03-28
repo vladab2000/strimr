@@ -34,5 +34,5 @@ struct StrimrApp: App {
 
 //TODO: Pamatovat si i HERO, pro jednotlivé stránky (když se mezi nimi přepíná zůstáva HERO z předchozí)
 //TODO: lokalizace
-//TODO: do HERO přidat i seznam jazyků
 //TODO: podpora stránkování
+//TODO: Možnost odebrat z pokračovat ve sledování
