@@ -9,17 +9,19 @@ struct MediaCarousel: View {
     let onSelectMedia: (Media) -> Void
 
     #if os(tvOS)
-        @FocusState private var focusedID: Media.ID?
-        @State private var lastFocusedID: Media.ID?
+    @FocusState private var focusedID: Media.ID?
+    @State private var lastFocusedID: Media.ID?
+        @Namespace private var carouselScope
     #endif
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             LazyHStack(alignment: .top, spacing: spacing(for: layout)) {
-                ForEach(items, id: \.id) { item in
+                ForEach(items) { item in
                     card(for: item)
                     #if os(tvOS)
                         .focused($focusedID, equals: item.id)
+                        .id(item.id)
                     #endif
                 }
             }
@@ -32,19 +34,20 @@ struct MediaCarousel: View {
         }
         #if os(tvOS)
         .focusSection()
+        .onAppear() {
+            if lastFocusedID == nil {
+                lastFocusedID = items.first?.id
+            }
+        }
+        .focusScope(carouselScope)
+//        .defaultFocus($focusedID, lastFocusedID ?? items.first?.id)
         .onChange(of: focusedID) { oldValue, newValue in
+            if oldValue == nil, let newValue, let saved = lastFocusedID, newValue != saved,
+               items.contains(where: { $0.id == saved }) {
+                focusedID = saved
+            }
             if let newValue {
-                if oldValue == nil,
-                   let target = lastFocusedID ?? items.first?.id,
-                   newValue != target,
-                   items.contains(where: { $0.id == target })
-                {
-                    Task { @MainActor in
-                        focusedID = target
-                    }
-                } else {
-                    lastFocusedID = newValue
-                }
+                lastFocusedID = newValue
             }
         }
         #endif
