@@ -31,6 +31,25 @@ final class WatchHistoryManager {
         }
     }
 
+    func markAsWatched(_ media: Media) async {
+        guard let url = media.url else { return }
+        do {
+            try await ApiClient.updateWatchPosition(
+                mediaUrl: url,
+                season: media.season,
+                episode: media.episode,
+                position: media.duration ?? 0,
+                watched: true
+            )
+        } catch {
+            debugPrint("WatchHistoryManager: failed to mark as watched:", error)
+        }
+    }
+
+    func markAsUnwatched(_ media: Media) async {
+        await remove(media)
+    }
+
     func updatePosition(
         url: String,
         season: Int?,

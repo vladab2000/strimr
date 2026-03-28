@@ -4,6 +4,7 @@ import SwiftUI
 struct MediaDetailTVView: View {
     @EnvironmentObject private var coordinator: MainCoordinator
     @Environment(FavoritesManager.self) private var favoritesManager
+    @Environment(WatchHistoryManager.self) private var watchHistoryManager
     @State var viewModel: MediaDetailViewModel
     @State private var focusedMedia: Media?
     @FocusState private var focusedEpisodeId: String?
@@ -31,7 +32,7 @@ struct MediaDetailTVView: View {
                             .frame(maxWidth: proxy.size.width * 0.60, alignment: .leading)
 
                         if bindableViewModel.media.itemType == .movie || bindableViewModel.media.itemType == .tvshow {
-                            favoriteButton
+                            actionButtons
                         }
 
                         if bindableViewModel.media.itemType == .tvshow {
@@ -67,9 +68,69 @@ struct MediaDetailTVView: View {
         .defaultFocus($focusedEpisodeId, viewModel.firstUnwatchedEpisodeId, priority: .userInitiated)
     }
 
-    // MARK: - Favorite Button
+    // MARK: - Action Buttons
 
-    private var favoriteButton: some View {
+    private var actionButtons: some View {
+        HStack(spacing: 16) {
+            if viewModel.effectiveWatchPosition != nil {
+                resumeButton
+            }
+            markWatchedButton
+            libraryButton
+        }
+    }
+
+    private var resumeButton: some View {
+        Button {
+            coordinator.resumePlayback(media: viewModel.media)
+        } label: {
+            Label(String(localized: "media.actions.resume"), systemImage: "play.fill")
+                .font(.headline)
+                .foregroundStyle(.brandPrimary)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(Color.brandPrimary.opacity(0.15))
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var markWatchedButton: some View {
+        let isWatched = viewModel.effectiveWatchCompleted
+        return Button {
+            Task {
+                if isWatched {
+                    await watchHistoryManager.markAsUnwatched(viewModel.media)
+                    viewModel.watchCompletedOverride = false
+                    viewModel.watchPositionCleared = false
+                } else {
+                    await watchHistoryManager.markAsWatched(viewModel.media)
+                    viewModel.watchCompletedOverride = true
+                    viewModel.watchPositionCleared = true
+                }
+            }
+        } label: {
+            Label(
+                isWatched
+                    ? String(localized: "media.actions.markUnwatched")
+                    : String(localized: "media.actions.markWatched"),
+                systemImage: isWatched ? "eye.slash" : "eye"
+            )
+            .font(.headline)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color.gray.opacity(0.15))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var libraryButton: some View {
         let isFav = favoritesManager.isFavorite(viewModel.media)
         return Button {
             Task {

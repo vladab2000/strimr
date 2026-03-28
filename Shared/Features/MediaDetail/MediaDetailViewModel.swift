@@ -12,9 +12,20 @@ final class MediaDetailViewModel {
     var selectedSeasonId: String?
     var isLoadingSeasons = false
     var isLoadingEpisodes = false
+    var watchCompletedOverride: Bool? = nil
+    var watchPositionCleared: Bool = false
 
     init(media: Media) {
         self.media = media
+    }
+
+    var effectiveWatchCompleted: Bool {
+        watchCompletedOverride ?? media.watchCompleted ?? false
+    }
+
+    var effectiveWatchPosition: Int? {
+        if watchPositionCleared { return nil }
+        return media.watchPosition
     }
 
     var heroImageURL: URL? {
