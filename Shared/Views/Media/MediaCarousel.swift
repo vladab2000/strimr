@@ -13,6 +13,7 @@ struct MediaCarousel: View {
         @FocusState private var focusedID: Media.ID?
         @Environment(MediaFocusModel.self) private var focusModel
         @Namespace private var focusNamespace
+        @State private var isRestoringFocus = false
     #endif
 
     var body: some View {
@@ -45,11 +46,21 @@ struct MediaCarousel: View {
         }
         .onChange(of: focusedID) { old, new in
             print("[MediaCarousel:\(layout)] focusedID: \(String(describing: old)) → \(String(describing: new)), selectedID=\(String(describing: selectedID))")
+            if old == nil, let new, let saved = selectedID, new != saved,
+               items.contains(where: { $0.id == saved }) {
+                // Focus re-entered this carousel via spatial navigation and landed on the
+                // wrong card.  Redirect programmatically to the last known selection and
+                // block selectedID overwrites until the restoration completes.
+                isRestoringFocus = true
+                focusedID = saved
+            } else {
+                isRestoringFocus = false
+            }
         }
         .onChange(of: focusModel.focusedMedia?.id) { _, newID in
             let belongs = newID.map { id in items.contains(where: { $0.id == id }) } ?? false
             print("[MediaCarousel:\(layout)] focusModel.focusedMedia → '\(focusModel.focusedMedia?.primaryLabel ?? "nil")' (id: \(newID ?? "nil")) — belongs=\(belongs), selectedID=\(String(describing: selectedID))")
-            if let newID, belongs {
+            if let newID, belongs, !isRestoringFocus {
                 selectedID = newID
                 print("[MediaCarousel:\(layout)] selectedID updated to \(newID)")
             }
