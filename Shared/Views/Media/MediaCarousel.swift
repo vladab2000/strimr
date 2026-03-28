@@ -8,11 +8,19 @@ struct MediaCarousel: View {
     let showsLabels: Bool
     let onSelectMedia: (Media) -> Void
 
+    #if os(tvOS)
+        @FocusState private var focusedID: Media.ID?
+        @State private var lastFocusedID: Media.ID?
+    #endif
+
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             LazyHStack(alignment: .top, spacing: spacing(for: layout)) {
                 ForEach(items, id: \.id) { item in
                     card(for: item)
+                    #if os(tvOS)
+                        .focused($focusedID, equals: item.id)
+                    #endif
                 }
             }
             #if os(tvOS)
@@ -24,6 +32,21 @@ struct MediaCarousel: View {
         }
         #if os(tvOS)
         .focusSection()
+        .onChange(of: focusedID) { oldValue, newValue in
+            if let newValue {
+                if oldValue == nil,
+                   let remembered = lastFocusedID,
+                   newValue != remembered,
+                   items.contains(where: { $0.id == remembered })
+                {
+                    Task { @MainActor in
+                        focusedID = remembered
+                    }
+                } else {
+                    lastFocusedID = newValue
+                }
+            }
+        }
         #endif
     }
 
