@@ -12,6 +12,7 @@ struct MediaCarousel: View {
         @Binding var selectedID: Media.ID?
         @FocusState private var focusedID: Media.ID?
         @Environment(MediaFocusModel.self) private var focusModel
+        @Namespace private var focusNamespace
     #endif
 
     var body: some View {
@@ -33,6 +34,7 @@ struct MediaCarousel: View {
         }
         #if os(tvOS)
         .focusSection()
+        .focusScope(focusNamespace)
         .onAppear {
             print("[MediaCarousel:\(layout)] onAppear — selectedID=\(String(describing: selectedID)), focusedID=\(String(describing: focusedID)), items=[\(items.map { "'\($0.primaryLabel)'" }.joined(separator: ", "))]")
             if focusedID == nil {
@@ -40,6 +42,9 @@ struct MediaCarousel: View {
                 focusedID = validID ?? items.first?.id
                 print("[MediaCarousel:\(layout)] onAppear — setting focusedID=\(String(describing: focusedID)) (selectedID was valid: \(validID != nil))")
             }
+        }
+        .onChange(of: focusedID) { old, new in
+            print("[MediaCarousel:\(layout)] focusedID: \(String(describing: old)) → \(String(describing: new)), selectedID=\(String(describing: selectedID))")
         }
         .onChange(of: focusModel.focusedMedia?.id) { _, newID in
             let belongs = newID.map { id in items.contains(where: { $0.id == id }) } ?? false
