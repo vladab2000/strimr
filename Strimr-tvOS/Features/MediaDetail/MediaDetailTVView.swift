@@ -239,6 +239,10 @@ private struct EpisodeArtworkCard: View {
             runtime: runtime,
             progress: progress,
         )
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(Color.brandPrimary, lineWidth: isFocused ? 4 : 0)
+        }
         .focusable()
         .focused($isFocused)
         .scaleEffect(isFocused ? 1.12 : 1)

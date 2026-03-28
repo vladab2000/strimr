@@ -57,6 +57,12 @@ struct MediaCard: View {
         .clipShape(
             RoundedRectangle(cornerRadius: 14, style: .continuous),
         )
+        #if os(tvOS)
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.brandPrimary, lineWidth: isFocused ? 4 : 0)
+        }
+        #endif
         .overlay(alignment: .bottom) {
             if let progress = media.progressFraction {
                 GeometryReader { geo in
