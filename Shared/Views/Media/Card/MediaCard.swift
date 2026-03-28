@@ -37,6 +37,7 @@ struct MediaCard: View {
             .focusable()
             .focused($isFocused)
             .onChange(of: isFocused) { _, focused in
+                            print("[MediaCard] isFocused=\(focused) — '\(media.primaryLabel)' (id: \(media.id))")
                             if focused {
                                 focusModel.focusedMedia = media
                             }

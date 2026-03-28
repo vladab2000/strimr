@@ -7,7 +7,7 @@ struct MediaCarousel: View {
     let items: [Media]
     let showsLabels: Bool
     let onSelectMedia: (Media) -> Void
-
+    
     #if os(tvOS)
         @FocusState private var focusedID: Media.ID?
         @State private var lastFocusedID: Media.ID?
@@ -20,6 +20,7 @@ struct MediaCarousel: View {
                     card(for: item)
                     #if os(tvOS)
                         .focused($focusedID, equals: item.id)
+                        .id(item.id)
                     #endif
                 }
             }
@@ -32,19 +33,21 @@ struct MediaCarousel: View {
         }
         #if os(tvOS)
         .focusSection()
+        .onAppear {
+            if focusedID == nil {
+                let fallbackID = items.first?.id
+                let validID = lastFocusedID.flatMap { id in items.first(where: { $0.id == id })?.id }
+                focusedID = validID ?? fallbackID
+            }
+        }
+        .defaultFocus($focusedID, lastFocusedID)
         .onChange(of: focusedID) { oldValue, newValue in
+            if oldValue == nil, let newValue, let saved = lastFocusedID, newValue != saved,
+               items.contains(where: { $0.id == saved }) {
+                focusedID = saved
+            }
             if let newValue {
-                if oldValue == nil,
-                   let target = lastFocusedID ?? items.first?.id,
-                   newValue != target,
-                   items.contains(where: { $0.id == target })
-                {
-                    Task { @MainActor in
-                        focusedID = target
-                    }
-                } else {
-                    lastFocusedID = newValue
-                }
+                lastFocusedID = newValue
             }
         }
         #endif
