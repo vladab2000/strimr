@@ -6,6 +6,8 @@ struct MediaDetailTVView: View {
     @Environment(FavoritesManager.self) private var favoritesManager
     @State var viewModel: MediaDetailViewModel
     @State private var focusedMedia: Media?
+    @FocusState private var focusedEpisodeId: String?
+    @Namespace private var episodesNamespace
     private let onSelectMedia: (Media) -> Void
 
     init(
@@ -61,6 +63,8 @@ struct MediaDetailTVView: View {
             }
         }*/
         .toolbar(.hidden, for: .tabBar)
+        .focusScope(episodesNamespace)
+        .defaultFocus($focusedEpisodeId, viewModel.firstUnwatchedEpisodeId, priority: .userInitiated)
     }
 
     // MARK: - Favorite Button
@@ -156,6 +160,7 @@ struct MediaDetailTVView: View {
                             runtime: viewModel.runtimeText,
                             progress: viewModel.progressFraction(for: episode),
                             width: 460,
+                            isFocused: focusedEpisodeId == episode.id,
                             onPlay: {
                                 onSelectMedia(episode)
                             },
@@ -163,6 +168,7 @@ struct MediaDetailTVView: View {
                                 focusedMedia = episode
                             },
                         )
+                        .focused($focusedEpisodeId, equals: episode.id)
                     }
                 }
                 .padding(.vertical, 12)
@@ -224,10 +230,9 @@ private struct EpisodeArtworkCard: View {
     let runtime: String?
     let progress: Double?
     let width: CGFloat
+    let isFocused: Bool
     let onPlay: () -> Void
     let onFocus: () -> Void
-
-    @FocusState private var isFocused: Bool
 
     private let aspectRatio: CGFloat = 16 / 9
 
@@ -244,7 +249,6 @@ private struct EpisodeArtworkCard: View {
                 .strokeBorder(Color.brandPrimary, lineWidth: isFocused ? 4 : 0)
         }
         .focusable()
-        .focused($isFocused)
         .scaleEffect(isFocused ? 1.12 : 1)
         .animation(.easeOut(duration: 0.15), value: isFocused)
         .onChange(of: isFocused) { _, focused in

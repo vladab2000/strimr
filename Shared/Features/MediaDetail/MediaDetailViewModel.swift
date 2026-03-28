@@ -62,6 +62,12 @@ final class MediaDetailViewModel {
         item.progressFraction
     }
 
+    /// The ID of the first episode that hasn't been fully watched.
+    var firstUnwatchedEpisodeId: String? {
+        let episode = episodes.first { $0.watchCompleted != true }
+        return episode?.id ?? episodes.last?.id
+    }
+
     private func fetchSeasons() async {
         guard let urlPath = media.url else { return }
 

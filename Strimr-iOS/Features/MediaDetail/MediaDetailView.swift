@@ -213,12 +213,22 @@ struct MediaDetailView: View {
                     .frame(maxWidth: .infinity)
                     .padding()
             } else {
-                LazyVStack(alignment: .leading, spacing: 8) {
-                    ForEach(viewModel.episodes) { episode in
-                        episodeRow(episode)
+                ScrollViewReader { proxy in
+                    LazyVStack(alignment: .leading, spacing: 8) {
+                        ForEach(viewModel.episodes) { episode in
+                            episodeRow(episode)
+                                .id(episode.id)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .onChange(of: viewModel.episodes.map(\.id)) {
+                        if let targetId = viewModel.firstUnwatchedEpisodeId {
+                            withAnimation {
+                                proxy.scrollTo(targetId, anchor: .top)
+                            }
+                        }
                     }
                 }
-                .padding(.horizontal, 16)
             }
         }
     }
