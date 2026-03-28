@@ -32,7 +32,6 @@ struct StrimrApp: App {
     }
 }
 
-//TODO: Upravit focusování - ať se na dané carusel pamatuje a neskáče podle vybraného prvku nahoře, nebo dole
 //TODO: Pamatovat si i HERO, pro jednotlivé stránky (když se mezi nimi přepíná zůstáva HERO z předchozí)
 //TODO: lokalizace
 //TODO: do HERO přidat i seznam jazyků
