@@ -22,6 +22,15 @@ final class WatchHistoryManager {
         }
     }
 
+    func remove(_ media: Media) async {
+        do {
+            try await ApiClient.removeWatchRecord(media: media)
+            await load()
+        } catch {
+            debugPrint("WatchHistoryManager: failed to remove watch record:", error)
+        }
+    }
+
     func updatePosition(
         url: String,
         season: Int?,

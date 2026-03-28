@@ -91,7 +91,7 @@ struct ApiClient {
     // MARK: - Watch History
 
     static func fetchContinueWatching() async throws -> [Media] {
-        let url = URL(string: "\(baseURL)watch/continue")!
+        let url = URL(string: "\(baseURL)watch")!
         
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -149,6 +149,18 @@ struct ApiClient {
         if let watched { body["watched"] = watched }
 
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (_, _) = try await URLSession.shared.data(for: request)
+    }
+
+    static func removeWatchRecord(
+        media: Media
+    ) async throws {
+        let url = URL(string: "\(baseURL)watch/remove")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        request.httpBody = try JSONEncoder().encode(media)
         let (_, _) = try await URLSession.shared.data(for: request)
     }
 
