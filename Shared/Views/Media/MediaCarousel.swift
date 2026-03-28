@@ -35,12 +35,12 @@ struct MediaCarousel: View {
         .onChange(of: focusedID) { oldValue, newValue in
             if let newValue {
                 if oldValue == nil,
-                   let remembered = lastFocusedID,
-                   newValue != remembered,
-                   items.contains(where: { $0.id == remembered })
+                   let target = lastFocusedID ?? items.first?.id,
+                   newValue != target,
+                   items.contains(where: { $0.id == target })
                 {
                     Task { @MainActor in
-                        focusedID = remembered
+                        focusedID = target
                     }
                 } else {
                     lastFocusedID = newValue
