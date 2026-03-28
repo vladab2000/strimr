@@ -8,12 +8,6 @@ struct HomeTVView: View {
     @State var viewModel: HomeViewModel
     let onSelectMedia: (Media) -> Void
 
-    #if os(tvOS)
-    @State private var continueWatchingSelectedID: Media.ID?
-    @State private var latestVideosSelectedID: Media.ID?
-    @State private var latestShowsSelectedID: Media.ID?
-    #endif
-
     init(
         viewModel: HomeViewModel,
         onSelectMedia: @escaping (Media) -> Void = { _ in },
@@ -67,7 +61,6 @@ struct HomeTVView: View {
                         MediaCarousel(
                             layout: .landscape,
                             items: viewModel.continueWatching,
-                            selectedID: $continueWatchingSelectedID,
                             showsLabels: true,
                             onSelectMedia: onSelectMedia,
                         )
@@ -79,7 +72,6 @@ struct HomeTVView: View {
                          MediaCarousel(
                              layout: .portrait,
                              items: viewModel.latestVideos,
-                             selectedID: $latestVideosSelectedID,
                              showsLabels: true,
                              onSelectMedia: onSelectMedia,
                          )
@@ -91,7 +83,6 @@ struct HomeTVView: View {
                          MediaCarousel(
                              layout: .portrait,
                              items: viewModel.latestShows,
-                             selectedID: $latestShowsSelectedID,
                              showsLabels: true,
                              onSelectMedia: onSelectMedia,
                          )
