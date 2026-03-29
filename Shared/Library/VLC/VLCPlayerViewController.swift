@@ -1,7 +1,7 @@
 import Foundation
-import UIKit
 
 #if canImport(UIKit)
+import UIKit
 
 #if os(tvOS)
     import TVVLCKit
