@@ -110,22 +110,17 @@ struct MainTabTVView: View {
     }
 
     private func makePlayerViewModel(streamURL: URL) -> PlayerViewModel {
-        let vm = PlayerViewModel(streamURL: streamURL, title: coordinator.selectedStreamTitle)
-        vm.mediaUrl = coordinator.selectedMediaUrl
+        let vm = PlayerViewModel(streamURL: streamURL, title: coordinator.selectedMedia?.title ?? "")
         vm.resumePosition = coordinator.selectedResumePosition
 
-        let mediaUrl = coordinator.selectedMediaUrl
-        let season = coordinator.selectedSeasonNumber
-        let episode = coordinator.selectedEpisodeNumber
+        let media = coordinator.selectedMedia
         let manager = watchHistoryManager
 
         vm.onSavePosition = { position in
-            guard let mediaUrl else { return }
+            guard let media else { return }
             Task { @MainActor in
                 await manager.updatePosition(
-                    url: mediaUrl,
-                    season: season,
-                    episode: episode,
+                    media: media,
                     position: position
                 )
             }

@@ -14,7 +14,6 @@ final class PlayerViewModel {
     var bufferedAhead = 0.0
     var isPaused = false
 
-    var mediaUrl: String?
     var resumePosition: Double?
     var onSavePosition: ((Int) -> Void)?
 

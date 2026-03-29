@@ -57,30 +57,22 @@ struct MediaCard: View {
         .clipShape(
             RoundedRectangle(cornerRadius: 14, style: .continuous),
         )
+        .overlay(alignment: .topTrailing) {
+            WatchStatusBadge(media: media)
+        }
         #if os(tvOS)
         .overlay {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Color.brandPrimary, lineWidth: isFocused ? 4 : 0)
+                .strokeBorder(Color.brandSecondary, lineWidth: isFocused ? 4 : 0)
         }
         #endif
         .overlay(alignment: .bottom) {
             if let progress = media.progressFraction {
-                GeometryReader { geo in
-                    VStack {
-                        Spacer()
-                        ZStack(alignment: .leading) {
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.4))
-                                .frame(height: 4)
-                            Rectangle()
-                                .fill(Color.brandPrimary)
-                                .frame(width: geo.size.width * progress, height: 4)
-                        }
-                    }
-                }
-                .clipShape(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                )
+                ProgressView(value: progress)
+                    .progressViewStyle(.linear)
+                    .tint(.brandPrimary)
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 10)
             }
         }
     }

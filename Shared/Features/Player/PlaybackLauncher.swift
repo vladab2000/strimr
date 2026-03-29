@@ -21,10 +21,7 @@ struct PlaybackLauncher {
             await MainActor.run {
                 coordinator.showPlayer(
                     streamURL: streamURL,
-                    title: media.title,
-                    mediaUrl: media.url,
-                    seasonNumber: media.seasonNumber,
-                    episodeNumber: media.episodeNumber,
+                    media: media,
                     resumePosition: resumePosition
                 )
             }

@@ -22,10 +22,7 @@ final class MainCoordinator: ObservableObject {
     @Published var morePath = NavigationPath()
 
     @Published var selectedStreamURL: URL?
-    @Published var selectedStreamTitle: String = ""
-    @Published var selectedMediaUrl: String?
-    @Published var selectedSeasonNumber: Int?
-    @Published var selectedEpisodeNumber: Int?
+    @Published var selectedMedia: Media?
     @Published var selectedResumePosition: Double?
     @Published var isPresentingPlayer = false
 
@@ -110,27 +107,18 @@ final class MainCoordinator: ObservableObject {
 
     func showPlayer(
         streamURL: URL,
-        title: String,
-        mediaUrl: String? = nil,
-        seasonNumber: Int? = nil,
-        episodeNumber: Int? = nil,
+        media: Media? = nil,
         resumePosition: Double? = nil
     ) {
         selectedStreamURL = streamURL
-        selectedStreamTitle = title
-        selectedMediaUrl = mediaUrl
-        selectedSeasonNumber = seasonNumber
-        selectedEpisodeNumber = episodeNumber
+        selectedMedia = media
         selectedResumePosition = resumePosition
         isPresentingPlayer = true
     }
 
     func resetPlayer() {
         selectedStreamURL = nil
-        selectedStreamTitle = ""
-        selectedMediaUrl = nil
-        selectedSeasonNumber = nil
-        selectedEpisodeNumber = nil
+        selectedMedia = nil
         selectedResumePosition = nil
         isPresentingPlayer = false
     }

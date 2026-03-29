@@ -2,6 +2,8 @@ import SwiftUI
 
 struct StreamSelectionTVView: View {
     @EnvironmentObject private var coordinator: MainCoordinator
+    @Environment(FavoritesManager.self) private var favoritesManager
+    @Environment(WatchHistoryManager.self) private var watchHistoryManager
     @State var viewModel: StreamSelectionViewModel
     private let onPlay: (Stream, Double?) -> Void
     
@@ -23,12 +25,71 @@ struct StreamSelectionTVView: View {
                         MediaHeroContentView(media: viewModel.media)
                             .frame(maxWidth: proxy.size.width * 0.60, alignment: .leading)
 
+                        if viewModel.media.itemType == .movie || viewModel.media.itemType == .episode {
+                            HStack(alignment: .center, spacing: 16) {
+                                if viewModel.media.itemType == .movie {
+                                    favoriteButton
+                                }
+                                watchedButton
+                            }
+                        }
+
                         streamsSection
                     }
                 }
             }
         }
         .toolbar(.hidden, for: .tabBar)
+    }
+
+    // MARK: - Watched Button
+
+    private var watchedButton: some View {
+        @FocusState var isFocused: Bool
+        
+        let isWatched = viewModel.media.watchCompleted ?? false
+        return Button {
+            Task {
+                if isWatched {
+                    await watchHistoryManager.setWatched(media: viewModel.media, watched: false)
+                } else {
+                    await watchHistoryManager.setWatched(media: viewModel.media, watched: true)
+                }
+            }
+        } label: {
+            Label(
+                isWatched
+                ? String(localized: "library.removeWatched")
+                : String(localized: "library.setWatched"),
+                systemImage: isWatched ? "checkmark.circle" : "circle.fill"
+            )
+        }
+        .buttonStyle(.automatic)
+    }
+
+    // MARK: - Favorite Button
+
+    private var favoriteButton: some View {
+        @FocusState var isFocused: Bool
+        
+        let isFav = favoritesManager.isFavorite(viewModel.media)
+        return Button {
+            Task {
+                if isFav {
+                    await favoritesManager.remove(viewModel.media)
+                } else {
+                    await favoritesManager.add(viewModel.media)
+                }
+            }
+        } label: {
+            Label(
+                isFav
+                    ? String(localized: "library.removeFromLibrary")
+                    : String(localized: "library.addToLibrary"),
+                systemImage: isFav ? "heart.fill" : "heart"
+            )
+        }
+        .buttonStyle(.automatic)
     }
 
     // MARK: - Streams

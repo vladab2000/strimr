@@ -16,34 +16,33 @@ final class WatchHistoryManager {
 
     func createWatchRecord(for media: Media) async {
         do {
-            try await ApiClient.createWatchRecord(media: media)
+            try await ApiClient.createWatch(media: media)
         } catch {
             debugPrint("WatchHistoryManager: failed to create watch record:", error)
         }
     }
 
-    func remove(_ media: Media) async {
+    func remove(media: Media) async {
         do {
-            try await ApiClient.removeWatchRecord(media: media)
+            try await ApiClient.removeWatch(media: media)
             await load()
         } catch {
             debugPrint("WatchHistoryManager: failed to remove watch record:", error)
         }
     }
 
-    func updatePosition(
-        url: String,
-        season: Int?,
-        episode: Int?,
-        position: Int
-    ) async {
+    func setWatched(media: Media, watched: Bool) async {
         do {
-            try await ApiClient.updateWatchPosition(
-                mediaUrl: url,
-                season: season,
-                episode: episode,
-                position: position
-            )
+            try await ApiClient.updateWatch(media: media, watched: watched)
+            await load()
+        } catch {
+            debugPrint("WatchHistoryManager: failed to update watch status:", error)
+        }
+    }
+    
+    func updatePosition(media: Media, position: Int) async {
+        do {
+            try await ApiClient.updateWatch(media: media, position: position)
         } catch {
             debugPrint("WatchHistoryManager: failed to update position:", error)
         }

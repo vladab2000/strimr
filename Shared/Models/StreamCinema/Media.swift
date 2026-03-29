@@ -31,9 +31,8 @@ struct Media: Codable, Hashable, Identifiable {
     let streams: [Stream]?
 
     // Watch data
-    let watchPosition: Int?
-    let watchCompleted: Bool?
-    let watchDuration: Int?
+    var watchPosition: Int?
+    var watchCompleted: Bool?
     let updatedUtc: Date?
 
     enum CodingKeys: String, CodingKey {
@@ -44,7 +43,7 @@ struct Media: Codable, Hashable, Identifiable {
         case description
         case season, seasonTitle, episode, episodeTitle
         case art, streams
-        case watchPosition, watchCompleted, watchDuration, updatedUtc
+        case watchPosition, watchCompleted, updatedUtc
     }
 
     // MARK: - Identifiable
@@ -119,6 +118,17 @@ struct Media: Codable, Hashable, Identifiable {
         return nil
     }
 
+    var isFullyWatched: Bool {
+        switch itemType {
+        case .movie, .episode:
+            return watchCompleted ?? false
+        case .tvshow, .season:
+            return watchCompleted ?? false  //TODO: Implementovat počet epizod a sériií + počet shlédnutých
+        default:
+            return false
+        }
+    }
+    
     // MARK: - Computed: progress
 
     var progressFraction: Double? {
@@ -138,6 +148,10 @@ struct Media: Codable, Hashable, Identifiable {
         return String(format: "S%02dE%02d", season, episode)
     }
 
+    var remainingUnwatchedEpisodes: Int? {
+        return nil   //TODO: Implementovat počet epizod a sériií + počet shlédnutých
+    }
+    
     // MARK: - Computed: lang (inlined from MediaLangItem)
 
     var isCZLang: Bool {
@@ -207,7 +221,6 @@ struct Media: Codable, Hashable, Identifiable {
             streams: nil,
             watchPosition: nil,
             watchCompleted: nil,
-            watchDuration: nil,
             updatedUtc: nil
         )
     }
@@ -232,7 +245,7 @@ extension Media {
         season: nil, seasonTitle: nil, episode: nil, episodeTitle: nil,
         art: Art.preview1,
         streams: nil,
-        watchPosition: nil, watchCompleted: nil, watchDuration: nil, updatedUtc: nil
+        watchPosition: nil, watchCompleted: nil, updatedUtc: nil
     )
     static let preview2 = Media(
         type: "movie",
@@ -250,7 +263,7 @@ extension Media {
         season: nil, seasonTitle: nil, episode: nil, episodeTitle: nil,
         art: Art.preview2,
         streams: nil,
-        watchPosition: nil, watchCompleted: nil, watchDuration: nil, updatedUtc: nil
+        watchPosition: nil, watchCompleted: nil, updatedUtc: nil
     )
     static let preview3 = Media(
         type: "movie",
@@ -268,7 +281,7 @@ extension Media {
         season: nil, seasonTitle: nil, episode: nil, episodeTitle: nil,
         art: Art.preview3,
         streams: nil,
-        watchPosition: nil, watchCompleted: nil, watchDuration: nil, updatedUtc: nil
+        watchPosition: nil, watchCompleted: nil, updatedUtc: nil
     )
     static let preview4 = Media(
         type: "movie",
@@ -286,7 +299,7 @@ extension Media {
         season: nil, seasonTitle: nil, episode: nil, episodeTitle: nil,
         art: Art.preview4,
         streams: nil,
-        watchPosition: nil, watchCompleted: nil, watchDuration: nil, updatedUtc: nil
+        watchPosition: nil, watchCompleted: nil, updatedUtc: nil
     )
 
     static let previewTvShow1 = Media(
@@ -305,7 +318,7 @@ extension Media {
         season: 1, seasonTitle: "Season 1", episode: 1, episodeTitle: "We Have Always Lived in the Castle",
         art: Art.previewTvShow1,
         streams: nil,
-        watchPosition: nil, watchCompleted: nil, watchDuration: nil, updatedUtc: nil
+        watchPosition: nil, watchCompleted: nil, updatedUtc: nil
     )
     static let previewTvShow2 = Media(
         type: "tvshow",
@@ -323,7 +336,7 @@ extension Media {
         season: 1, seasonTitle: "Season 1", episode: 1, episodeTitle: "Piya Wiconi",
         art: Art.previewTvShow2,
         streams: nil,
-        watchPosition: nil, watchCompleted: nil, watchDuration: nil, updatedUtc: nil
+        watchPosition: nil, watchCompleted: nil, updatedUtc: nil
     )
     static let previewTvShow3 = Media(
         type: "tvshow",
@@ -341,7 +354,7 @@ extension Media {
         season: 6, seasonTitle: "Season 1", episode: 1, episodeTitle: "The Case of the Killing Jar",
         art: Art.previewTvShow3,
         streams: nil,
-        watchPosition: nil, watchCompleted: nil, watchDuration: nil, updatedUtc: nil
+        watchPosition: nil, watchCompleted: nil, updatedUtc: nil
     )
     static let previewTvShow4 = Media(
         type: "tvshow",
@@ -359,7 +372,7 @@ extension Media {
         season: 1, seasonTitle: "Season 1", episode: 2, episodeTitle: "Hi, My Name Is",
         art: Art.previewTvShow4,
         streams: nil,
-        watchPosition: nil, watchCompleted: nil, watchDuration: nil, updatedUtc: nil
+        watchPosition: nil, watchCompleted: nil, updatedUtc: nil
     )
 
     static let previewEpisode1 = Media(
@@ -378,6 +391,6 @@ extension Media {
         season: 6, seasonTitle: "Season 6", episode: 1, episodeTitle: "The Case of the Killing Jar",
         art: Art.previewTvShow3,
         streams: nil,
-        watchPosition: nil, watchCompleted: nil, watchDuration: nil, updatedUtc: nil
+        watchPosition: nil, watchCompleted: nil, updatedUtc: nil
     )
 }

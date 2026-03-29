@@ -61,7 +61,7 @@ struct HomeTVView: View {
                         MediaCarousel(
                             layout: .landscape,
                             items: viewModel.continueWatching,
-                            showsLabels: true,
+                            showsLabels: false,
                             onSelectMedia: onSelectMedia,
                         )
                     }
@@ -72,7 +72,7 @@ struct HomeTVView: View {
                          MediaCarousel(
                              layout: .portrait,
                              items: viewModel.latestVideos,
-                             showsLabels: true,
+                             showsLabels: false,
                              onSelectMedia: onSelectMedia,
                          )
                      }
@@ -83,7 +83,7 @@ struct HomeTVView: View {
                          MediaCarousel(
                              layout: .portrait,
                              items: viewModel.latestShows,
-                             showsLabels: true,
+                             showsLabels: false,
                              onSelectMedia: onSelectMedia,
                          )
                      }

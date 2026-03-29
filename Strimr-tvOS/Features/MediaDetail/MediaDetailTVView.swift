@@ -4,6 +4,7 @@ import SwiftUI
 struct MediaDetailTVView: View {
     @EnvironmentObject private var coordinator: MainCoordinator
     @Environment(FavoritesManager.self) private var favoritesManager
+    @Environment(WatchHistoryManager.self) private var watchHistoryManager
     @State var viewModel: MediaDetailViewModel
     @State private var focusedMedia: Media?
     @FocusState private var focusedEpisodeId: String?
@@ -31,7 +32,10 @@ struct MediaDetailTVView: View {
                             .frame(maxWidth: proxy.size.width * 0.60, alignment: .leading)
 
                         if bindableViewModel.media.itemType == .movie || bindableViewModel.media.itemType == .tvshow {
-                            favoriteButton
+                            HStack(alignment: .center, spacing: 16) {
+                                favoriteButton
+                                watchedButton
+                            }
                         }
 
                         if bindableViewModel.media.itemType == .tvshow {
@@ -70,6 +74,8 @@ struct MediaDetailTVView: View {
     // MARK: - Favorite Button
 
     private var favoriteButton: some View {
+        @FocusState var isFocused: Bool
+        
         let isFav = favoritesManager.isFavorite(viewModel.media)
         return Button {
             Task {
@@ -86,16 +92,33 @@ struct MediaDetailTVView: View {
                     : String(localized: "library.addToLibrary"),
                 systemImage: isFav ? "heart.fill" : "heart"
             )
-            .font(.headline)
-            .foregroundStyle(isFav ? .red : .brandSecondary)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .background(
-                Capsule(style: .continuous)
-                    .fill((isFav ? Color.red : Color.brandSecondary).opacity(0.15))
+        }
+        .buttonStyle(.automatic)
+    }
+    
+    // MARK: - Watched Button
+
+    private var watchedButton: some View {
+        @FocusState var isFocused: Bool
+        
+        let isWatched = viewModel.media.watchCompleted ?? false
+        return Button {
+            Task {
+                if isWatched {
+                    await watchHistoryManager.setWatched(media: viewModel.media, watched: false)
+                } else {
+                    await watchHistoryManager.setWatched(media: viewModel.media, watched: true)
+                }
+            }
+        } label: {
+            Label(
+                isWatched
+                    ? String(localized: "library.removeWatched")
+                    : String(localized: "library.setWatched"),
+                systemImage: isWatched ? "checkmark.circle" : "circle.fill"
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.automatic)
     }
 
     private var seasonsSection: some View {

@@ -20,6 +20,9 @@ struct SearchResultCard: View {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .strokeBorder(Color.primary.opacity(0.08))
                 }
+                .overlay(alignment: .topTrailing) {
+                    WatchStatusBadge(media: media)
+                }
 
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {

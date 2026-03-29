@@ -66,8 +66,8 @@ struct EpisodeArtworkView: View {
             RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(.white.opacity(0.05))
         }
-/*        .overlay(alignment: .topTrailing) {
-            WatchStatusBadge(media: .playable(episode))
-        }*/
+        .overlay(alignment: .topTrailing) {
+            WatchStatusBadge(media: episode)
+        }
     }
 }
