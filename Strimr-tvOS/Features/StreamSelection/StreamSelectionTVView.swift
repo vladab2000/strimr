@@ -50,11 +50,9 @@ struct StreamSelectionTVView: View {
         let isWatched = viewModel.media.watchCompleted ?? false
         return Button {
             Task {
-                if isWatched {
-                    await watchHistoryManager.setWatched(media: viewModel.media, watched: false)
-                } else {
-                    await watchHistoryManager.setWatched(media: viewModel.media, watched: true)
-                }
+                let newValue = !isWatched
+                await watchHistoryManager.setWatched(media: viewModel.media, watched: newValue)
+                viewModel.media.watchCompleted = newValue
             }
         } label: {
             Label(
@@ -99,7 +97,6 @@ struct StreamSelectionTVView: View {
         VStack(alignment: .leading, spacing: 20) {
             Text("streamSelection.title")
                 .font(.title3.weight(.semibold))
-                .focusable()
 
             if viewModel.streams.isEmpty {
                 Text("streamSelection.noStreams")

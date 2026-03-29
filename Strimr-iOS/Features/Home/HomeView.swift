@@ -73,7 +73,10 @@ struct HomeView: View {
             await viewModel.load()
         }
         .onAppear {
-            viewModel.refreshContinueWatching()
+            viewModel.refreshWatchStatus()
+        }
+        .onChange(of: watchHistoryManager.changeCounter) {
+            viewModel.refreshWatchStatus()
         }
         .refreshable {
             await viewModel.reload()

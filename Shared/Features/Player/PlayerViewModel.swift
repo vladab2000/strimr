@@ -16,8 +16,11 @@ final class PlayerViewModel {
 
     var resumePosition: Double?
     var onSavePosition: ((Int) -> Void)?
+    var onCreateWatchRecord: (() -> Void)?
 
+    private static let minimumPlaybackSeconds: Double = 60
     private var lastSaveTime: Date = .distantPast
+    private var hasCreatedWatchRecord = false
 
     init(streamURL: URL, title: String) {
         self.streamURL = streamURL
@@ -48,12 +51,22 @@ final class PlayerViewModel {
     }
 
     func handleStop() {
+        guard position >= Self.minimumPlaybackSeconds else { return }
+        ensureWatchRecordCreated()
         onSavePosition?(Int(position))
     }
 
     private func periodicSave() {
+        guard position >= Self.minimumPlaybackSeconds else { return }
         guard Date().timeIntervalSince(lastSaveTime) >= 15 else { return }
         lastSaveTime = Date()
+        ensureWatchRecordCreated()
         onSavePosition?(Int(position))
+    }
+
+    private func ensureWatchRecordCreated() {
+        guard !hasCreatedWatchRecord else { return }
+        hasCreatedWatchRecord = true
+        onCreateWatchRecord?()
     }
 }

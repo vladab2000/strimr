@@ -116,6 +116,13 @@ struct MainTabTVView: View {
         let media = coordinator.selectedMedia
         let manager = watchHistoryManager
 
+        vm.onCreateWatchRecord = {
+            guard let media else { return }
+            Task { @MainActor in
+                await manager.createWatchRecord(for: media)
+            }
+        }
+
         vm.onSavePosition = { position in
             guard let media else { return }
             Task { @MainActor in

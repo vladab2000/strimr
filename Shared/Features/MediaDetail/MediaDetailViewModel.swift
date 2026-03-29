@@ -38,12 +38,13 @@ final class MediaDetailViewModel {
         return genres.joined(separator: ", ")
     }
 
+    var selectedSeason: Media? {
+        guard let selectedSeasonId else { return nil }
+        return seasons.first(where: { $0.id == selectedSeasonId })
+    }
+
     var selectedSeasonTitle: String {
-        guard let selectedSeasonId else {
-            return String(localized: "media.detail.season")
-        }
-        return seasons.first(where: { $0.id == selectedSeasonId })?.title
-            ?? String(localized: "media.detail.season")
+        selectedSeason?.title ?? String(localized: "media.detail.season")
     }
 
     func loadDetails() async {

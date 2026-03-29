@@ -15,9 +15,6 @@ struct PlaybackLauncher {
             let urlStr = try await ApiClient.fetchStream(urlPath: urlPath)
             guard let streamURL = URL(string: urlStr) else { return }
 
-            // Create watch record on server before showing player
-            await watchHistoryManager.createWatchRecord(for: media)
-
             await MainActor.run {
                 coordinator.showPlayer(
                     streamURL: streamURL,

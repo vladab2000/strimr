@@ -43,7 +43,10 @@ struct HomeTVView: View {
             await viewModel.load()
         }
         .onAppear {
-            viewModel.refreshContinueWatching()
+            viewModel.refreshWatchStatus()
+        }
+        .onChange(of: watchHistoryManager.changeCounter) {
+            viewModel.refreshWatchStatus()
         }
         .onChange(of: heroMedia?.id) { _, _ in
             updateInitialFocus()

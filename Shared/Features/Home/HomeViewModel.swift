@@ -36,8 +36,12 @@ final class HomeViewModel {
         await task.value
     }
 
-    func refreshContinueWatching() {
+    func refreshWatchStatus() {
         continueWatching = watchHistoryManager?.continueWatching ?? []
+        if let manager = watchHistoryManager {
+            latestVideos = manager.applyWatchOverrides(to: latestVideos)
+            latestShows = manager.applyWatchOverrides(to: latestShows)
+        }
     }
 
     private func loadContinueWatching() async {

@@ -28,7 +28,7 @@ struct MediaDetailTVView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 32) {
-                        MediaHeroContentView(media: focusedMedia ?? bindableViewModel.media)
+                        MediaHeroContentView(media: heroMedia)
                             .frame(maxWidth: proxy.size.width * 0.60, alignment: .leading)
 
                         if bindableViewModel.media.itemType == .movie || bindableViewModel.media.itemType == .tvshow {
@@ -51,6 +51,9 @@ struct MediaDetailTVView: View {
         }
         .task {
             await bindableViewModel.loadDetails()
+            if let episodeId = bindableViewModel.firstUnwatchedEpisodeId {
+                focusedEpisodeId = episodeId
+            }
         }
         .onChange(of: coordinator.isPresentingPlayer) { _, isPresenting in
             guard !isPresenting else { return }
@@ -61,14 +64,21 @@ struct MediaDetailTVView: View {
                 focusedMedia = bindableViewModel.media
             }
         }
-/*        .onChange(of: bindableViewModel.media) { oldValue, newValue in
-            if focusedMedia == nil || focusedMedia?.id == oldValue.id {
-                focusedMedia = newValue.mediaItem
-            }
-        }*/
         .toolbar(.hidden, for: .tabBar)
         .focusScope(episodesNamespace)
         .defaultFocus($focusedEpisodeId, viewModel.firstUnwatchedEpisodeId, priority: .userInitiated)
+    }
+
+    /// Media displayed in the hero area.
+    /// Priority: focused episode/season > selected season > main media.
+    private var heroMedia: Media {
+        if let focused = focusedMedia {
+            return focused
+        }
+        if let selectedSeason = viewModel.selectedSeason {
+            return selectedSeason
+        }
+        return viewModel.media
     }
 
     // MARK: - Favorite Button
@@ -104,11 +114,9 @@ struct MediaDetailTVView: View {
         let isWatched = viewModel.media.watchCompleted ?? false
         return Button {
             Task {
-                if isWatched {
-                    await watchHistoryManager.setWatched(media: viewModel.media, watched: false)
-                } else {
-                    await watchHistoryManager.setWatched(media: viewModel.media, watched: true)
-                }
+                let newValue = !isWatched
+                await watchHistoryManager.setWatched(media: viewModel.media, watched: newValue)
+                viewModel.media.watchCompleted = newValue
             }
         } label: {
             Label(

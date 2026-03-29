@@ -193,6 +193,8 @@ struct Media: Codable, Hashable, Identifiable {
 
     static func == (lhs: Media, rhs: Media) -> Bool {
         lhs.id == rhs.id
+            && lhs.watchCompleted == rhs.watchCompleted
+            && lhs.watchPosition == rhs.watchPosition
     }
 
     // MARK: - Factory

@@ -4,7 +4,7 @@ import Observation
 @MainActor
 @Observable
 final class StreamSelectionViewModel {
-    let media: Media
+    var media: Media
     let streams: [Stream]
     var isResolvingStream = false
     var errorMessage: String?
