@@ -1,13 +1,8 @@
+import AppKit
 import Foundation
 import Libmpv
 
-#if canImport(UIKit)
-import UIKit
-
-/// warning: metal API validation has been disabled to ignore crash when playing HDR videos.
-/// Edit Scheme -> Run -> Diagnostics -> Metal API Validation -> Turn it off
-/// https://github.com/KhronosGroup/MoltenVK/issues/2226
-final class MPVPlayerViewController: UIViewController {
+final class MPVPlayerViewControllerMac: NSViewController {
     var metalLayer = MetalLayer()
     private var lastDrawableSize: CGSize?
     var mpv: OpaquePointer?
@@ -16,12 +11,8 @@ final class MPVPlayerViewController: UIViewController {
     private let options: PlayerOptions
 
     var playUrl: URL?
-    var hdrAvailable: Bool = false
     var hdrEnabled = false {
         didSet {
-            // FIXME: target-colorspace-hint does not support being changed at runtime.
-            // this option should be set as early as possible otherwise can cause issues
-            // not recommended to use this way.
             guard let mpv else { return }
             if hdrEnabled {
                 checkError(mpv_set_option_string(mpv, "target-colorspace-hint", "yes"))
@@ -43,16 +34,20 @@ final class MPVPlayerViewController: UIViewController {
 
     deinit {
         destruct()
-        updateIdleTimer(isPlaying: false)
+    }
+
+    override func loadView() {
+        view = NSView()
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        view.wantsLayer = true
         metalLayer.framebufferOnly = true
-        metalLayer.backgroundColor = UIColor.black.cgColor
+        metalLayer.backgroundColor = NSColor.black.cgColor
 
-        view.layer.addSublayer(metalLayer)
+        view.layer?.addSublayer(metalLayer)
 
         updateMetalLayerLayout()
         setupMpv()
@@ -60,17 +55,44 @@ final class MPVPlayerViewController: UIViewController {
         if let url = playUrl {
             loadFile(url)
         }
+
+        setupNotifications()
     }
 
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-
+    override func viewDidLayout() {
+        super.viewDidLayout()
         updateMetalLayerLayout()
     }
 
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        updateIdleTimer(isPlaying: false)
+    override func viewWillDisappear() {
+        super.viewWillDisappear()
+    }
+
+    private func setupNotifications() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidResignActive),
+            name: NSApplication.didResignActiveNotification,
+            object: nil,
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidBecomeActive),
+            name: NSApplication.didBecomeActiveNotification,
+            object: nil,
+        )
+    }
+
+    @objc private func appDidResignActive() {
+        guard let mpv else { return }
+        pause()
+        checkError(mpv_set_option_string(mpv, "vid", "no"))
+    }
+
+    @objc private func appDidBecomeActive() {
+        guard let mpv else { return }
+        checkError(mpv_set_option_string(mpv, "vid", "auto"))
+        play()
     }
 
     func setupMpv() {
@@ -80,7 +102,6 @@ final class MPVPlayerViewController: UIViewController {
             exit(1)
         }
 
-        // https://mpv.io/manual/stable/#options
         checkError(mpv_request_log_messages(mpv, "no"))
         checkError(mpv_set_option(mpv, "wid", MPV_FORMAT_INT64, &metalLayer))
         checkError(mpv_set_option_string(mpv, "vo", "gpu-next"))
@@ -92,10 +113,6 @@ final class MPVPlayerViewController: UIViewController {
         let scaleString = String(format: "%.2f", locale: Locale(identifier: "en_US_POSIX"), subtitleScale)
         checkError(mpv_set_option_string(mpv, "sub-scale", scaleString))
 
-//        checkError(mpv_set_option_string(mpv, "target-colorspace-hint", "yes")) // HDR passthrough
-//        checkError(mpv_set_option_string(mpv, "tone-mapping-visualize", "yes"))  // only for debugging purposes
-//        checkError(mpv_set_option_string(mpv, "profile", "fast"))   // can fix frame drop in poor device when play 4k
-
         checkError(mpv_initialize(mpv))
 
         mpv_observe_property(mpv, 0, MPVProperty.pause, MPV_FORMAT_FLAG)
@@ -105,44 +122,12 @@ final class MPVPlayerViewController: UIViewController {
         mpv_observe_property(mpv, 0, MPVProperty.duration, MPV_FORMAT_DOUBLE)
         mpv_observe_property(mpv, 0, MPVProperty.demuxerCacheDuration, MPV_FORMAT_DOUBLE)
         mpv_set_wakeup_callback(mpv, { ctx in
-            let client = unsafeBitCast(ctx, to: MPVPlayerViewController.self)
+            let client = unsafeBitCast(ctx, to: MPVPlayerViewControllerMac.self)
             client.readEvents()
         }, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque()))
-
-        setupNotification()
     }
 
-    func setupNotification() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(enterBackground),
-            name: UIApplication.didEnterBackgroundNotification,
-            object: nil,
-        )
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(enterForeground),
-            name: UIApplication.willEnterForegroundNotification,
-            object: nil,
-        )
-    }
-
-    @objc func enterBackground() {
-        // fix black screen issue when app enter foreground again
-        guard let mpv else { return }
-        pause()
-        checkError(mpv_set_option_string(mpv, "vid", "no"))
-    }
-
-    @objc func enterForeground() {
-        guard let mpv else { return }
-        checkError(mpv_set_option_string(mpv, "vid", "auto"))
-        play()
-    }
-
-    func loadFile(
-        _ url: URL,
-    ) {
+    func loadFile(_ url: URL) {
         var args = [url.absoluteString]
         let options = [String]()
 
@@ -161,12 +146,10 @@ final class MPVPlayerViewController: UIViewController {
 
     func play() {
         setFlag(MPVProperty.pause, false)
-        updateIdleTimer(isPlaying: true)
     }
 
     func pause() {
         setFlag(MPVProperty.pause, true)
-        updateIdleTimer(isPlaying: false)
     }
 
     func seek(to time: Double) {
@@ -238,6 +221,102 @@ final class MPVPlayerViewController: UIViewController {
         return tracks
     }
 
+    func destruct() {
+        NotificationCenter.default.removeObserver(self)
+        guard let mpv else { return }
+
+        mpv_set_wakeup_callback(mpv, nil, nil)
+
+        let mpvHandle = mpv
+        self.mpv = nil
+
+        queue.async {
+            mpv_terminate_destroy(mpvHandle)
+        }
+    }
+
+    func updateMetalLayerLayout() {
+        let scale = view.window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 1.0
+        let size = view.bounds.size
+        let roundedDrawableSize = CGSize(
+            width: (size.width * scale).rounded(),
+            height: (size.height * scale).rounded(),
+        )
+        metalLayer.contentsScale = scale
+        metalLayer.frame = view.bounds
+
+        guard roundedDrawableSize != lastDrawableSize else { return }
+        metalLayer.drawableSize = roundedDrawableSize
+        lastDrawableSize = roundedDrawableSize
+    }
+
+    func readEvents() {
+        queue.async { [weak self] in
+            guard let self else { return }
+
+            while true {
+                guard let mpv else { break }
+                let event = mpv_wait_event(mpv, 0)
+                if event?.pointee.event_id == MPV_EVENT_NONE {
+                    break
+                }
+
+                switch event!.pointee.event_id {
+                case MPV_EVENT_PROPERTY_CHANGE:
+                    let dataOpaquePtr = OpaquePointer(event!.pointee.data)
+                    if let eventProperty = UnsafePointer<mpv_event_property>(dataOpaquePtr)?.pointee {
+                        let propertyName = String(cString: eventProperty.name)
+                        guard let playerProperty = PlayerProperty(rawValue: propertyName) else { break }
+                        switch playerProperty {
+                        case .videoParamsSigPeak:
+                            if let sigPeak = UnsafePointer<Double>(OpaquePointer(eventProperty.data))?.pointee {
+                                DispatchQueue.main.async {
+                                    self.playDelegate?.propertyChange(mpv: mpv, property: playerProperty, data: sigPeak)
+                                }
+                            }
+                        case .pause:
+                            let pausedValue = UnsafePointer<Int64>(OpaquePointer(eventProperty.data))?.pointee ?? 0
+                            let isPaused = pausedValue > 0
+                            DispatchQueue.main.async {
+                                self.playDelegate?.propertyChange(mpv: mpv, property: playerProperty, data: isPaused)
+                            }
+                        case .pausedForCache:
+                            let buffering = UnsafePointer<Bool>(OpaquePointer(eventProperty.data))?.pointee ?? true
+                            DispatchQueue.main.async {
+                                self.playDelegate?.propertyChange(mpv: mpv, property: playerProperty, data: buffering)
+                            }
+                        case .timePos, .duration, .demuxerCacheDuration:
+                            let value = UnsafePointer<Double>(OpaquePointer(eventProperty.data))?.pointee
+                            DispatchQueue.main.async {
+                                self.playDelegate?.propertyChange(mpv: mpv, property: playerProperty, data: value)
+                            }
+                        default:
+                            break
+                        }
+                    }
+                case MPV_EVENT_END_FILE:
+                    let endFileData = UnsafeMutablePointer<mpv_event_end_file>(OpaquePointer(event!.pointee.data))
+                    let reason = endFileData?.pointee.reason ?? MPV_END_FILE_REASON_ERROR
+                    if reason == MPV_END_FILE_REASON_EOF {
+                        DispatchQueue.main.async {
+                            self.playDelegate?.playbackEnded()
+                        }
+                    }
+                case MPV_EVENT_FILE_LOADED:
+                    DispatchQueue.main.async {
+                        self.playDelegate?.fileLoaded()
+                    }
+                case MPV_EVENT_SHUTDOWN:
+                    print("event: shutdown\n")
+                    destruct()
+                default:
+                    let eventName = mpv_event_name(event!.pointee.event_id)
+                    print("event: \(String(cString: eventName!))")
+                }
+            }
+        }
+    }
+
     private func getFlag(_ name: String) -> Bool {
         guard let mpv else { return false }
         var data = Int64()
@@ -268,16 +347,13 @@ final class MPVPlayerViewController: UIViewController {
         checkForErrors: Bool = true,
         returnValueCallback: ((Int32) -> Void)? = nil,
     ) {
-        guard let mpv else {
-            return
-        }
+        guard let mpv else { return }
         var cargs = makeCArgs(command, args).map { $0.flatMap { UnsafePointer<CChar>(strdup($0)) } }
         defer {
             for ptr in cargs where ptr != nil {
                 free(UnsafeMutablePointer(mutating: ptr!))
             }
         }
-        // print("\(command) -- \(args)")
         let returnValue = mpv_command(mpv, &cargs)
         if checkForErrors {
             checkError(returnValue)
@@ -297,121 +373,6 @@ final class MPVPlayerViewController: UIViewController {
         strArgs.append(nil)
 
         return strArgs
-    }
-
-    func readEvents() {
-        queue.async { [weak self] in
-            guard let self else { return }
-
-            while true {
-                guard let mpv else { break }
-                let event = mpv_wait_event(mpv, 0)
-                if event?.pointee.event_id == MPV_EVENT_NONE {
-                    break
-                }
-
-                switch event!.pointee.event_id {
-                case MPV_EVENT_PROPERTY_CHANGE:
-                    let dataOpaquePtr = OpaquePointer(event!.pointee.data)
-                    if let eventProperty = UnsafePointer<mpv_event_property>(dataOpaquePtr)?.pointee {
-                        let propertyName = String(cString: eventProperty.name)
-                        guard let playerProperty = PlayerProperty(rawValue: propertyName) else { break }
-                        switch playerProperty {
-                        case .videoParamsSigPeak:
-                            if let sigPeak = UnsafePointer<Double>(OpaquePointer(eventProperty.data))?.pointee {
-                                DispatchQueue.main.async {
-                                    let maxEDRRange = self.view.window?.screen.potentialEDRHeadroom ?? 1.0
-                                    // display screen support HDR and current playing HDR video
-                                    self.hdrAvailable = maxEDRRange > 1.0 && sigPeak > 1.0
-                                    self.playDelegate?.propertyChange(mpv: mpv, property: playerProperty, data: sigPeak)
-                                }
-                            }
-                        case .pause:
-                            let pausedValue = UnsafePointer<Int64>(OpaquePointer(eventProperty.data))?.pointee ?? 0
-                            let isPaused = pausedValue > 0
-                            DispatchQueue.main.async {
-                                self.playDelegate?.propertyChange(mpv: mpv, property: playerProperty, data: isPaused)
-                                self.updateIdleTimer(isPlaying: !isPaused)
-                            }
-                        case .pausedForCache:
-                            let buffering = UnsafePointer<Bool>(OpaquePointer(eventProperty.data))?.pointee ?? true
-                            DispatchQueue.main.async {
-                                self.playDelegate?.propertyChange(mpv: mpv, property: playerProperty, data: buffering)
-                            }
-                        case .timePos, .duration, .demuxerCacheDuration:
-                            let value = UnsafePointer<Double>(OpaquePointer(eventProperty.data))?.pointee
-                            DispatchQueue.main.async {
-                                self.playDelegate?.propertyChange(mpv: mpv, property: playerProperty, data: value)
-                            }
-                        default:
-                            break
-                        }
-                    }
-                case MPV_EVENT_END_FILE:
-                    let endFileData = UnsafeMutablePointer<mpv_event_end_file>(OpaquePointer(event!.pointee.data))
-                    let reason = endFileData?.pointee.reason ?? MPV_END_FILE_REASON_ERROR
-                    if reason == MPV_END_FILE_REASON_EOF {
-                        updateIdleTimer(isPlaying: false)
-                        DispatchQueue.main.async {
-                            self.playDelegate?.playbackEnded()
-                        }
-                    }
-                case MPV_EVENT_FILE_LOADED:
-                    DispatchQueue.main.async {
-                        self.playDelegate?.fileLoaded()
-                    }
-                case MPV_EVENT_SHUTDOWN:
-                    print("event: shutdown\n")
-                    destruct()
-                case MPV_EVENT_LOG_MESSAGE:
-                    let msg = UnsafeMutablePointer<mpv_event_log_message>(OpaquePointer(event!.pointee.data))
-                    print(
-                        "[\(String(cString: (msg!.pointee.prefix)!))] \(String(cString: (msg!.pointee.level)!)): \(String(cString: (msg!.pointee.text)!))",
-                        terminator: "",
-                    )
-                default:
-                    let eventName = mpv_event_name(event!.pointee.event_id)
-                    print("event: \(String(cString: eventName!))")
-                }
-            }
-        }
-    }
-
-    func destruct() {
-        NotificationCenter.default.removeObserver(self)
-        guard let mpv else { return }
-
-        // Drop the wakeup callback to avoid mpv calling back into a deallocated controller.
-        mpv_set_wakeup_callback(mpv, nil, nil)
-
-        let mpvHandle = mpv
-        self.mpv = nil
-
-        queue.async {
-            mpv_terminate_destroy(mpvHandle)
-        }
-    }
-
-    private func updateIdleTimer(isPlaying: Bool) {
-        DispatchQueue.main.async {
-            UIApplication.shared.isIdleTimerDisabled = isPlaying
-        }
-    }
-
-    func updateMetalLayerLayout() {
-        debugPrint("updateMetalLayerLayout: \(view.bounds.size)")
-        let nativeScale = view.window?.screen.nativeScale ?? UIScreen.main.nativeScale
-        let size = view.bounds.size
-        let roundedDrawableSize = CGSize(
-            width: (size.width * nativeScale).rounded(),
-            height: (size.height * nativeScale).rounded(),
-        )
-        metalLayer.contentsScale = nativeScale
-        metalLayer.frame = view.bounds
-
-        guard roundedDrawableSize != lastDrawableSize else { return }
-        metalLayer.drawableSize = roundedDrawableSize
-        lastDrawableSize = roundedDrawableSize
     }
 
     private func parseMap(_ map: mpv_node_list) -> [String: Any] {
@@ -447,5 +408,3 @@ final class MPVPlayerViewController: UIViewController {
         }
     }
 }
-
-#endif

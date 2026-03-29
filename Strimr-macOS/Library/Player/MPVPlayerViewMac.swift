@@ -1,12 +1,12 @@
+import AppKit
 import Foundation
 import SwiftUI
 
-#if canImport(UIKit)
-struct MPVPlayerView: UIViewControllerRepresentable {
+struct MPVPlayerViewMac: NSViewControllerRepresentable {
     var coordinator: Coordinator
 
-    func makeUIViewController(context: Context) -> some UIViewController {
-        let mpv = MPVPlayerViewController(options: coordinator.options)
+    func makeNSViewController(context: Context) -> some NSViewController {
+        let mpv = MPVPlayerViewControllerMac(options: coordinator.options)
         mpv.playDelegate = coordinator
         mpv.playUrl = coordinator.playUrl
         mpv.setPlaybackRate(coordinator.playbackRate)
@@ -15,8 +15,8 @@ struct MPVPlayerView: UIViewControllerRepresentable {
         return mpv
     }
 
-    func updateUIViewController(_ uiViewController: UIViewControllerType, context _: Context) {
-        (uiViewController as? MPVPlayerViewController)?.updateMetalLayerLayout()
+    func updateNSViewController(_ nsViewController: NSViewControllerType, context _: Context) {
+        (nsViewController as? MPVPlayerViewControllerMac)?.updateMetalLayerLayout()
     }
 
     func makeCoordinator() -> Coordinator {
@@ -28,7 +28,7 @@ struct MPVPlayerView: UIViewControllerRepresentable {
         return self
     }
 
-    func onPropertyChange(_ handler: @escaping (MPVPlayerViewController, PlayerProperty, Any?) -> Void) -> Self {
+    func onPropertyChange(_ handler: @escaping (MPVPlayerViewControllerMac, PlayerProperty, Any?) -> Void) -> Self {
         coordinator.onPropertyChange = handler
         return self
     }
@@ -46,12 +46,12 @@ struct MPVPlayerView: UIViewControllerRepresentable {
     @MainActor
     @Observable
     final class Coordinator: MPVPlayerDelegate, PlayerCoordinating {
-        weak var player: MPVPlayerViewController?
+        weak var player: MPVPlayerViewControllerMac?
 
         @ObservationIgnored var playUrl: URL?
         @ObservationIgnored var options = PlayerOptions()
         @ObservationIgnored var playbackRate: Float = 1.0
-        @ObservationIgnored var onPropertyChange: ((MPVPlayerViewController, PlayerProperty, Any?) -> Void)?
+        @ObservationIgnored var onPropertyChange: ((MPVPlayerViewControllerMac, PlayerProperty, Any?) -> Void)?
         @ObservationIgnored var onPlaybackEnded: (() -> Void)?
         @ObservationIgnored var onMediaLoaded: (() -> Void)?
 
@@ -102,11 +102,6 @@ struct MPVPlayerView: UIViewControllerRepresentable {
 
         func propertyChange(mpv _: OpaquePointer, property: PlayerProperty, data: Any?) {
             guard let player else { return }
-
-            if property == .videoParamsSigPeak {
-                let supportsHdr = (data as? Double ?? 1.0) > 1.0
-                player.hdrEnabled = supportsHdr
-            }
             onPropertyChange?(player, property, data)
         }
 
@@ -120,5 +115,3 @@ struct MPVPlayerView: UIViewControllerRepresentable {
         }
     }
 }
-
-#endif

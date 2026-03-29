@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 
+#if canImport(UIKit)
 struct VLCPlayerView: UIViewControllerRepresentable {
     var coordinator: Coordinator
 
@@ -111,3 +112,5 @@ struct VLCPlayerView: UIViewControllerRepresentable {
         }
     }
 }
+
+#endif

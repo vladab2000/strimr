@@ -1,6 +1,8 @@
 import Foundation
 import UIKit
 
+#if canImport(UIKit)
+
 #if os(tvOS)
     import TVVLCKit
 #else
@@ -211,3 +213,5 @@ final class VLCPlayerViewController: UIViewController, VLCMediaPlayerDelegate {
         return min(max(0, time), maxSeekTime)
     }
 }
+
+#endif
