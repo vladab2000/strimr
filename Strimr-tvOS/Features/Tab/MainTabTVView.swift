@@ -97,7 +97,6 @@ struct MainTabTVView: View {
                         await playbackLauncher.play(
                             stream: stream,
                             media: media,
-                            resumePosition: resumePosition
                         )
                     }
                 }

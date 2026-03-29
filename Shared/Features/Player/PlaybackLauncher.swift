@@ -6,8 +6,7 @@ struct PlaybackLauncher {
 
     func play(
         stream: Stream,
-        media: Media,
-        resumePosition: Double? = nil
+        media: Media
     ) async {
         guard let urlPath = stream.url else { return }
 
@@ -15,11 +14,17 @@ struct PlaybackLauncher {
             let urlStr = try await ApiClient.fetchStream(urlPath: urlPath)
             guard let streamURL = URL(string: urlStr) else { return }
 
+            let resume: Double? = if let pos = media.watchPosition, pos > 0, media.watchCompleted != true {
+                Double(pos)
+            } else {
+                nil
+            }
+
             await MainActor.run {
                 coordinator.showPlayer(
                     streamURL: streamURL,
                     media: media,
-                    resumePosition: resumePosition
+                    resumePosition: resume
                 )
             }
         } catch {

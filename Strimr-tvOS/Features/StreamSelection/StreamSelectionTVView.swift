@@ -5,6 +5,8 @@ struct StreamSelectionTVView: View {
     @Environment(FavoritesManager.self) private var favoritesManager
     @Environment(WatchHistoryManager.self) private var watchHistoryManager
     @State var viewModel: StreamSelectionViewModel
+    @FocusState private var focusedStreamId: String?
+    @Namespace private var streamsNamespace
     private let onPlay: (Stream, Double?) -> Void
     
     init(
@@ -40,6 +42,8 @@ struct StreamSelectionTVView: View {
             }
         }
         .toolbar(.hidden, for: .tabBar)
+        .focusScope(streamsNamespace)
+        .defaultFocus($focusedStreamId, viewModel.streams.first?.id, priority: .userInitiated)
     }
 
     // MARK: - Watched Button
@@ -108,10 +112,12 @@ struct StreamSelectionTVView: View {
                             StreamCard(
                                 stream: stream,
                                 isResolving: viewModel.isResolvingStream,
+                                isFocused: focusedStreamId == stream.id,
                                 onSelect: {
                                     onPlay(stream, nil)
                                 }
                             )
+                            .focused($focusedStreamId, equals: stream.id)
                         }
                     }
                     .padding(.vertical, 12)
@@ -131,9 +137,8 @@ struct StreamSelectionTVView: View {
 private struct StreamCard: View {
     let stream: Stream
     let isResolving: Bool
+    let isFocused: Bool
     let onSelect: () -> Void
-
-    @FocusState private var isFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -189,7 +194,6 @@ private struct StreamCard: View {
         .scaleEffect(isFocused ? 1.05 : 1.0)
         .animation(.easeOut(duration: 0.15), value: isFocused)
         .focusable()
-        .focused($isFocused)
         .onPlayPauseCommand(perform: onSelect)
         .onTapGesture(perform: onSelect)
     }
