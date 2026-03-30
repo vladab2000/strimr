@@ -32,6 +32,10 @@ struct StrimrApp: App {
     }
 }
 
-//TODO: Pamatovat si i HERO, pro jednotlivé stránky (když se mezi nimi přepíná zůstáva HERO z předchozí)
+//TODO: Pamatovat si i HERO, pro jednotlivé stránky (když se mezi nimi přepíná zůstáva HERO z předchozí) - toto chování je způsobeno MediaFocusModel (globální pamatování Media přes celou aplikaci, asi by mělo být na stránku)
 //TODO: lokalizace
-//TODO: podpora stránkování
+//TODO: V HomeViewModel by mohlo být načítání MediaCarusel dynamicky, dle konfigurace
+
+//TODO: Věci nutné upravit i na Serveru
+//TODO: podpora stránkování - nový typ v Media, nebo jen url, která slouží k dočtění další/předchozí stránky
+//TODO: Přidat property do Media, pro přeskakování začátku, aby se dalo přeskočit intro a pozice konce videa, aby se mohlo nastavit jako shlédnuté
