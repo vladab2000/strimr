@@ -96,6 +96,10 @@ struct PlayerMacView: View {
                     )
                     .transition(.opacity)
                 }
+                
+/*                if let seekFeedback {
+                    seekFeedbackOverlay(seekFeedback)
+                }*/
             }
         }
         .onAppear {
@@ -112,7 +116,7 @@ struct PlayerMacView: View {
             guard !isScrubbing else { return }
             timelinePosition = newValue
         }
-        .sheet(isPresented: $showingSettings) {
+/*        .sheet(isPresented: $showingSettings) {
             MacPlaybackSettingsView(
                 audioTracks: settingsAudioTracks,
                 subtitleTracks: settingsSubtitleTracks,
@@ -125,7 +129,7 @@ struct PlayerMacView: View {
                 onClose: { showingSettings = false },
             )
             .frame(minWidth: 400, minHeight: 300)
-        }
+        }*/
     }
 
     private var bufferingOverlay: some View {
@@ -290,7 +294,7 @@ struct PlayerMacView: View {
 
 // MARK: - Playback Settings Sheet
 
-private struct MacPlaybackSettingsView: View {
+/*private struct MacPlaybackSettingsView: View {
     let audioTracks: [PlaybackSettingsTrack]
     let subtitleTracks: [PlaybackSettingsTrack]
     let selectedAudioTrackID: Int?
@@ -416,4 +420,4 @@ private struct MacPlaybackSettingsView: View {
             Spacer()
         }
     }
-}
+}*/
