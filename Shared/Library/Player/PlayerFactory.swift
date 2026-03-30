@@ -8,13 +8,25 @@ enum PlayerFactory {
     ) -> any PlayerCoordinating {
         switch selection {
         case .mpv:
+            #if os(macOS)
+            let coordinator = MPVPlayerViewMac.Coordinator()
+            coordinator.options = options
+            return coordinator
+            #else
             let coordinator = MPVPlayerView.Coordinator()
             coordinator.options = options
             return coordinator
+            #endif
         case .vlc:
+            #if canImport(UIKit)
             let coordinator = VLCPlayerView.Coordinator()
             coordinator.options = options
             return coordinator
+            #else
+            let coordinator = MPVPlayerViewMac.Coordinator()
+            coordinator.options = options
+            return coordinator
+            #endif
         }
     }
 
@@ -27,6 +39,20 @@ enum PlayerFactory {
     ) -> AnyView {
         switch selection {
         case .mpv:
+            #if os(macOS)
+            guard let mpvCoordinator = coordinator as? MPVPlayerViewMac.Coordinator else {
+                assertionFailure("MPV coordinator expected")
+                return AnyView(EmptyView())
+            }
+            return AnyView(
+                MPVPlayerViewMac(coordinator: mpvCoordinator)
+                    .onPropertyChange { _, property, data in
+                        onPropertyChange(property, data)
+                    }
+                    .onPlaybackEnded(onPlaybackEnded)
+                    .onMediaLoaded(onMediaLoaded),
+            )
+            #else
             guard let mpvCoordinator = coordinator as? MPVPlayerView.Coordinator else {
                 assertionFailure("MPV coordinator expected")
                 return AnyView(EmptyView())
@@ -39,7 +65,9 @@ enum PlayerFactory {
                     .onPlaybackEnded(onPlaybackEnded)
                     .onMediaLoaded(onMediaLoaded),
             )
+            #endif
         case .vlc:
+            #if canImport(UIKit)
             guard let vlcCoordinator = coordinator as? VLCPlayerView.Coordinator else {
                 assertionFailure("VLC coordinator expected")
                 return AnyView(EmptyView())
@@ -52,6 +80,20 @@ enum PlayerFactory {
                     .onPlaybackEnded(onPlaybackEnded)
                     .onMediaLoaded(onMediaLoaded),
             )
+            #else
+            guard let mpvCoordinator = coordinator as? MPVPlayerViewMac.Coordinator else {
+                assertionFailure("MPV coordinator expected for VLC fallback on macOS")
+                return AnyView(EmptyView())
+            }
+            return AnyView(
+                MPVPlayerViewMac(coordinator: mpvCoordinator)
+                    .onPropertyChange { _, property, data in
+                        onPropertyChange(property, data)
+                    }
+                    .onPlaybackEnded(onPlaybackEnded)
+                    .onMediaLoaded(onMediaLoaded),
+            )
+            #endif
         }
     }
 }
