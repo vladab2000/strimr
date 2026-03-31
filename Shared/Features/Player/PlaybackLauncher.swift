@@ -24,7 +24,10 @@ struct PlaybackLauncher {
                 coordinator.showPlayer(
                     streamURL: streamURL,
                     media: media,
-                    resumePosition: resume
+                    resumePosition: resume,
+                    skipIntroStart: stream.skipIntroStart,
+                    skipIntroEnd: stream.skipIntroEnd,
+                    skipTitlesStart: stream.skipTitlesStart
                 )
             }
         } catch {

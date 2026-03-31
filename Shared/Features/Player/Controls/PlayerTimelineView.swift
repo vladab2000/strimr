@@ -6,6 +6,9 @@ struct PlayerTimelineView: View {
     var bufferedAhead: Double
     var playbackPosition: Double
     var onEditingChanged: (Bool) -> Void
+    var skipIntroStart: Double?
+    var skipIntroEnd: Double?
+    var skipTitlesStart: Double?
 
     private var sliderUpperBound: Double {
         max(duration ?? 0, position, playbackPosition, 1)
@@ -42,6 +45,9 @@ struct PlayerTimelineView: View {
                     duration: duration,
                     bufferedProgress: bufferedProgress,
                     onEditingChanged: onEditingChanged,
+                    skipIntroStart: skipIntroStart,
+                    skipIntroEnd: skipIntroEnd,
+                    skipTitlesStart: skipTitlesStart,
                 )
             #else
                 ZStack {
@@ -77,13 +83,35 @@ struct PlayerTimelineView: View {
 
     private var bufferTrack: some View {
         GeometryReader { proxy in
-            let bufferWidth = proxy.size.width * bufferedProgress
+            let width = proxy.size.width
+            let bufferWidth = width * bufferedProgress
             ZStack(alignment: .leading) {
                 Capsule()
                     .fill(Color.white.opacity(0.35))
                 Capsule()
                     .fill(Color.white.opacity(0.65))
                     .frame(width: bufferWidth)
+
+                // Intro region
+                if let introEnd = skipIntroEnd, introEnd > 0, sliderUpperBound > 0 {
+                    let introStart = skipIntroStart ?? 0
+                    let x = width * (introStart / sliderUpperBound)
+                    let w = width * ((introEnd - introStart) / sliderUpperBound)
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(Color.yellow.opacity(0.5))
+                        .frame(width: max(w, 2))
+                        .offset(x: x)
+                }
+
+                // Titles region
+                if let titlesStart = skipTitlesStart, titlesStart > 0, sliderUpperBound > 0 {
+                    let x = width * (titlesStart / sliderUpperBound)
+                    let w = width - x
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(Color.blue.opacity(0.4))
+                        .frame(width: max(w, 2))
+                        .offset(x: x)
+                }
             }
             .frame(height: 4)
             .frame(maxHeight: .infinity, alignment: .center)

@@ -26,6 +26,9 @@ struct Stream: Codable, Hashable, Identifiable {
     let size: String?
     let bitrate: String?
     let langs: [String]?
+    let skipIntroStart: Double?
+    let skipIntroEnd: Double?
+    let skipTitlesStart: Double?
 }
 
 extension Stream {
@@ -77,7 +80,10 @@ extension Stream {
         videoInfo: "AVC1 SDR",
         size: "12345 MB",
         bitrate: "1236548",
-        langs: ["CZ", "EN"]
+        langs: ["CZ", "EN"],
+        skipIntroStart: nil,
+        skipIntroEnd: nil,
+        skipTitlesStart: nil
     )
 }
 enum StreamSorter {

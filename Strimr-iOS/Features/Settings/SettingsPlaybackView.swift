@@ -25,6 +25,7 @@ struct SettingsPlaybackView: View {
         List {
             Section {
                 Toggle("settings.playback.autoPlayNext", isOn: viewModel.autoPlayNextBinding)
+                Toggle("settings.playback.autoSkipIntro", isOn: viewModel.autoSkipIntroBinding)
 
                 Picker("settings.playback.rewind", selection: viewModel.rewindBinding) {
                     ForEach(viewModel.seekOptions, id: \.self) { seconds in

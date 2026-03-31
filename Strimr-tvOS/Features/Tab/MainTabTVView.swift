@@ -92,11 +92,11 @@ struct MainTabTVView: View {
         case let .streamSelection(media, streams):
             StreamSelectionTVView(
                 viewModel: StreamSelectionViewModel(media: media, streams: streams),
-                onPlay: { stream, resumePosition in
+                onPlay: { stream in
                     Task {
                         await playbackLauncher.play(
                             stream: stream,
-                            media: media,
+                            media: media
                         )
                     }
                 }
@@ -111,6 +111,10 @@ struct MainTabTVView: View {
     private func makePlayerViewModel(streamURL: URL) -> PlayerViewModel {
         let vm = PlayerViewModel(streamURL: streamURL, title: coordinator.selectedMedia?.title ?? "")
         vm.resumePosition = coordinator.selectedResumePosition
+        vm.skipIntroStart = coordinator.selectedSkipIntroStart
+        vm.skipIntroEnd = coordinator.selectedSkipIntroEnd
+        vm.skipTitlesStart = coordinator.selectedSkipTitlesStart
+        vm.autoSkipIntro = settingsManager.playback.autoSkipIntro
 
         let media = coordinator.selectedMedia
         let manager = watchHistoryManager
@@ -129,6 +133,13 @@ struct MainTabTVView: View {
                     media: media,
                     position: position
                 )
+            }
+        }
+
+        vm.onMarkWatched = {
+            guard let media else { return }
+            Task { @MainActor in
+                await manager.setWatched(media: media, watched: true)
             }
         }
         return vm

@@ -20,6 +20,13 @@ final class SettingsViewModel {
         )
     }
 
+    var autoSkipIntroBinding: Binding<Bool> {
+        Binding(
+            get: { self.settingsManager.playback.autoSkipIntro },
+            set: { self.settingsManager.setAutoSkipIntro($0) },
+        )
+    }
+
     var rewindBinding: Binding<Int> {
         Binding(
             get: { self.settingsManager.playback.seekBackwardSeconds },

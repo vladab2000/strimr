@@ -29,6 +29,11 @@ final class SettingsManager {
         persist()
     }
 
+    func setAutoSkipIntro(_ enabled: Bool) {
+        settings.playback.autoSkipIntro = enabled
+        persist()
+    }
+
     func setSeekBackwardSeconds(_ seconds: Int) {
         settings.playback.seekBackwardSeconds = seconds
         persist()

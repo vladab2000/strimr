@@ -5,11 +5,11 @@ struct StreamSelectionView: View {
     @State var viewModel: StreamSelectionViewModel
     @State private var isSummaryExpanded = false
     private let heroHeight: CGFloat = 320
-    private let onPlay: (Stream, Double?) -> Void
+    private let onPlay: (Stream) -> Void
     
     init(
         viewModel: StreamSelectionViewModel,
-        onPlay: @escaping (Stream, Double?) -> Void = { _, _ in }
+        onPlay: @escaping (Stream) -> Void = { _ in }
     ) {
         _viewModel =  State(initialValue: viewModel)
         self.onPlay = onPlay
@@ -158,7 +158,7 @@ struct StreamSelectionView: View {
 
     private func streamRow(_ stream: Stream) -> some View {
         Button {
-            onPlay(stream, nil)
+            onPlay(stream)
         } label: {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {

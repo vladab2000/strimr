@@ -38,4 +38,3 @@ struct StrimrApp: App {
 
 //TODO: Věci nutné upravit i na Serveru
 //TODO: podpora stránkování - nový typ v Media, nebo jen url, která slouží k dočtění další/předchozí stránky
-//TODO: Přidat property do Media, pro přeskakování začátku, aby se dalo přeskočit intro a pozice konce videa, aby se mohlo nastavit jako shlédnuté

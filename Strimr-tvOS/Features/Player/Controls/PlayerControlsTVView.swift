@@ -19,6 +19,9 @@ struct PlayerControlsTVView: View {
     var seekForwardSeconds: Int
     var onScrubbingChanged: (Bool) -> Void
     var onUserInteraction: () -> Void
+    var skipIntroStart: Double?
+    var skipIntroEnd: Double?
+    var skipTitlesStart: Double?
     @FocusState private var focusedControl: FocusTarget?
 
     private var playbackBadges: [PlayerControlBadge] {
@@ -65,6 +68,9 @@ struct PlayerControlsTVView: View {
                 bufferedAhead: bufferedAhead,
                 playbackPosition: bufferBasePosition,
                 onEditingChanged: onScrubbingChanged,
+                skipIntroStart: skipIntroStart,
+                skipIntroEnd: skipIntroEnd,
+                skipTitlesStart: skipTitlesStart,
             )
 
             ZStack {

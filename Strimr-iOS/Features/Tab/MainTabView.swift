@@ -86,12 +86,11 @@ struct MainTabView: View {
         case let .streamSelection(media, streams):
             StreamSelectionView(
                 viewModel: StreamSelectionViewModel(media: media, streams: streams),
-                onPlay: { stream, resumePosition in
+                onPlay: { stream in
                     Task {
                         await playbackLauncher.play(
                             stream: stream,
-                            media: media,
-                            resumePosition: resumePosition
+                            media: media
                         )
                     }
                 }
@@ -104,24 +103,37 @@ struct MainTabView: View {
     }
 
     private func makePlayerViewModel(streamURL: URL) -> PlayerViewModel {
-        let vm = PlayerViewModel(streamURL: streamURL, title: coordinator.selectedStreamTitle)
-        vm.mediaUrl = coordinator.selectedMediaUrl
+        let vm = PlayerViewModel(streamURL: streamURL, title: coordinator.selectedMedia?.title ?? "")
         vm.resumePosition = coordinator.selectedResumePosition
+        vm.skipIntroStart = coordinator.selectedSkipIntroStart
+        vm.skipIntroEnd = coordinator.selectedSkipIntroEnd
+        vm.skipTitlesStart = coordinator.selectedSkipTitlesStart
+        vm.autoSkipIntro = settingsManager.playback.autoSkipIntro
 
-        let mediaUrl = coordinator.selectedMediaUrl
-        let season = coordinator.selectedSeasonNumber
-        let episode = coordinator.selectedEpisodeNumber
+        let media = coordinator.selectedMedia
         let manager = watchHistoryManager
 
+        vm.onCreateWatchRecord = {
+            guard let media else { return }
+            Task { @MainActor in
+                await manager.createWatchRecord(for: media)
+            }
+        }
+
         vm.onSavePosition = { position in
-            guard let mediaUrl else { return }
+            guard let media else { return }
             Task { @MainActor in
                 await manager.updatePosition(
-                    url: mediaUrl,
-                    season: season,
-                    episode: episode,
+                    media: media,
                     position: position
                 )
+            }
+        }
+
+        vm.onMarkWatched = {
+            guard let media else { return }
+            Task { @MainActor in
+                await manager.setWatched(media: media, watched: true)
             }
         }
         return vm

@@ -6,6 +6,9 @@ struct PlayerTimelineScrubberTVView: View {
     var duration: Double?
     var bufferedProgress: Double
     var onEditingChanged: (Bool) -> Void
+    var skipIntroStart: Double?
+    var skipIntroEnd: Double?
+    var skipTitlesStart: Double?
 
     @State private var consecutiveMoves = 0
     @State private var isScrubbing = false
@@ -45,6 +48,27 @@ struct PlayerTimelineScrubberTVView: View {
                     .fill(Color.white)
                     .frame(width: progressWidth)
                     .frame(height: 8, alignment: .center)
+
+                // Intro region
+                if let introEnd = skipIntroEnd, introEnd > 0, upperBound > 0 {
+                    let introStart = skipIntroStart ?? 0
+                    let x = width * (introStart / upperBound)
+                    let w = width * ((introEnd - introStart) / upperBound)
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(Color.yellow.opacity(0.5))
+                        .frame(width: max(w, 3), height: 8)
+                        .offset(x: x)
+                }
+
+                // Titles region
+                if let titlesStart = skipTitlesStart, titlesStart > 0, upperBound > 0 {
+                    let x = width * (titlesStart / upperBound)
+                    let w = width - x
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(Color.blue.opacity(0.4))
+                        .frame(width: max(w, 3), height: 8)
+                        .offset(x: x)
+                }
 
                 Circle()
                     .fill(Color.white)

@@ -7,11 +7,11 @@ struct StreamSelectionTVView: View {
     @State var viewModel: StreamSelectionViewModel
     @FocusState private var focusedStreamId: String?
     @Namespace private var streamsNamespace
-    private let onPlay: (Stream, Double?) -> Void
+    private let onPlay: (Stream) -> Void
     
     init(
         viewModel: StreamSelectionViewModel,
-        onPlay: @escaping (Stream, Double?) -> Void = { _, _ in }
+        onPlay: @escaping (Stream) -> Void = { _ in }
     ) {
         _viewModel =  State(initialValue: viewModel)
         self.onPlay = onPlay
@@ -114,7 +114,7 @@ struct StreamSelectionTVView: View {
                                 isResolving: viewModel.isResolvingStream,
                                 isFocused: focusedStreamId == stream.id,
                                 onSelect: {
-                                    onPlay(stream, nil)
+                                    onPlay(stream)
                                 }
                             )
                             .focused($focusedStreamId, equals: stream.id)

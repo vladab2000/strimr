@@ -19,6 +19,9 @@ struct PlayerControlsView: View {
     var onScrubbingChanged: (Bool) -> Void
     var isRotationLocked: Bool
     var onToggleRotationLock: () -> Void
+    var skipIntroStart: Double?
+    var skipIntroEnd: Double?
+    var skipTitlesStart: Double?
 
     var body: some View {
         ZStack {
@@ -46,6 +49,9 @@ struct PlayerControlsView: View {
                         bufferedAhead: bufferedAhead,
                         playbackPosition: bufferBasePosition,
                         onEditingChanged: onScrubbingChanged,
+                        skipIntroStart: skipIntroStart,
+                        skipIntroEnd: skipIntroEnd,
+                        skipTitlesStart: skipTitlesStart,
                     )
                 }
             }

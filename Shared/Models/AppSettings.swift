@@ -2,6 +2,7 @@ import Foundation
 
 struct PlaybackSettings: Codable, Equatable {
     var autoPlayNextEpisode = true
+    var autoSkipIntro = false
     var seekBackwardSeconds = 10
     var seekForwardSeconds = 10
     var player = PlaybackPlayer.mpv
@@ -12,6 +13,7 @@ struct PlaybackSettings: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         autoPlayNextEpisode = try container.decodeIfPresent(Bool.self, forKey: .autoPlayNextEpisode) ?? true
+        autoSkipIntro = try container.decodeIfPresent(Bool.self, forKey: .autoSkipIntro) ?? false
         seekBackwardSeconds = try container.decodeIfPresent(Int.self, forKey: .seekBackwardSeconds) ?? 10
         seekForwardSeconds = try container.decodeIfPresent(Int.self, forKey: .seekForwardSeconds) ?? 10
         player = try container.decodeIfPresent(PlaybackPlayer.self, forKey: .player) ?? .mpv

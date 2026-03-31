@@ -119,8 +119,16 @@ struct PlayerTVView: View {
                         seekForwardSeconds: settingsManager.playback.seekForwardSeconds,
                         onScrubbingChanged: handleScrubbing(editing:),
                         onUserInteraction: { showControls(temporarily: true) },
+                        skipIntroStart: bindableViewModel.skipIntroStart,
+                        skipIntroEnd: bindableViewModel.skipIntroEnd,
+                        skipTitlesStart: bindableViewModel.skipTitlesStart,
                     )
                     .transition(.opacity)
+                }
+
+                if bindableViewModel.showSkipIntroButton && !bindableViewModel.autoSkipIntro {
+                    skipIntroButton
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
 
                 if let seekFeedback {
@@ -133,6 +141,9 @@ struct PlayerTVView: View {
             playerCoordinator.setPlaybackRate(playbackRate)
             awaitingMediaLoad = true
             playerCoordinator.play(viewModel.streamURL)
+            viewModel.onSeek = { [playerCoordinator] position in
+                playerCoordinator.seek(to: position)
+            }
         }
         .onDisappear {
             viewModel.handleStop()
@@ -188,6 +199,24 @@ struct PlayerTVView: View {
                     onClose: { activeSettingsSheet = nil },
                 )
             }
+        }
+    }
+
+    private var skipIntroButton: some View {
+        VStack {
+            Spacer()
+            HStack {
+                Spacer()
+                Button {
+                    viewModel.skipIntro()
+                } label: {
+                    Label("player.skipIntro", systemImage: "forward.fill")
+                        .font(.callout.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(.bottom, 80)
+            .padding(.trailing, 60)
         }
     }
 

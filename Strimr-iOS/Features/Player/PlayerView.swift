@@ -80,6 +80,11 @@ struct PlayerView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                 }
 
+                if bindableViewModel.showSkipIntroButton && !bindableViewModel.autoSkipIntro {
+                    skipIntroButton
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
+
                 if controlsVisible {
                     PlayerControlsView(
                         title: bindableViewModel.title,
@@ -100,6 +105,9 @@ struct PlayerView: View {
                         onScrubbingChanged: handleScrubbing(editing:),
                         isRotationLocked: isRotationLocked,
                         onToggleRotationLock: toggleRotationLock,
+                        skipIntroStart: bindableViewModel.skipIntroStart,
+                        skipIntroEnd: bindableViewModel.skipIntroEnd,
+                        skipTitlesStart: bindableViewModel.skipTitlesStart,
                     )
                     .transition(.opacity)
                 }
@@ -109,6 +117,9 @@ struct PlayerView: View {
             showControls(temporarily: true)
             playerCoordinator.setPlaybackRate(playbackRate)
             startPlayback(url: bindableViewModel.streamURL)
+            viewModel.onSeek = { [playerCoordinator] position in
+                playerCoordinator.seek(to: position)
+            }
         }
         .onDisappear {
             viewModel.handleStop()
@@ -135,6 +146,27 @@ struct PlayerView: View {
             )
             .presentationDetents([.medium])
             .presentationBackground(.ultraThinMaterial)
+        }
+    }
+
+    private var skipIntroButton: some View {
+        VStack {
+            Spacer()
+            HStack {
+                Spacer()
+                Button {
+                    viewModel.skipIntro()
+                } label: {
+                    Label("player.skipIntro", systemImage: "forward.fill")
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(.ultraThinMaterial, in: Capsule(style: .continuous))
+                }
+            }
+            .padding(.bottom, 60)
+            .padding(.trailing, 20)
         }
     }
 

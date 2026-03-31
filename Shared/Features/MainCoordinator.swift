@@ -24,6 +24,9 @@ final class MainCoordinator: ObservableObject {
     @Published var selectedStreamURL: URL?
     @Published var selectedMedia: Media?
     @Published var selectedResumePosition: Double?
+    @Published var selectedSkipIntroStart: Double?
+    @Published var selectedSkipIntroEnd: Double?
+    @Published var selectedSkipTitlesStart: Double?
     @Published var isPresentingPlayer = false
 
     @Published var isLoadingStreams = false
@@ -108,11 +111,17 @@ final class MainCoordinator: ObservableObject {
     func showPlayer(
         streamURL: URL,
         media: Media? = nil,
-        resumePosition: Double? = nil
+        resumePosition: Double? = nil,
+        skipIntroStart: Double? = nil,
+        skipIntroEnd: Double? = nil,
+        skipTitlesStart: Double? = nil
     ) {
         selectedStreamURL = streamURL
         selectedMedia = media
         selectedResumePosition = resumePosition
+        selectedSkipIntroStart = skipIntroStart
+        selectedSkipIntroEnd = skipIntroEnd
+        selectedSkipTitlesStart = skipTitlesStart
         isPresentingPlayer = true
     }
 
@@ -120,6 +129,9 @@ final class MainCoordinator: ObservableObject {
         selectedStreamURL = nil
         selectedMedia = nil
         selectedResumePosition = nil
+        selectedSkipIntroStart = nil
+        selectedSkipIntroEnd = nil
+        selectedSkipTitlesStart = nil
         isPresentingPlayer = false
     }
 }
