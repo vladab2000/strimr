@@ -7,6 +7,7 @@ struct MediaDetailTVView: View {
     @Environment(WatchHistoryManager.self) private var watchHistoryManager
     @State var viewModel: MediaDetailViewModel
     @State private var focusedMedia: Media?
+    @State private var scrollToEpisodeId: String?
     @FocusState private var focusedEpisodeId: String?
     @Namespace private var episodesNamespace
     private let onSelectMedia: (Media) -> Void
@@ -51,13 +52,16 @@ struct MediaDetailTVView: View {
         }
         .task {
             await bindableViewModel.loadDetails()
-            if let episodeId = bindableViewModel.firstUnwatchedEpisodeId {
-                focusedEpisodeId = episodeId
-            }
         }
         .onChange(of: coordinator.isPresentingPlayer) { _, isPresenting in
             guard !isPresenting else { return }
             Task { await bindableViewModel.loadDetails() }
+        }
+        .onChange(of: bindableViewModel.episodes) {
+            if let episodeId = bindableViewModel.firstUnwatchedEpisodeId {
+                focusedEpisodeId = episodeId
+                scrollToEpisodeId = episodeId
+            }
         }
         .onAppear {
             if focusedMedia == nil {
@@ -182,30 +186,40 @@ struct MediaDetailTVView: View {
             Text("media.detail.noEpisodes")
                 .foregroundStyle(.secondary)
         } else {
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(alignment: .top, spacing: 36) {
-                    ForEach(viewModel.episodes) { episode in
-                        EpisodeArtworkCard(
-                            episode: episode,
-                            imageURL: episode.thumbURL,
-                            runtime: viewModel.runtimeText,
-                            progress: viewModel.progressFraction(for: episode),
-                            width: 460,
-                            isFocused: focusedEpisodeId == episode.id,
-                            onPlay: {
-                                onSelectMedia(episode)
-                            },
-                            onFocus: {
-                                focusedMedia = episode
-                            },
-                        )
-                        .focused($focusedEpisodeId, equals: episode.id)
+            ScrollViewReader { scrollProxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(alignment: .top, spacing: 36) {
+                        ForEach(viewModel.episodes) { episode in
+                            EpisodeArtworkCard(
+                                episode: episode,
+                                imageURL: episode.thumbURL,
+                                runtime: viewModel.runtimeText,
+                                progress: viewModel.progressFraction(for: episode),
+                                width: 460,
+                                isFocused: focusedEpisodeId == episode.id,
+                                onPlay: {
+                                    onSelectMedia(episode)
+                                },
+                                onFocus: {
+                                    focusedMedia = episode
+                                },
+                            )
+                            .id(episode.id)
+                            .focused($focusedEpisodeId, equals: episode.id)
+                        }
+                    }
+                    .padding(.vertical, 12)
+                    .padding(.vertical, 4)
+                }
+                .focusSection()
+                .onChange(of: scrollToEpisodeId) { _, targetId in
+                    guard let targetId else { return }
+                    scrollToEpisodeId = nil
+                    withAnimation {
+                        scrollProxy.scrollTo(targetId, anchor: .leading)
                     }
                 }
-                .padding(.vertical, 12)
-                .padding(.vertical, 4)
             }
-            .focusSection()
         }
     }
     
