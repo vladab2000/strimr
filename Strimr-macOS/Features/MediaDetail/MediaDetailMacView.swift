@@ -25,6 +25,7 @@ struct MediaDetailMacView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text(vm.media.title)
+                        .lineLimit(1)
                         .font(.title2.bold())
                         .padding(.horizontal, 16)
 

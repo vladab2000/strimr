@@ -264,7 +264,7 @@ struct Media: Codable, Hashable, Identifiable {
         return Media(
             kind: .season,
             id: UUID().uuidString,
-            name: media?.title,
+            name: name,
             description: media?.description,
             url: nil,
             art: media?.art,

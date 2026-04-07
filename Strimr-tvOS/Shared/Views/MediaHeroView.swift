@@ -65,6 +65,7 @@ struct MediaHeroContentView: View {
 
             if let secondary = media.secondaryLabel, media.itemType != .movie, media.itemType != .tvshow {
                 Text(secondary)
+                    .lineLimit(1)
                     .font(.headline)
                     .foregroundStyle(.brandSecondary)
             }
