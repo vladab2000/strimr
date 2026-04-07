@@ -8,7 +8,7 @@
 import Foundation
 
 struct ApiClient {
-    static let baseURL = URL(string: "http://192.168.88.136:5001/api/")!
+    static let baseURL = URL(string: "http://192.168.88.136:5020/api/")!
     
     static func fetchMenu(urlPath: String = "/") async throws -> [Media] {
         try await fetch(path: "folder", queryItems: [URLQueryItem(name: "url", value: urlPath)])

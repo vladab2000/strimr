@@ -85,7 +85,7 @@ private struct TypeBadge: View {
             String(localized: "search.badge.season")
         case .episode:
             String(localized: "search.badge.episode")
-        case .folder, .stream, .unknown:
+        case .folder, .stream, .channel, .program, .unknown:
             String(localized: "search.badge.unknown")
         }
     }
@@ -100,7 +100,7 @@ private struct TypeBadge: View {
             .orange
         case .episode:
             .purple
-        case .folder, .stream, .unknown:
+        case .folder, .stream, .channel, .program, .unknown:
             .gray
         }
     }
@@ -117,7 +117,7 @@ private extension SearchResultCard {
             media.secondaryLabel ?? media.title
         case .episode:
             media.secondaryLabel ?? ""
-        case .folder, .stream, .unknown:
+        case .folder, .stream, .channel, .program, .unknown:
             media.title
         }
     }
