@@ -3,13 +3,13 @@ import SwiftUI
 @MainActor
 struct EPGTVView: View {
     @Environment(MediaFocusModel.self) private var focusModel
-    @Environment(SettingsManager.self) private var settingsManager
+    @Environment(ChannelProgramManager.self) private var channelManager
     @EnvironmentObject private var coordinator: MainCoordinator
     @State private var viewModel: EPGViewModel?
 
-    private var vm: EPGViewModel { viewModel ?? EPGViewModel(settingsManager: settingsManager) }
+    private var vm: EPGViewModel { viewModel ?? EPGViewModel(manager: channelManager) }
 
-    private let channelColumnWidth: CGFloat = 150
+    private let channelColumnWidth: CGFloat = 200
     private let rowHeight: CGFloat = 100
     private let pixelsPerMinute: CGFloat = 6.66 // ~400px per hour
     private let spacing: CGFloat = 2
@@ -48,7 +48,7 @@ struct EPGTVView: View {
                     .onAppear {
                         focusModel.focusedMedia = nil
                         if viewModel == nil {
-                            viewModel = EPGViewModel(settingsManager: settingsManager)
+                            viewModel = EPGViewModel(manager: channelManager)
                         }
                         vm.reloadIfProviderChanged()
                     }
@@ -86,26 +86,30 @@ struct EPGTVView: View {
 
     private let timeHeaderHeight: CGFloat = 36
 
-    // MARK: - EPG Grid (article-inspired two-column layout)
+    // MARK: - EPG Grid (channels pinned left, programs scroll horizontally, both scroll vertically together)
 
     private var epgGrid: some View {
-        HStack(alignment: .top, spacing: 4) {
-            // Fixed channel column on the left (with corner spacer for time header)
-            VStack(spacing: 0) {
-                Color.clear
-                    .frame(width: channelColumnWidth, height: timeHeaderHeight)
-                ScrollView(.vertical, showsIndicators: false) {
-                    channelColumn
+        ScrollView(.vertical, showsIndicators: false) {
+            HStack(alignment: .top, spacing: 4) {
+                // Fixed channel column (does not scroll horizontally)
+                VStack(spacing: 0) {
+                    Color.clear
+                        .frame(width: channelColumnWidth, height: timeHeaderHeight)
+                    LazyVStack(alignment: .leading, spacing: spacing) {
+                        ForEach(vm.channels) { channel in
+                            channelCell(channel)
+                                .frame(width: channelColumnWidth, height: rowHeight)
+                                .onAppear { vm.loadProgramsIfNeeded(for: channel) }
+                        }
+                    }
+                    .frame(width: channelColumnWidth)
                 }
-            }
 
-            // Horizontally scrollable: time header pinned on top + vertically scrollable programs
-            ScrollView(.horizontal, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 0) {
-                    timeHeader
-                        .frame(height: timeHeaderHeight)
-
-                    ScrollView(.vertical, showsIndicators: false) {
+                // Horizontally scrollable program area
+                ScrollView(.horizontal, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        timeHeader
+                            .frame(height: timeHeaderHeight)
                         LazyVStack(alignment: .leading, spacing: spacing) {
                             ForEach(vm.channels) { channel in
                                 programRow(for: channel)
@@ -133,18 +137,7 @@ struct EPGTVView: View {
         }
     }
 
-    // MARK: - Channel Column
-
-    private var channelColumn: some View {
-        LazyVStack(alignment: .leading, spacing: spacing) {
-            ForEach(vm.channels) { channel in
-                channelCell(channel)
-                    .frame(width: channelColumnWidth, height: rowHeight)
-                    .onAppear { vm.loadProgramsIfNeeded(for: channel) }
-            }
-        }
-        .frame(width: channelColumnWidth)
-    }
+    // MARK: - Channel Cell
 
     private func channelCell(_ channel: Media) -> some View {
         VStack(spacing: 6) {
@@ -189,17 +182,21 @@ struct EPGTVView: View {
                 Color.clear
                     .frame(width: offset, height: rowHeight)
             }
-            ForEach(programs) { program in
+            ForEach(Array(programs.enumerated()), id: \.element.id) { index, program in
                 EPGProgramCellTV(
                     program: program,
                     width: programWidth(program),
                     height: rowHeight - spacing,
-                    isNow: isProgramNow(program)
-                ) {
-                    Task { await handleProgramTap(program: program, channel: channel) }
-                }
+                    isNow: isProgramNow(program),
+                    onTap: {
+                        Task { await handleProgramTap(program: program, channel: channel) }
+                    },
+                    onLoadNext: index == programs.count - 1 ? { vm.loadNextDay(for: channel) } : nil,
+                    onLoadPrevious: index == 0 ? { vm.loadPreviousDay(for: channel) } : nil
+                )
             }
         }
+        .onAppear { vm.loadProgramsIfNeeded(for: channel) }
     }
 
     // MARK: - Helpers
@@ -207,7 +204,7 @@ struct EPGTVView: View {
     /// Computes the pixel offset from 00:00 of the selected day to the first program's start.
     private func leadingOffset(for programs: [Media]) -> CGFloat {
         guard let firstStart = programs.first?.programStart else { return 0 }
-        let dayStart = Calendar.current.startOfDay(for: vm.selectedDate)
+        let dayStart = vm.baseDate
         let offsetMinutes = firstStart.timeIntervalSince(dayStart) / 60
         guard offsetMinutes > 0 else { return 0 }
         return CGFloat(offsetMinutes) * pixelsPerMinute
@@ -271,6 +268,8 @@ private struct EPGProgramCellTV: View {
     let height: CGFloat
     let isNow: Bool
     let onTap: () -> Void
+    var onLoadNext: (() -> Void)?
+    var onLoadPrevious: (() -> Void)?
 
     var body: some View {
         Button(action: onTap) {
@@ -302,6 +301,13 @@ private struct EPGProgramCellTV: View {
         .onChange(of: isFocused) { _, focused in
             if focused {
                 focusModel.focusedMedia = program
+            }
+        }
+        .onMoveCommand { direction in
+            if direction == .right, let onLoadNext {
+                onLoadNext()
+            } else if direction == .left, let onLoadPrevious {
+                onLoadPrevious()
             }
         }
     }

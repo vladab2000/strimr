@@ -2,11 +2,11 @@ import SwiftUI
 
 @MainActor
 struct EPGMacView: View {
-    @Environment(SettingsManager.self) private var settingsManager
+    @Environment(ChannelProgramManager.self) private var channelManager
     @EnvironmentObject private var coordinator: MainCoordinator
     @State private var viewModel: EPGViewModel?
 
-    private var vm: EPGViewModel { viewModel ?? EPGViewModel(settingsManager: settingsManager) }
+    private var vm: EPGViewModel { viewModel ?? EPGViewModel(manager: channelManager) }
 
     private let channelColumnWidth: CGFloat = 100
     private let rowHeight: CGFloat = 60
@@ -33,7 +33,7 @@ struct EPGMacView: View {
         .navigationTitle("tabs.epg")
         .onAppear {
             if viewModel == nil {
-                viewModel = EPGViewModel(settingsManager: settingsManager)
+                viewModel = EPGViewModel(manager: channelManager)
             }
             vm.reloadIfProviderChanged()
         }
@@ -101,27 +101,31 @@ struct EPGMacView: View {
 
     private let timeHeaderHeight: CGFloat = 24
 
-    // MARK: - EPG Grid (two-column layout: fixed channels + scrollable programs)
+    // MARK: - EPG Grid (channels pinned left, programs scroll horizontally, both scroll vertically together)
 
     private var epgGrid: some View {
-        HStack(alignment: .top, spacing: 0) {
-            // Fixed channel column (with corner spacer for time header)
-            VStack(spacing: 0) {
-                Color.clear
-                    .frame(width: channelColumnWidth, height: timeHeaderHeight)
-                ScrollView(.vertical, showsIndicators: false) {
-                    channelColumn
+        ScrollView(.vertical, showsIndicators: false) {
+            HStack(alignment: .top, spacing: 0) {
+                // Fixed channel column (does not scroll horizontally)
+                VStack(spacing: 0) {
+                    Color.clear
+                        .frame(width: channelColumnWidth, height: timeHeaderHeight)
+                    LazyVStack(spacing: 0) {
+                        ForEach(vm.channels) { channel in
+                            channelCell(channel)
+                                .frame(width: channelColumnWidth, height: rowHeight)
+                                .onAppear { vm.loadProgramsIfNeeded(for: channel) }
+                            Divider()
+                        }
+                    }
                 }
-            }
 
-            // Horizontally scrollable: time header pinned on top + vertically scrollable programs
-            ScrollView(.horizontal, showsIndicators: true) {
-                VStack(alignment: .leading, spacing: 0) {
-                    timeHeader
-                        .frame(height: timeHeaderHeight)
-                        .background(.bar)
-
-                    ScrollView(.vertical, showsIndicators: false) {
+                // Horizontally scrollable program area
+                ScrollView(.horizontal, showsIndicators: true) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        timeHeader
+                            .frame(height: timeHeaderHeight)
+                            .background(.bar)
                         LazyVStack(alignment: .leading, spacing: 0) {
                             ForEach(vm.channels) { channel in
                                 programRow(for: channel)
@@ -135,18 +139,7 @@ struct EPGMacView: View {
         }
     }
 
-    // MARK: - Channel Column
-
-    private var channelColumn: some View {
-        LazyVStack(spacing: 0) {
-            ForEach(vm.channels) { channel in
-                channelCell(channel)
-                    .frame(width: channelColumnWidth, height: rowHeight)
-                    .onAppear { vm.loadProgramsIfNeeded(for: channel) }
-                Divider()
-            }
-        }
-    }
+    // MARK: - Channel Cell
 
     private func channelCell(_ channel: Media) -> some View {
         VStack(spacing: 4) {
@@ -213,12 +206,13 @@ struct EPGMacView: View {
                 }
             }
         }
+        .onAppear { vm.loadProgramsIfNeeded(for: channel) }
     }
 
     /// Computes the pixel offset from 00:00 of the selected day to the first program's start.
     private func leadingOffset(for programs: [Media]) -> CGFloat {
         guard let firstStart = programs.first?.programStart else { return 0 }
-        let dayStart = Calendar.current.startOfDay(for: vm.selectedDate)
+        let dayStart = vm.baseDate
         let offsetMinutes = firstStart.timeIntervalSince(dayStart) / 60
         guard offsetMinutes > 0 else { return 0 }
         return CGFloat(offsetMinutes) * pixelsPerMinute

@@ -3,12 +3,12 @@ import SwiftUI
 @MainActor
 struct ChannelsTVView: View {
     @Environment(MediaFocusModel.self) private var focusModel
-    @Environment(SettingsManager.self) private var settingsManager
+    @Environment(ChannelProgramManager.self) private var channelManager
     @EnvironmentObject private var coordinator: MainCoordinator
     @State private var viewModel: ChannelsViewModel?
 
     private var vm: ChannelsViewModel {
-        viewModel ?? ChannelsViewModel(settingsManager: settingsManager)
+        viewModel ?? ChannelsViewModel(manager: channelManager)
     }
 
     var body: some View {
@@ -16,33 +16,29 @@ struct ChannelsTVView: View {
             Color("Background")
                 .ignoresSafeArea()
 
-            GeometryReader { proxy in
-                ZStack(alignment: .bottom) {
-                    // Hero area
-                    ZStack(alignment: .topLeading) {
-                        if let focused = focusModel.focusedMedia {
-                            MediaHeroBackgroundView(media: focused)
-                        } else {
-                            MediaBackdropGradient(colors: [])
-                                .ignoresSafeArea()
+            if let heroMedia {
+                GeometryReader { proxy in
+                    ZStack(alignment: .bottom) {
+                        // Hero area
+                        ZStack(alignment: .topLeading) {
+                            MediaHeroBackgroundView(media: focusModel.focusedMedia ?? heroMedia)
+                            MediaHeroContentView(media: focusModel.focusedMedia ?? heroMedia)
+                                .frame(maxWidth: proxy.size.width * 0.60, alignment: .topLeading)
                         }
-
-                        if let focused = focusModel.focusedMedia {
-                            MediaHeroContentView(media: focused)
-                                .frame(maxWidth: proxy.size.width * 0.50, alignment: .topLeading)
-                        }
+                        
+                        // Channel grid
+                        channelGrid
+                            .frame(height: proxy.size.height * 0.60)
                     }
-
-                    // Channel grid
-                    channelGrid
-                        .frame(height: proxy.size.height * 0.60)
                 }
+            } else {
+                emptyState
             }
         }
         .onAppear {
             focusModel.focusedMedia = nil
             if viewModel == nil {
-                viewModel = ChannelsViewModel(settingsManager: settingsManager)
+                viewModel = ChannelsViewModel(manager: channelManager)
             }
             viewModel?.reloadIfProviderChanged()
         }
@@ -58,6 +54,31 @@ struct ChannelsTVView: View {
 
     private var channelGrid: some View {
         ScrollView {
+            VStack(alignment: .leading, spacing: 32) {
+                if vm.hasContent {
+                    MediaHubSection(title: String(localized: "channels.title")) {
+                        MediaCarousel(
+                            layout: .landscape,
+                            items: vm.channels,
+                            showsLabels: false,
+                            onSelectMedia: { channel in
+                                Task { await playChannel(channel) }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        .onChange(of: heroMedia?.id) { _, _ in
+            updateInitialFocus()
+        }
+        .onAppear {
+            updateInitialFocus()
+        }
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 16) {
             if vm.isLoading, !vm.hasContent {
                 ProgressView()
                     .frame(maxWidth: .infinity, minHeight: 200)
@@ -68,29 +89,29 @@ struct ChannelsTVView: View {
                     description: Text("channels.empty.description")
                 )
             } else {
-                LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 200, maximum: 280), spacing: 40)],
-                    spacing: 40
-                ) {
-                    ForEach(vm.channels) { channel in
-                        ChannelCardTV(channel: channel) {
-                            Task { await playChannel(channel) }
-                        }
-                    }
-                }
-                .padding(.horizontal, 48)
-                .padding(.vertical, 24)
+                Text("common.empty.nothingToShow")
+                    .foregroundStyle(.secondary)
             }
         }
     }
+    
+    private var heroMedia: Media? {
+        vm.channels.first
+    }
 
+    
+    private func updateInitialFocus() {
+        guard focusModel.focusedMedia == nil, let heroMedia else { return }
+        focusModel.focusedMedia = heroMedia
+    }
+    
     private func playChannel(_ channel: Media) async {
         guard let url = await viewModel?.resolveStreamURL(for: channel) else { return }
         coordinator.showPlayer(streamURL: url, media: channel)
     }
 }
 
-private struct ChannelCardTV: View {
+/*private struct ChannelCardTV: View {
     @Environment(MediaFocusModel.self) private var focusModel
     @FocusState private var isFocused: Bool
 
@@ -145,3 +166,4 @@ private struct ChannelCardTV: View {
             }
     }
 }
+*/

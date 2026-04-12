@@ -6,12 +6,17 @@ struct PlayerWrapper: View {
 
     var body: some View {
         if let internalPlayer = InternalPlaybackPlayer(player: settingsManager.playback.player) {
-            PlayerView(
-                viewModel: viewModel,
-                initialPlayer: internalPlayer,
-                options: PlayerOptions(subtitleScale: settingsManager.playback.subtitleScale),
-            )
-            .transition(.opacity)
+            if internalPlayer == .avPlayer {
+                AVPlayerIOSView(viewModel: viewModel)
+                    .transition(.opacity)
+            } else {
+                PlayerView(
+                    viewModel: viewModel,
+                    initialPlayer: internalPlayer,
+                    options: PlayerOptions(subtitleScale: settingsManager.playback.subtitleScale),
+                )
+                .transition(.opacity)
+            }
         } else {
             ProgressView()
                 .tint(.white)

@@ -2,12 +2,12 @@ import SwiftUI
 
 @MainActor
 struct ChannelsView: View {
-    @Environment(SettingsManager.self) private var settingsManager
+    @Environment(ChannelProgramManager.self) private var channelManager
     @EnvironmentObject private var coordinator: MainCoordinator
     @State private var viewModel: ChannelsViewModel?
 
     private var vm: ChannelsViewModel {
-        viewModel ?? ChannelsViewModel(settingsManager: settingsManager)
+        viewModel ?? ChannelsViewModel(manager: channelManager)
     }
 
     private let columns = [
@@ -47,7 +47,7 @@ struct ChannelsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             if viewModel == nil {
-                viewModel = ChannelsViewModel(settingsManager: settingsManager)
+                viewModel = ChannelsViewModel(manager: channelManager)
             }
             viewModel?.reloadIfProviderChanged()
         }

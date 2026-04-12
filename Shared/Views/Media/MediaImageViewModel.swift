@@ -23,7 +23,7 @@ final class MediaImageViewModel {
         case .poster:
             media.posterURL
         case .art:
-            media.funartURL
+            media.funartURL ?? media.logoURL
         }
     }
 }

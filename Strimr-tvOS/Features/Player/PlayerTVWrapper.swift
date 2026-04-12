@@ -7,12 +7,16 @@ struct PlayerTVWrapper: View {
 
     var body: some View {
         if let internalPlayer = InternalPlaybackPlayer(player: settingsManager.playback.player) {
-            PlayerTVView(
-                viewModel: viewModel,
-                initialPlayer: internalPlayer,
-                options: PlayerOptions(subtitleScale: settingsManager.playback.subtitleScale),
-                onExit: onExit,
-            )
+            if internalPlayer == .avPlayer {
+                AVPlayerTVView(viewModel: viewModel, onExit: onExit)
+            } else {
+                PlayerTVView(
+                    viewModel: viewModel,
+                    initialPlayer: internalPlayer,
+                    options: PlayerOptions(subtitleScale: settingsManager.playback.subtitleScale),
+                    onExit: onExit,
+                )
+            }
         } else {
             ProgressView()
         }

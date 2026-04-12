@@ -4,6 +4,7 @@ import SwiftUI
 struct StrimrApp: App {
     @State private var settingsManager: SettingsManager
     @State private var mediaFocusModel: MediaFocusModel
+    @State private var channelProgramManager: ChannelProgramManager
     @State private var watchHistoryManager = WatchHistoryManager()
     @State private var favoritesManager = FavoritesManager()
 
@@ -14,8 +15,10 @@ struct StrimrApp: App {
         } else {
             defaults = .standard
         }
-        _settingsManager = State(initialValue: SettingsManager(userDefaults: defaults))
+        let settings = SettingsManager(userDefaults: defaults)
+        _settingsManager = State(initialValue: settings)
         _mediaFocusModel = State(initialValue: MediaFocusModel())
+        _channelProgramManager = State(initialValue: ChannelProgramManager(settingsManager: settings))
     }
 
     var body: some Scene {
@@ -23,6 +26,7 @@ struct StrimrApp: App {
             ContentView()
                 .environment(settingsManager)
                 .environment(mediaFocusModel)
+                .environment(channelProgramManager)
                 .environment(watchHistoryManager)
                 .environment(favoritesManager)
                 .preferredColorScheme(.dark)

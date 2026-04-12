@@ -4,6 +4,7 @@ enum PlaybackPlayer: String, Codable, CaseIterable, Identifiable {
     case vlc
     case mpv
     case infuse
+    case avPlayer
 
     var id: String {
         rawValue
@@ -17,6 +18,8 @@ enum PlaybackPlayer: String, Codable, CaseIterable, Identifiable {
             "settings.playback.player.vlc"
         case .infuse:
             "settings.playback.player.infuse"
+        case .avPlayer:
+            "settings.playback.player.avPlayer"
         }
     }
 
@@ -28,6 +31,7 @@ enum PlaybackPlayer: String, Codable, CaseIterable, Identifiable {
 enum InternalPlaybackPlayer: String, CaseIterable, Identifiable {
     case vlc
     case mpv
+    case avPlayer
 
     var id: String {
         rawValue
@@ -39,6 +43,8 @@ enum InternalPlaybackPlayer: String, CaseIterable, Identifiable {
             self = .vlc
         case .mpv:
             self = .mpv
+        case .avPlayer:
+            self = .avPlayer
         case .infuse:
             return nil
         }

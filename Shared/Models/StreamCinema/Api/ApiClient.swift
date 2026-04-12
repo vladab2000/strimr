@@ -87,7 +87,11 @@ struct ApiClient {
     static func fetchPrograms(channelId: String, date: String) async throws -> [Media] {
         try await fetch(path: "tv/channels/\(channelId)/programs/\(date)")
     }
-
+/*
+    static func fetchPrograms(channelId: String, from: String, to: String) async throws -> [Media] {
+        try await fetch(path: "channels/\(channelId)/programs/\(from)/\(to)")
+    }
+*/
     static func fetchNowNext(channelId: String) async throws -> [Media] {
         try await fetch(path: "tv/channels/\(channelId)/now-next")
     }
