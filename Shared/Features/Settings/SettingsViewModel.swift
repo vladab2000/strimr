@@ -54,4 +54,11 @@ final class SettingsViewModel {
             set: { self.settingsManager.setSubtitleScale($0) },
         )
     }
+
+    var tvProviderBinding: Binding<ProviderType> {
+        Binding(
+            get: { self.settingsManager.tvProvider },
+            set: { self.settingsManager.setTvProvider($0) },
+        )
+    }
 }

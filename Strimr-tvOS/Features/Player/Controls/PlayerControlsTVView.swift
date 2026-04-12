@@ -19,6 +19,7 @@ struct PlayerControlsTVView: View {
     var seekForwardSeconds: Int
     var onScrubbingChanged: (Bool) -> Void
     var onUserInteraction: () -> Void
+    var isLive: Bool
     var skipIntroStart: Double?
     var skipIntroEnd: Double?
     var skipTitlesStart: Double?
@@ -62,23 +63,27 @@ struct PlayerControlsTVView: View {
                 .padding(.horizontal, 24)
             }
 
-            PlayerTimelineView(
-                position: $position,
-                duration: duration,
-                bufferedAhead: bufferedAhead,
-                playbackPosition: bufferBasePosition,
-                onEditingChanged: onScrubbingChanged,
-                skipIntroStart: skipIntroStart,
-                skipIntroEnd: skipIntroEnd,
-                skipTitlesStart: skipTitlesStart,
-            )
+            if !isLive {
+                PlayerTimelineView(
+                    position: $position,
+                    duration: duration,
+                    bufferedAhead: bufferedAhead,
+                    playbackPosition: bufferBasePosition,
+                    onEditingChanged: onScrubbingChanged,
+                    skipIntroStart: skipIntroStart,
+                    skipIntroEnd: skipIntroEnd,
+                    skipTitlesStart: skipTitlesStart,
+                )
+            }
 
             ZStack {
                 HStack(spacing: 36) {
-                    PlayerSettingButton(
-                        systemImage: "speedometer",
-                        action: onShowSpeedSettings,
-                    )
+                    if !isLive {
+                        PlayerSettingButton(
+                            systemImage: "speedometer",
+                            action: onShowSpeedSettings,
+                        )
+                    }
 
                     PlayerSettingButton(
                         systemImage: "speaker.wave.2",
@@ -93,23 +98,25 @@ struct PlayerControlsTVView: View {
                     Spacer()
                 }
 
-                HStack(spacing: 30) {
-                    PlayerIconButton(
-                        systemName: iconName(prefix: "gobackward", seconds: seekBackwardSeconds),
-                        accessibilityLabel: String(localized: "player.controls.rewindSeconds \(seekBackwardSeconds)"),
-                        action: onSeekBackward,
-                    )
+                if !isLive {
+                    HStack(spacing: 30) {
+                        PlayerIconButton(
+                            systemName: iconName(prefix: "gobackward", seconds: seekBackwardSeconds),
+                            accessibilityLabel: String(localized: "player.controls.rewindSeconds \(seekBackwardSeconds)"),
+                            action: onSeekBackward,
+                        )
 
-                    PlayPauseButton(isPaused: isPaused, action: onPlayPause)
-                        .focused($focusedControl, equals: .playPause)
+                        PlayPauseButton(isPaused: isPaused, action: onPlayPause)
+                            .focused($focusedControl, equals: .playPause)
 
-                    PlayerIconButton(
-                        systemName: iconName(prefix: "goforward", seconds: seekForwardSeconds),
-                        accessibilityLabel: String(
-                            localized: "player.controls.skipForwardSeconds \(seekForwardSeconds)",
-                        ),
-                        action: onSeekForward,
-                    )
+                        PlayerIconButton(
+                            systemName: iconName(prefix: "goforward", seconds: seekForwardSeconds),
+                            accessibilityLabel: String(
+                                localized: "player.controls.skipForwardSeconds \(seekForwardSeconds)",
+                            ),
+                            action: onSeekForward,
+                        )
+                    }
                 }
             }
         }

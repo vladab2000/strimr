@@ -119,6 +119,7 @@ struct PlayerTVView: View {
                         seekForwardSeconds: settingsManager.playback.seekForwardSeconds,
                         onScrubbingChanged: handleScrubbing(editing:),
                         onUserInteraction: { showControls(temporarily: true) },
+                        isLive: bindableViewModel.isLive,
                         skipIntroStart: bindableViewModel.skipIntroStart,
                         skipIntroEnd: bindableViewModel.skipIntroEnd,
                         skipTitlesStart: bindableViewModel.skipTitlesStart,
@@ -152,6 +153,7 @@ struct PlayerTVView: View {
             playerCoordinator.destruct()
         }
         .onPlayPauseCommand {
+            guard !viewModel.isLive else { return }
             togglePlayPause()
         }
         .onExitCommand {
@@ -412,10 +414,10 @@ struct PlayerTVView: View {
         case .up:
             showControls(temporarily: true)
         case .left:
-            guard !controlsVisible else { return }
+            guard !controlsVisible, !viewModel.isLive else { return }
             quickSeek(by: -seekBackwardInterval)
         case .right:
-            guard !controlsVisible else { return }
+            guard !controlsVisible, !viewModel.isLive else { return }
             quickSeek(by: seekForwardInterval)
         default:
             break

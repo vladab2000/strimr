@@ -6,6 +6,7 @@ import Observation
 final class PlayerViewModel {
     let streamURL: URL
     let title: String
+    var isLive = false
     var isLoading = false
     var errorMessage: String?
     var isBuffering = false

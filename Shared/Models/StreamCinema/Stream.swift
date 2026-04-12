@@ -29,6 +29,11 @@ struct Stream: Codable, Hashable, Identifiable {
     let skipIntroStart: Double?
     let skipIntroEnd: Double?
     let skipTitlesStart: Double?
+
+    // Live TV fields
+    let isEncoded: Bool?
+    let provider: Int?
+    let type: Int?
 }
 
 extension Stream {
@@ -83,7 +88,10 @@ extension Stream {
         langs: ["CZ", "EN"],
         skipIntroStart: nil,
         skipIntroEnd: nil,
-        skipTitlesStart: nil
+        skipTitlesStart: nil,
+        isEncoded: nil,
+        provider: nil,
+        type: nil
     )
 }
 enum StreamSorter {

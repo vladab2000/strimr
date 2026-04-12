@@ -70,7 +70,7 @@ final class MediaDetailViewModel {
     }
 
     private func fetchSeasons() async {
-        guard let urlPath = media.url else { return }
+        let urlPath = media.url
 
         isLoadingSeasons = true
         defer { isLoadingSeasons = false }
@@ -110,9 +110,8 @@ final class MediaDetailViewModel {
     }
 
     private func fetchEpisodes(for seasonId: String) async {
-        guard let season = seasons.first(where: { $0.id == seasonId }),
-              let urlPath = season.url
-        else { return }
+        guard let season = seasons.first(where: { $0.id == seasonId }) else { return }
+        let urlPath = season.url
 
         isLoadingEpisodes = true
         defer { isLoadingEpisodes = false }

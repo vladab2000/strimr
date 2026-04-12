@@ -37,15 +37,21 @@ enum SCItemType: String, Codable, Hashable {
         return result
     }()
 
+    private static let stringMapping: [String: SCItemType] = [
+        "folder": .folder,
+        "movie": .movie,
+        "tvshow": .tvshow,
+        "season": .season,
+        "episode": .episode,
+        "channel": .channel,
+        "program": .program,
+        "stream": .stream,
+    ]
+
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
-        if let intValue = try? container.decode(Int.self) {
-            self = SCItemType.intMapping[intValue] ?? .unknown
-        } else if let stringValue = try? container.decode(String.self) {
-            self = SCItemType(rawValue: stringValue.lowercased()) ?? .unknown
-        } else {
-            self = .unknown
-        }
+        let stringValue = try container.decode(String.self)
+        self = SCItemType.stringMapping[stringValue.lowercased()] ?? .unknown
     }
 
     func encode(to encoder: Encoder) throws {

@@ -13,9 +13,9 @@ struct Media: Codable, Hashable, Identifiable {
 
     let kind: SCItemType
     let id: String
-    let name: String?
+    let name: String
     let description: String?
-    let url: String?
+    let url: String
     let art: [String: String]?
     let details: MediaDetailsVariant?
 
@@ -24,11 +24,10 @@ struct Media: Codable, Hashable, Identifiable {
     var watchCompleted: Bool?
     var isFavorite: Bool?
     let updatedUtc: Date?
-    let isPlayable: Bool?
 
     enum CodingKeys: String, CodingKey {
         case kind, id, name, description, url, art, details
-        case watchPosition, watchCompleted, isFavorite, updatedUtc, isPlayable
+        case watchPosition, watchCompleted, isFavorite, updatedUtc
     }
 
     // MARK: - Custom Codable for polymorphic details
@@ -36,17 +35,16 @@ struct Media: Codable, Hashable, Identifiable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        kind = (try? container.decode(SCItemType.self, forKey: .kind)) ?? .unknown
-        id = (try? container.decode(String.self, forKey: .id)) ?? ""
-        name = try container.decodeIfPresent(String.self, forKey: .name)
+        kind = try container.decode(SCItemType.self, forKey: .kind)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
         description = try container.decodeIfPresent(String.self, forKey: .description)
-        url = try container.decodeIfPresent(String.self, forKey: .url)
+        url = try container.decode(String.self, forKey: .url)
         art = try container.decodeIfPresent([String: String].self, forKey: .art)
         watchPosition = try container.decodeIfPresent(Int.self, forKey: .watchPosition)
         watchCompleted = try container.decodeIfPresent(Bool.self, forKey: .watchCompleted)
         isFavorite = try container.decodeIfPresent(Bool.self, forKey: .isFavorite)
         updatedUtc = try container.decodeIfPresent(Date.self, forKey: .updatedUtc)
-        isPlayable = try container.decodeIfPresent(Bool.self, forKey: .isPlayable)
 
         // Polymorphic details decoding based on kind
         switch kind {
@@ -77,16 +75,15 @@ struct Media: Codable, Hashable, Identifiable {
     init(
         kind: SCItemType,
         id: String,
-        name: String?,
+        name: String,
         description: String?,
-        url: String?,
+        url: String,
         art: [String: String]?,
         details: MediaDetailsVariant?,
         watchPosition: Int?,
         watchCompleted: Bool?,
         isFavorite: Bool?,
         updatedUtc: Date?,
-        isPlayable: Bool? = nil
     ) {
         self.kind = kind
         self.id = id
@@ -99,7 +96,6 @@ struct Media: Codable, Hashable, Identifiable {
         self.watchCompleted = watchCompleted
         self.isFavorite = isFavorite
         self.updatedUtc = updatedUtc
-        self.isPlayable = isPlayable
     }
 
     // MARK: - Computed: type
@@ -120,10 +116,19 @@ struct Media: Codable, Hashable, Identifiable {
     var episodeTitle: String? { details?.episodeTitle }
     var streams: [Stream]? { details?.streams }
 
+    // Channel-specific
+    var hasArchive: Bool? { details?.hasArchive }
+    var channelNumber: Int? { details?.number }
+
+    // Program-specific
+    var programStart: Date? { details?.start }
+    var programEnd: Date? { details?.end }
+    var channelId: String? { details?.channelId }
+
     // MARK: - Computed: labels
 
     var title: String {
-        name ?? ""
+        name
     }
 
     var primaryLabel: String {
@@ -174,6 +179,11 @@ struct Media: Codable, Hashable, Identifiable {
 
     var clearlogoURL: URL? {
         if let clearlogo = art?["clearlogo"], let url = URL(string: clearlogo) { return url }
+        return nil
+    }
+
+    var logoURL: URL? {
+        if let logo = art?["logo"], let url = URL(string: logo) { return url }
         return nil
     }
 
@@ -266,7 +276,7 @@ struct Media: Codable, Hashable, Identifiable {
             id: UUID().uuidString,
             name: name,
             description: media?.description,
-            url: nil,
+            url: "",
             art: media?.art,
             details: .base(MediaDetails(
                 year: media?.year,
@@ -287,6 +297,17 @@ struct Media: Codable, Hashable, Identifiable {
 // MARK: - Preview Data
 
 extension Media {
+    static let empty = Media(
+        kind: .movie,
+        id: "",
+        name: "",
+        description: "",
+        url: "",
+        art: nil,
+        details: nil,
+        watchPosition: nil, watchCompleted: nil, isFavorite: nil, updatedUtc: nil
+
+    )
     static let preview1 = Media(
         kind: .movie,
         id: "1",

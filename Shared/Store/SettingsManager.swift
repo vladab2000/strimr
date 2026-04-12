@@ -24,6 +24,15 @@ final class SettingsManager {
         settings.playback
     }
 
+    var tvProvider: ProviderType {
+        settings.tvProvider
+    }
+
+    func setTvProvider(_ provider: ProviderType) {
+        settings.tvProvider = provider
+        persist()
+    }
+
     func setAutoPlayNextEpisode(_ enabled: Bool) {
         settings.playback.autoPlayNextEpisode = enabled
         persist()

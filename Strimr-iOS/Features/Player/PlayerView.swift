@@ -105,6 +105,7 @@ struct PlayerView: View {
                         onScrubbingChanged: handleScrubbing(editing:),
                         isRotationLocked: isRotationLocked,
                         onToggleRotationLock: toggleRotationLock,
+                        isLive: bindableViewModel.isLive,
                         skipIntroStart: bindableViewModel.skipIntroStart,
                         skipIntroEnd: bindableViewModel.skipIntroEnd,
                         skipTitlesStart: bindableViewModel.skipTitlesStart,

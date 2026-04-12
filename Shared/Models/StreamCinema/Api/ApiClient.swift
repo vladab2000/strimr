@@ -63,7 +63,49 @@ struct ApiClient {
     static func removeFavorite(media: Media) async throws {
         try await performRequest(path: "favorites/remove", method: "POST", body: media)
     }
-    
+
+    // MARK: - TV Channels
+
+    static func fetchChannels(providerType: ProviderType, favorites: Bool = false) async throws -> [Media] {
+        var queryItems = [
+            URLQueryItem(name: "providerType", value: String(providerType.rawValue)),
+        ]
+        if favorites {
+            queryItems.append(URLQueryItem(name: "favorites", value: "true"))
+        }
+        return try await fetch(path: "tv/channels", queryItems: queryItems)
+    }
+
+    static func fetchLiveStream(channelId: String, providerType: ProviderType? = nil) async throws -> Stream {
+        var queryItems: [URLQueryItem] = []
+        if let providerType {
+            queryItems.append(URLQueryItem(name: "providerType", value: String(providerType.rawValue)))
+        }
+        return try await fetch(path: "tv/channels/\(channelId)/live", queryItems: queryItems.isEmpty ? nil : queryItems)
+    }
+
+    static func fetchPrograms(channelId: String, date: String) async throws -> [Media] {
+        try await fetch(path: "tv/channels/\(channelId)/programs/\(date)")
+    }
+
+    static func fetchNowNext(channelId: String) async throws -> [Media] {
+        try await fetch(path: "tv/channels/\(channelId)/now-next")
+    }
+
+    static func fetchArchiveStream(channelId: String, programId: String) async throws -> Stream {
+        try await fetch(path: "tv/channels/\(channelId)/archive/\(programId)")
+    }
+
+    static func decodeStream(stream: Stream) -> String {
+        var components = URLComponents(string: "\(baseURL)tv/decode")!
+        components.queryItems = [
+            URLQueryItem(name: "url", value: stream.url ?? ""),
+            URLQueryItem(name: "type", value: String(stream.type ?? 0)),
+            URLQueryItem(name: "provider", value: String(stream.provider ?? 0)),
+        ]
+        return components.url?.absoluteString ?? ""
+    }
+
     private static func fetch<T: Decodable>(path: String, queryItems: [URLQueryItem]? = nil) async throws -> T {
         // Sestavení URL s parametry
         var components = URLComponents(string: "\(baseURL)\(path)")!
@@ -87,7 +129,7 @@ struct ApiClient {
 
         // Standardní JSON dekódování
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        decoder.dateDecodingStrategy = .custom(Self.decodeDate)
         do {
             return try decoder.decode(T.self, from: data)
         } catch {
@@ -118,5 +160,77 @@ struct ApiClient {
             print("API Error [\(statusCode)]: \(errorMsg)")
             throw URLError(.badServerResponse)
         }
+    }
+
+    // MARK: - Date Decoding
+
+    private nonisolated static func decodeDate(from decoder: Decoder) throws -> Date {
+        let container = try decoder.singleValueContainer()
+        let string = try container.decode(String.self)
+
+        // ISO 8601 with fractional seconds and Z
+        let isoFractional = ISO8601DateFormatter()
+        isoFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = isoFractional.date(from: string) { return date }
+
+        // ISO 8601 standard (no fractional seconds)
+        let isoStandard = ISO8601DateFormatter()
+        isoStandard.formatOptions = [.withInternetDateTime]
+        if let date = isoStandard.date(from: string) { return date }
+
+        // No timezone suffix — treat as UTC
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = TimeZone(identifier: "UTC")
+
+        // With fractional seconds, no Z
+        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
+        if let date = df.date(from: string) { return date }
+
+        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS"
+        if let date = df.date(from: string) { return date }
+
+        // No fractional seconds, no Z
+        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        if let date = df.date(from: string) { return date }
+
+        throw DecodingError.dataCorruptedError(
+            in: container,
+            debugDescription: "Cannot decode date from: \(string)"
+        )
+    }
+
+    private static func postReturning<Body: Encodable, Response: Decodable>(
+        path: String,
+        body: Body
+    ) async throws -> Response {
+        let url = URL(string: "\(baseURL)\(path)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        request.httpBody = try encoder.encode(body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+            let errorMsg = String(data: data, encoding: .utf8) ?? "Neznámá chyba"
+            print("API Error [\(statusCode)]: \(errorMsg)")
+            throw URLError(.badServerResponse)
+        }
+
+        if Response.self == String.self {
+            if let decodedString = String(data: data, encoding: .utf8) {
+                return decodedString as! Response
+            }
+            throw URLError(.cannotDecodeContentData)
+        }
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom(Self.decodeDate)
+        return try decoder.decode(Response.self, from: data)
     }
 }

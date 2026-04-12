@@ -24,6 +24,12 @@ struct MainTabMacView: View {
                 Label("tabs.search", systemImage: "magnifyingglass")
                     .tag(MainCoordinator.Tab.search)
 
+                Label("tabs.channels", systemImage: "tv")
+                    .tag(MainCoordinator.Tab.channels)
+
+                Label("tabs.epg", systemImage: "list.bullet.rectangle")
+                    .tag(MainCoordinator.Tab.epg)
+
                 Label("tabs.more", systemImage: "gearshape")
                     .tag(MainCoordinator.Tab.more)
             }
@@ -59,6 +65,20 @@ struct MainTabMacView: View {
                     .navigationDestination(for: MainCoordinator.Route.self) { route in
                         destination(for: route)
                     }
+                }
+            case .channels:
+                NavigationStack(path: coordinator.pathBinding(for: .channels)) {
+                    ChannelsMacView()
+                        .navigationDestination(for: MainCoordinator.Route.self) { route in
+                            destination(for: route)
+                        }
+                }
+            case .epg:
+                NavigationStack(path: coordinator.pathBinding(for: .epg)) {
+                    EPGMacView()
+                        .navigationDestination(for: MainCoordinator.Route.self) { route in
+                            destination(for: route)
+                        }
                 }
             case .more:
                 NavigationStack(path: coordinator.pathBinding(for: .more)) {
@@ -128,22 +148,28 @@ struct MainTabMacView: View {
         vm.resumePosition = coordinator.selectedResumePosition
 
         let media = coordinator.selectedMedia
-        let manager = watchHistoryManager
+        let isLiveChannel = media?.itemType == .channel
+        let isProgram = media?.itemType == .program
+        vm.isLive = isLiveChannel
 
-        vm.onCreateWatchRecord = {
-            guard let media else { return }
-            Task { @MainActor in
-                await manager.createWatchRecord(for: media)
+        if !isLiveChannel, !isProgram {
+            let manager = watchHistoryManager
+
+            vm.onCreateWatchRecord = {
+                guard let media else { return }
+                Task { @MainActor in
+                    await manager.createWatchRecord(for: media)
+                }
             }
-        }
 
-        vm.onSavePosition = { position in
-            guard let media else { return }
-            Task { @MainActor in
-                await manager.updatePosition(
-                    media: media,
-                    position: position,
-                )
+            vm.onSavePosition = { position in
+                guard let media else { return }
+                Task { @MainActor in
+                    await manager.updatePosition(
+                        media: media,
+                        position: position,
+                    )
+                }
             }
         }
         return vm

@@ -93,6 +93,7 @@ struct PlayerMacView: View {
                         seekBackwardSeconds: settingsManager.playback.seekBackwardSeconds,
                         seekForwardSeconds: settingsManager.playback.seekForwardSeconds,
                         onScrubbingChanged: handleScrubbing(editing:),
+                        isLive: bindableViewModel.isLive,
                     )
                     .transition(.opacity)
                 }

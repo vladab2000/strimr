@@ -7,6 +7,8 @@ final class MainCoordinator: ObservableObject {
         case home
         case library
         case search
+        case channels
+        case epg
         case more
     }
 
@@ -19,6 +21,8 @@ final class MainCoordinator: ObservableObject {
     @Published var homePath = NavigationPath()
     @Published var libraryPath = NavigationPath()
     @Published var searchPath = NavigationPath()
+    @Published var channelsPath = NavigationPath()
+    @Published var epgPath = NavigationPath()
     @Published var morePath = NavigationPath()
 
     @Published var selectedStreamURL: URL?
@@ -43,6 +47,10 @@ final class MainCoordinator: ObservableObject {
                     self.libraryPath
                 case .search:
                     self.searchPath
+                case .channels:
+                    self.channelsPath
+                case .epg:
+                    self.epgPath
                 case .more:
                     self.morePath
                 }
@@ -55,6 +63,10 @@ final class MainCoordinator: ObservableObject {
                     self.libraryPath = newValue
                 case .search:
                     self.searchPath = newValue
+                case .channels:
+                    self.channelsPath = newValue
+                case .epg:
+                    self.epgPath = newValue
                 case .more:
                     self.morePath = newValue
                 }
@@ -84,7 +96,7 @@ final class MainCoordinator: ObservableObject {
             return StreamSorter.sorted(inlineStreams)
         }
 
-        guard let urlPath = media.url else { return [] }
+        let urlPath = media.url
         do {
             let items = try await ApiClient.fetchMenu(urlPath: urlPath)
             let allStreams = items.flatMap { $0.streams ?? [] }
@@ -103,6 +115,10 @@ final class MainCoordinator: ObservableObject {
             libraryPath.append(route)
         case .search:
             searchPath.append(route)
+        case .channels:
+            channelsPath.append(route)
+        case .epg:
+            epgPath.append(route)
         case .more:
             break
         }

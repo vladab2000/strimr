@@ -48,6 +48,24 @@ struct MainTabView: View {
                 }
             }
 
+            Tab("tabs.channels", systemImage: "tv", value: MainCoordinator.Tab.channels) {
+                NavigationStack(path: coordinator.pathBinding(for: .channels)) {
+                    ChannelsView()
+                        .navigationDestination(for: MainCoordinator.Route.self) {
+                            destination(for: $0)
+                        }
+                }
+            }
+
+            Tab("tabs.epg", systemImage: "list.bullet.rectangle", value: MainCoordinator.Tab.epg) {
+                NavigationStack(path: coordinator.pathBinding(for: .epg)) {
+                    EPGView()
+                        .navigationDestination(for: MainCoordinator.Route.self) {
+                            destination(for: $0)
+                        }
+                }
+            }
+
             Tab("tabs.more", systemImage: "ellipsis.circle", value: MainCoordinator.Tab.more) {
                 NavigationStack(path: coordinator.pathBinding(for: .more)) {
                     SettingsView()
@@ -111,29 +129,35 @@ struct MainTabView: View {
         vm.autoSkipIntro = settingsManager.playback.autoSkipIntro
 
         let media = coordinator.selectedMedia
-        let manager = watchHistoryManager
+        let isLiveChannel = media?.itemType == .channel
+        let isProgram = media?.itemType == .program
+        vm.isLive = isLiveChannel
 
-        vm.onCreateWatchRecord = {
-            guard let media else { return }
-            Task { @MainActor in
-                await manager.createWatchRecord(for: media)
+        if !isLiveChannel, !isProgram {
+            let manager = watchHistoryManager
+
+            vm.onCreateWatchRecord = {
+                guard let media else { return }
+                Task { @MainActor in
+                    await manager.createWatchRecord(for: media)
+                }
             }
-        }
 
-        vm.onSavePosition = { position in
-            guard let media else { return }
-            Task { @MainActor in
-                await manager.updatePosition(
-                    media: media,
-                    position: position
-                )
+            vm.onSavePosition = { position in
+                guard let media else { return }
+                Task { @MainActor in
+                    await manager.updatePosition(
+                        media: media,
+                        position: position
+                    )
+                }
             }
-        }
 
-        vm.onMarkWatched = {
-            guard let media else { return }
-            Task { @MainActor in
-                await manager.setWatched(media: media, watched: true)
+            vm.onMarkWatched = {
+                guard let media else { return }
+                Task { @MainActor in
+                    await manager.setWatched(media: media, watched: true)
+                }
             }
         }
         return vm

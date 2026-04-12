@@ -19,6 +19,7 @@ struct PlayerControlsView: View {
     var onScrubbingChanged: (Bool) -> Void
     var isRotationLocked: Bool
     var onToggleRotationLock: () -> Void
+    var isLive: Bool
     var skipIntroStart: Double?
     var skipIntroEnd: Double?
     var skipTitlesStart: Double?
@@ -34,40 +35,44 @@ struct PlayerControlsView: View {
 
                 Spacer(minLength: 0)
 
-                VStack(spacing: 18) {
-                    HStack {
-                        RotationLockButton(isLocked: isRotationLocked, action: onToggleRotationLock)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 24)
-                    .opacity(isScrubbing ? 0 : 1)
-                    .allowsHitTesting(!isScrubbing)
+                if !isLive {
+                    VStack(spacing: 18) {
+                        HStack {
+                            RotationLockButton(isLocked: isRotationLocked, action: onToggleRotationLock)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 24)
+                        .opacity(isScrubbing ? 0 : 1)
+                        .allowsHitTesting(!isScrubbing)
 
-                    PlayerTimelineView(
-                        position: $position,
-                        duration: duration,
-                        bufferedAhead: bufferedAhead,
-                        playbackPosition: bufferBasePosition,
-                        onEditingChanged: onScrubbingChanged,
-                        skipIntroStart: skipIntroStart,
-                        skipIntroEnd: skipIntroEnd,
-                        skipTitlesStart: skipTitlesStart,
-                    )
+                        PlayerTimelineView(
+                            position: $position,
+                            duration: duration,
+                            bufferedAhead: bufferedAhead,
+                            playbackPosition: bufferBasePosition,
+                            onEditingChanged: onScrubbingChanged,
+                            skipIntroStart: skipIntroStart,
+                            skipIntroEnd: skipIntroEnd,
+                            skipTitlesStart: skipTitlesStart,
+                        )
+                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
 
-            PrimaryControls(
-                isPaused: isPaused,
-                onSeekBackward: onSeekBackward,
-                onPlayPause: onPlayPause,
-                onSeekForward: onSeekForward,
-                seekBackwardSeconds: seekBackwardSeconds,
-                seekForwardSeconds: seekForwardSeconds,
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            if !isLive {
+                PrimaryControls(
+                    isPaused: isPaused,
+                    onSeekBackward: onSeekBackward,
+                    onPlayPause: onPlayPause,
+                    onSeekForward: onSeekForward,
+                    seekBackwardSeconds: seekBackwardSeconds,
+                    seekForwardSeconds: seekForwardSeconds,
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            }
         }
         .background {
             PlayerControlsBackground()

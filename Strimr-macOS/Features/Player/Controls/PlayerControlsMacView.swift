@@ -17,6 +17,7 @@ struct PlayerControlsMacView: View {
     var seekBackwardSeconds: Int
     var seekForwardSeconds: Int
     var onScrubbingChanged: (Bool) -> Void
+    var isLive: Bool
 
     var body: some View {
         ZStack {
@@ -29,27 +30,31 @@ struct PlayerControlsMacView: View {
 
                 Spacer(minLength: 0)
 
-                PlayerTimelineView(
-                    position: $position,
-                    duration: duration,
-                    bufferedAhead: bufferedAhead,
-                    playbackPosition: bufferBasePosition,
-                    onEditingChanged: onScrubbingChanged,
-                )
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
+                if !isLive {
+                    PlayerTimelineView(
+                        position: $position,
+                        duration: duration,
+                        bufferedAhead: bufferedAhead,
+                        playbackPosition: bufferBasePosition,
+                        onEditingChanged: onScrubbingChanged,
+                    )
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
-            PrimaryControlsMac(
-                isPaused: isPaused,
-                onSeekBackward: onSeekBackward,
-                onPlayPause: onPlayPause,
-                onSeekForward: onSeekForward,
-                seekBackwardSeconds: seekBackwardSeconds,
-                seekForwardSeconds: seekForwardSeconds,
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            if !isLive {
+                PrimaryControlsMac(
+                    isPaused: isPaused,
+                    onSeekBackward: onSeekBackward,
+                    onPlayPause: onPlayPause,
+                    onSeekForward: onSeekForward,
+                    seekBackwardSeconds: seekBackwardSeconds,
+                    seekForwardSeconds: seekForwardSeconds,
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            }
         }
         .background {
             PlayerControlsMacBackground()
