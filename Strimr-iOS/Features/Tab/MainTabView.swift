@@ -48,18 +48,9 @@ struct MainTabView: View {
                 }
             }
 
-            Tab("tabs.channels", systemImage: "tv", value: MainCoordinator.Tab.channels) {
+            Tab("tabs.liveTV", systemImage: "tv.and.mediabox", value: MainCoordinator.Tab.channels) {
                 NavigationStack(path: coordinator.pathBinding(for: .channels)) {
-                    ChannelsView()
-                        .navigationDestination(for: MainCoordinator.Route.self) {
-                            destination(for: $0)
-                        }
-                }
-            }
-
-            Tab("tabs.epg", systemImage: "list.bullet.rectangle", value: MainCoordinator.Tab.epg) {
-                NavigationStack(path: coordinator.pathBinding(for: .epg)) {
-                    EPGView()
+                    LiveTVView()
                         .navigationDestination(for: MainCoordinator.Route.self) {
                             destination(for: $0)
                         }

@@ -8,7 +8,6 @@ final class MainCoordinator: ObservableObject {
         case library
         case search
         case channels
-        case epg
         case more
     }
 
@@ -22,7 +21,6 @@ final class MainCoordinator: ObservableObject {
     @Published var libraryPath = NavigationPath()
     @Published var searchPath = NavigationPath()
     @Published var channelsPath = NavigationPath()
-    @Published var epgPath = NavigationPath()
     @Published var morePath = NavigationPath()
 
     @Published var selectedStreamURL: URL?
@@ -32,6 +30,10 @@ final class MainCoordinator: ObservableObject {
     @Published var selectedSkipIntroEnd: Double?
     @Published var selectedSkipTitlesStart: Double?
     @Published var isPresentingPlayer = false
+
+    /// Channel context for LiveTV playback (auto-next program)
+    @Published var selectedChannel: Media?
+    @Published var selectedProgram: Media?
 
     @Published var isLoadingStreams = false
 
@@ -49,8 +51,6 @@ final class MainCoordinator: ObservableObject {
                     self.searchPath
                 case .channels:
                     self.channelsPath
-                case .epg:
-                    self.epgPath
                 case .more:
                     self.morePath
                 }
@@ -65,8 +65,6 @@ final class MainCoordinator: ObservableObject {
                     self.searchPath = newValue
                 case .channels:
                     self.channelsPath = newValue
-                case .epg:
-                    self.epgPath = newValue
                 case .more:
                     self.morePath = newValue
                 }
@@ -117,8 +115,6 @@ final class MainCoordinator: ObservableObject {
             searchPath.append(route)
         case .channels:
             channelsPath.append(route)
-        case .epg:
-            epgPath.append(route)
         case .more:
             break
         }
@@ -130,7 +126,9 @@ final class MainCoordinator: ObservableObject {
         resumePosition: Double? = nil,
         skipIntroStart: Double? = nil,
         skipIntroEnd: Double? = nil,
-        skipTitlesStart: Double? = nil
+        skipTitlesStart: Double? = nil,
+        channel: Media? = nil,
+        program: Media? = nil
     ) {
         selectedStreamURL = streamURL
         selectedMedia = media
@@ -138,6 +136,8 @@ final class MainCoordinator: ObservableObject {
         selectedSkipIntroStart = skipIntroStart
         selectedSkipIntroEnd = skipIntroEnd
         selectedSkipTitlesStart = skipTitlesStart
+        selectedChannel = channel
+        selectedProgram = program
         isPresentingPlayer = true
     }
 
@@ -148,6 +148,8 @@ final class MainCoordinator: ObservableObject {
         selectedSkipIntroStart = nil
         selectedSkipIntroEnd = nil
         selectedSkipTitlesStart = nil
+        selectedChannel = nil
+        selectedProgram = nil
         isPresentingPlayer = false
     }
 }

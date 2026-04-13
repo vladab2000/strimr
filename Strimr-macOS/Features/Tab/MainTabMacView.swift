@@ -24,11 +24,8 @@ struct MainTabMacView: View {
                 Label("tabs.search", systemImage: "magnifyingglass")
                     .tag(MainCoordinator.Tab.search)
 
-                Label("tabs.channels", systemImage: "tv")
+                Label("tabs.liveTV", systemImage: "tv.and.mediabox")
                     .tag(MainCoordinator.Tab.channels)
-
-                Label("tabs.epg", systemImage: "list.bullet.rectangle")
-                    .tag(MainCoordinator.Tab.epg)
 
                 Label("tabs.more", systemImage: "gearshape")
                     .tag(MainCoordinator.Tab.more)
@@ -68,14 +65,7 @@ struct MainTabMacView: View {
                 }
             case .channels:
                 NavigationStack(path: coordinator.pathBinding(for: .channels)) {
-                    ChannelsMacView()
-                        .navigationDestination(for: MainCoordinator.Route.self) { route in
-                            destination(for: route)
-                        }
-                }
-            case .epg:
-                NavigationStack(path: coordinator.pathBinding(for: .epg)) {
-                    EPGMacView()
+                    LiveTVMacView()
                         .navigationDestination(for: MainCoordinator.Route.self) { route in
                             destination(for: route)
                         }

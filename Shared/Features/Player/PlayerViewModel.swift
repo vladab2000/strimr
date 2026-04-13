@@ -4,8 +4,8 @@ import Observation
 @MainActor
 @Observable
 final class PlayerViewModel {
-    let streamURL: URL
-    let title: String
+    var streamURL: URL
+    var title: String
     var isLive = false
     var isLoading = false
     var errorMessage: String?
@@ -20,6 +20,19 @@ final class PlayerViewModel {
     var onCreateWatchRecord: (() -> Void)?
     var onMarkWatched: (() -> Void)?
     var onSeek: ((Double) -> Void)?
+
+    /// Called when playback ends and a next program should be played.
+    /// Returns the stream URL and metadata for the next program, or nil if none.
+    var onPlayNextProgram: (() async -> (url: URL, title: String, metadata: AVPlayerMetadata)?)?
+
+    /// Channel name displayed in metadata subtitle
+    var channelName: String?
+
+    /// Description for player metadata display
+    var mediaDescription: String?
+
+    /// Artwork URL for player metadata display
+    var artworkURL: URL?
 
     // Skip intro
     var skipIntroStart: Double?

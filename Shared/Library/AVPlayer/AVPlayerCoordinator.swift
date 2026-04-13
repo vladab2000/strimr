@@ -3,6 +3,13 @@ import AVKit
 import Foundation
 import Observation
 
+struct AVPlayerMetadata {
+    var title: String?
+    var subtitle: String?
+    var description: String?
+    var artworkURL: URL?
+}
+
 #if canImport(UIKit)
 
 @MainActor
@@ -24,16 +31,69 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
     @ObservationIgnored private var endObserver: NSObjectProtocol?
 
     func play(_ url: URL) {
+        play(url, metadata: nil)
+    }
+
+    func play(_ url: URL, metadata: AVPlayerMetadata?) {
         cleanup()
 
         let item = AVPlayerItem(url: url)
+        if let metadata {
+            applyMetadata(metadata, to: item)
+        }
         let avPlayer = AVPlayer(playerItem: item)
         avPlayer.rate = playbackRate
         self.player = avPlayer
         playerViewController?.player = avPlayer
+        #if os(iOS)
+        playerViewController?.showsTimecodes = true
+        #endif
 
         setupObservers(player: avPlayer, item: item)
         avPlayer.play()
+    }
+
+    func updateMetadata(_ metadata: AVPlayerMetadata) {
+        guard let item = player?.currentItem else { return }
+        applyMetadata(metadata, to: item)
+    }
+
+    private func applyMetadata(_ metadata: AVPlayerMetadata, to item: AVPlayerItem) {
+        var metadataItems: [AVMetadataItem] = []
+
+        if let title = metadata.title {
+            metadataItems.append(makeMetadataItem(identifier: .commonIdentifierTitle, value: title as NSString))
+        }
+
+        if let subtitle = metadata.subtitle {
+            metadataItems.append(makeMetadataItem(identifier: .iTunesMetadataTrackSubTitle, value: subtitle as NSString))
+        }
+
+        if let description = metadata.description {
+            metadataItems.append(makeMetadataItem(identifier: .commonIdentifierDescription, value: description as NSString))
+        }
+
+        if let artworkURL = metadata.artworkURL {
+            Task {
+                guard let (data, _) = try? await URLSession.shared.data(from: artworkURL) else { return }
+                let artworkItem = self.makeMetadataItem(identifier: .commonIdentifierArtwork, value: data as NSData)
+                await MainActor.run {
+                    var items = item.externalMetadata
+                    items.append(artworkItem)
+                    item.externalMetadata = items
+                }
+            }
+        }
+
+        item.externalMetadata = metadataItems
+    }
+
+    private func makeMetadataItem(identifier: AVMetadataIdentifier, value: NSCopying & NSObjectProtocol) -> AVMetadataItem {
+        let item = AVMutableMetadataItem()
+        item.identifier = identifier
+        item.value = value
+        item.extendedLanguageTag = "und"
+        return item.copy() as! AVMetadataItem
     }
 
     func togglePlayback() {

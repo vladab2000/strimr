@@ -7,6 +7,7 @@ struct AVPlayerTVView: View {
 
     @State private var coordinator = AVPlayerCoordinator()
     @State private var awaitingMediaLoad = false
+    @State private var isLoadingNext = false
 
     var body: some View {
         ZStack {
@@ -21,16 +22,21 @@ struct AVPlayerTVView: View {
                     )
                 }
                 .onPlaybackEnded {
-                    onExit()
+                    handlePlaybackEnded()
                 }
                 .onMediaLoaded {
                     handleMediaLoaded()
                 }
                 .ignoresSafeArea()
+
+            if isLoadingNext {
+                ProgressView()
+                    .scaleEffect(1.5)
+            }
         }
         .onAppear {
             awaitingMediaLoad = true
-            coordinator.play(viewModel.streamURL)
+            coordinator.play(viewModel.streamURL, metadata: makeMetadata())
             viewModel.onSeek = { [coordinator] position in
                 coordinator.seek(to: position)
             }
@@ -52,5 +58,35 @@ struct AVPlayerTVView: View {
             coordinator.seek(to: resume)
             viewModel.resumePosition = nil
         }
+    }
+
+    private func handlePlaybackEnded() {
+        guard let nextProvider = viewModel.onPlayNextProgram else {
+            onExit()
+            return
+        }
+
+        isLoadingNext = true
+        Task {
+            if let next = await nextProvider() {
+                awaitingMediaLoad = true
+                viewModel.title = next.title
+                let metadata = next.metadata
+                coordinator.play(next.url, metadata: metadata)
+                isLoadingNext = false
+            } else {
+                isLoadingNext = false
+                onExit()
+            }
+        }
+    }
+
+    private func makeMetadata() -> AVPlayerMetadata {
+        AVPlayerMetadata(
+            title: viewModel.title,
+            subtitle: viewModel.channelName,
+            description: viewModel.mediaDescription,
+            artworkURL: viewModel.artworkURL
+        )
     }
 }
