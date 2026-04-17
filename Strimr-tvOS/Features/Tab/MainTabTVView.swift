@@ -40,7 +40,7 @@ struct MainTabTVView: View {
                 }
             }
             
-            Tab("tabs.liveTV", systemImage: "tv.and.mediabox", value: MainCoordinator.Tab.channels) {
+            Tab("tabs.liveTV", systemImage: "tv.fill", value: MainCoordinator.Tab.channels) {
                 NavigationStack(path: coordinator.pathBinding(for: .channels)) {
                     LiveTVTVView()
                         .navigationDestination(for: MainCoordinator.Route.self) { route in
@@ -169,38 +169,62 @@ struct MainTabTVView: View {
         }
         vm.mediaDescription = media?.summary
         vm.artworkURL = media?.thumbURL ?? media?.posterURL
+        vm.startDate = media?.programStart
+        vm.endDate = media?.programEnd
 
-        // Set up auto-next-program for archive program playback
-        if let channel = coordinator.selectedChannel,
-           coordinator.selectedProgram != nil
-        {
+        // Set up auto-next-program and go-to-live for channel playback
+        if let channel = coordinator.selectedChannel {
             let channelMgr = channelManager
             let coord = coordinator
-            vm.onPlayNextProgram = {
-                let currentProgramId = await MainActor.run { coord.selectedProgram?.id }
-                guard let currentProgramId else { return nil }
 
-                let programs = await MainActor.run { channelMgr.programsByChannel[channel.id] ?? [] }
-                guard let idx = programs.firstIndex(where: { $0.id == currentProgramId }) else { return nil }
-                let nextIndex = programs.index(after: idx)
-                guard nextIndex < programs.endIndex else { return nil }
-
-                let nextProgram = programs[nextIndex]
-                // Only auto-play past programs (archive)
-                guard (nextProgram.programEnd ?? .distantFuture) < Date.now else { return nil }
-
-                guard let url = await channelMgr.resolveArchiveStreamURL(channelId: channel.id, program: nextProgram) else { return nil }
-
-                // Update coordinator so subsequent calls find the correct "current"
-                await MainActor.run { coord.selectedProgram = nextProgram }
+            // Go to live stream action
+            vm.onGoToLive = {
+                guard let url = await channelMgr.resolveLiveStreamURL(for: channel) else { return nil }
+                let currentProgram = await MainActor.run { channelMgr.currentProgram(for: channel) }
 
                 let metadata = AVPlayerMetadata(
-                    title: nextProgram.title,
+                    channel: channel.title,
+                    title: currentProgram?.title ?? channel.title,
                     subtitle: channel.title,
-                    description: nextProgram.summary,
-                    artworkURL: nextProgram.thumbURL ?? nextProgram.posterURL
+                    description: currentProgram?.summary,
+                    artworkURL: currentProgram?.thumbURL ?? currentProgram?.posterURL ?? channel.thumbURL,
+                    startDate: currentProgram?.programStart,
+                    endDate: currentProgram?.programEnd
                 )
-                return (url: url, title: nextProgram.title, metadata: metadata)
+                return (url: url, title: currentProgram?.title ?? channel.title, metadata: metadata)
+            }
+
+            // Auto-next-program for archive program playback
+            if coordinator.selectedProgram != nil {
+                vm.onPlayNextProgram = {
+                    let currentProgramId = await MainActor.run { coord.selectedProgram?.id }
+                    guard let currentProgramId else { return nil }
+
+                    let programs = await MainActor.run { channelMgr.programsByChannel[channel.id] ?? [] }
+                    guard let idx = programs.firstIndex(where: { $0.id == currentProgramId }) else { return nil }
+                    let nextIndex = programs.index(after: idx)
+                    guard nextIndex < programs.endIndex else { return nil }
+
+                    let nextProgram = programs[nextIndex]
+                    // Only auto-play past programs (archive)
+                    guard (nextProgram.programEnd ?? .distantFuture) < Date.now else { return nil }
+
+                    guard let url = await channelMgr.resolveArchiveStreamURL(channelId: channel.id, program: nextProgram) else { return nil }
+
+                    // Update coordinator so subsequent calls find the correct "current"
+                    await MainActor.run { coord.selectedProgram = nextProgram }
+
+                    let metadata = AVPlayerMetadata(
+                        channel: channel.title,
+                        title: nextProgram.title,
+                        subtitle: channel.title,
+                        description: nextProgram.summary,
+                        artworkURL: nextProgram.thumbURL ?? nextProgram.posterURL,
+                        startDate: nextProgram.programStart,
+                        endDate: nextProgram.programEnd
+                    )
+                    return (url: url, title: nextProgram.title, metadata: metadata)
+                }
             }
         }
 

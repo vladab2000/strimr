@@ -33,6 +33,12 @@ final class PlayerViewModel {
 
     /// Artwork URL for player metadata display
     var artworkURL: URL?
+    
+    var startDate: Date?
+    var endDate: Date?
+
+    /// Called to switch playback to the live stream of the current channel.
+    var onGoToLive: (() async -> (url: URL, title: String, metadata: AVPlayerMetadata)?)?
 
     // Skip intro
     var skipIntroStart: Double?

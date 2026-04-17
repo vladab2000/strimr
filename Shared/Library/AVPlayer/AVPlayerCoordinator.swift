@@ -4,10 +4,13 @@ import Foundation
 import Observation
 
 struct AVPlayerMetadata {
+    var channel: String?
     var title: String?
     var subtitle: String?
     var description: String?
     var artworkURL: URL?
+    var startDate: Date?
+    var endDate: Date?
 }
 
 #if canImport(UIKit)
@@ -72,6 +75,15 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
         if let description = metadata.description {
             metadataItems.append(makeMetadataItem(identifier: .commonIdentifierDescription, value: description as NSString))
         }
+        
+        if let startDate = metadata.startDate, let endDate = metadata.endDate, let channel = metadata.channel {
+            let startDateItem = makeMetadataItem(identifier: AVMetadataIdentifier(AVKitMetadataIdentifierExactStartDate), value: startDate as (NSCopying & NSObjectProtocol))
+            let endDateItem = makeMetadataItem(identifier: AVMetadataIdentifier(AVKitMetadataIdentifierExactEndDate), value: endDate as (NSCopying & NSObjectProtocol))
+            let serviceItentifier = makeMetadataItem(identifier: AVMetadataIdentifier(AVKitMetadataIdentifierServiceIdentifier), value: channel as (NSCopying & NSObjectProtocol))
+            metadataItems.append(startDateItem)
+            metadataItems.append(endDateItem)
+            metadataItems.append(serviceItentifier)
+        }
 
         if let artworkURL = metadata.artworkURL {
             Task {
@@ -94,6 +106,37 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
         item.value = value
         item.extendedLanguageTag = "und"
         return item.copy() as! AVMetadataItem
+    }
+
+    /// Configures custom transport bar items on the AVPlayerViewController.
+    func configureTransportBarActions(
+        onPlayFromBeginning: (() -> Void)?,
+        onGoToLive: (() -> Void)?
+    ) {
+        guard let vc = playerViewController else { return }
+        var items: [UIMenuElement] = []
+
+        if let onPlayFromBeginning {
+            let action = UIAction(
+                title: String(localized: "player.action.playFromBeginning"),
+                image: UIImage(systemName: "backward.fill")
+            ) { _ in
+                onPlayFromBeginning()
+            }
+            items.append(action)
+        }
+
+        if let onGoToLive {
+            let action = UIAction(
+                title: String(localized: "player.action.goToLive"),
+                image: UIImage(systemName: "dot.radiowaves.left.and.right")
+            ) { _ in
+                onGoToLive()
+            }
+            items.append(action)
+        }
+
+        vc.transportBarCustomMenuItems = items
     }
 
     func togglePlayback() {

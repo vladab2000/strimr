@@ -37,6 +37,7 @@ struct AVPlayerTVView: View {
         .onAppear {
             awaitingMediaLoad = true
             coordinator.play(viewModel.streamURL, metadata: makeMetadata())
+            configureTransportBarActions()
             viewModel.onSeek = { [coordinator] position in
                 coordinator.seek(to: position)
             }
@@ -81,12 +82,42 @@ struct AVPlayerTVView: View {
         }
     }
 
+    private func configureTransportBarActions() {
+        coordinator.configureTransportBarActions(
+            onPlayFromBeginning: viewModel.isLive ? nil : { [coordinator] in
+                coordinator.seek(to: 0)
+            },
+            onGoToLive: viewModel.onGoToLive != nil ? { handleGoToLive() } : nil
+        )
+    }
+
+    private func handleGoToLive() {
+        guard let goToLiveProvider = viewModel.onGoToLive else { return }
+
+        isLoadingNext = true
+        Task {
+            if let live = await goToLiveProvider() {
+                awaitingMediaLoad = true
+                viewModel.title = live.title
+                viewModel.isLive = true
+                coordinator.play(live.url, metadata: live.metadata)
+                configureTransportBarActions()
+                isLoadingNext = false
+            } else {
+                isLoadingNext = false
+            }
+        }
+    }
+
     private func makeMetadata() -> AVPlayerMetadata {
         AVPlayerMetadata(
+            channel: viewModel.channelName,
             title: viewModel.title,
             subtitle: viewModel.channelName,
             description: viewModel.mediaDescription,
-            artworkURL: viewModel.artworkURL
+            artworkURL: viewModel.artworkURL,
+            startDate: viewModel.startDate,
+            endDate: viewModel.endDate
         )
     }
 }

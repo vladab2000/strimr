@@ -458,6 +458,38 @@
         }
       }
     },
+    "player.action.goToLive" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přejít na živé vysílání"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Go to Live"
+          }
+        }
+      }
+    },
+    "player.action.playFromBeginning" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přehrát od začátku"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Play from Beginning"
+          }
+        }
+      }
+    },
     "player.badge.hdr" : {
       "localizations" : {
         "cs" : {
