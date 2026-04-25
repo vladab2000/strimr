@@ -166,12 +166,14 @@ struct MainTabTVView: View {
 
         let media = coordinator.selectedMedia
         let isLiveChannel = media?.itemType == .channel
-        let isProgram = media?.itemType == .program
         vm.isLive = isLiveChannel
 
         // Set metadata for native player info panel
         if let channel = coordinator.selectedChannel {
             vm.channelName = channel.title
+        }
+        else {
+            vm.channelName = media?.secondaryLabel
         }
         vm.mediaDescription = media?.summary
         vm.artworkURL = media?.thumbURL ?? media?.posterURL
@@ -189,9 +191,8 @@ struct MainTabTVView: View {
                 let currentProgram = await MainActor.run { channelMgr.currentProgram(for: channel) }
 
                 let metadata = AVPlayerMetadata(
-                    channel: channel.title,
                     title: currentProgram?.title ?? channel.title,
-                    subtitle: channel.title,
+                    subtitle: media?.secondaryLabel,
                     description: currentProgram?.summary,
                     artworkURL: currentProgram?.thumbURL ?? currentProgram?.posterURL ?? channel.thumbURL,
                     startDate: currentProgram?.programStart,
@@ -221,9 +222,8 @@ struct MainTabTVView: View {
                     await MainActor.run { coord.selectedProgram = nextProgram }
 
                     let metadata = AVPlayerMetadata(
-                        channel: channel.title,
                         title: nextProgram.title,
-                        subtitle: channel.title,
+                        subtitle: media?.secondaryLabel,
                         description: nextProgram.summary,
                         artworkURL: nextProgram.thumbURL ?? nextProgram.posterURL,
                         startDate: nextProgram.programStart,
@@ -234,32 +234,33 @@ struct MainTabTVView: View {
             }
         }
 
-        let manager = watchHistoryManager
+        if !isLiveChannel {
+            let manager = watchHistoryManager
 
-        vm.onCreateWatchRecord = {
-            guard let media else { return }
-            Task { @MainActor in
-                await manager.createWatchRecord(for: media)
+            vm.onCreateWatchRecord = {
+                guard let media else { return }
+                Task { @MainActor in
+                    await manager.createWatchRecord(for: media)
+                }
+            }
+
+            vm.onSavePosition = { position in
+                guard let media else { return }
+                Task { @MainActor in
+                    await manager.updatePosition(
+                        media: media,
+                        position: position
+                    )
+                }
+            }
+
+            vm.onMarkWatched = {
+                guard let media else { return }
+                Task { @MainActor in
+                    await manager.setWatched(media: media, watched: true)
+                }
             }
         }
-
-        vm.onSavePosition = { position in
-            guard let media else { return }
-            Task { @MainActor in
-                await manager.updatePosition(
-                    media: media,
-                    position: position
-                )
-            }
-        }
-
-        vm.onMarkWatched = {
-            guard let media else { return }
-            Task { @MainActor in
-                await manager.setWatched(media: media, watched: true)
-            }
-        }
-
         return vm
     }
 }

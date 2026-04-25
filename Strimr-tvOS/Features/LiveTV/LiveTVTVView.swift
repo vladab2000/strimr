@@ -431,10 +431,10 @@ struct LiveTVTVView: View {
         let isPast = (program.programEnd ?? .distantFuture) < Date.now
 
         if isNow {
-            guard let playback = await viewModel?.resolveArchivePlayback(channelId: channel.id, program: program) else { return }
+            guard let playback = await viewModel?.resolveArchivePlayback(program: program) else { return }
             coordinator.showPlayer(streamURL: ApiClient.playbackURL(sessionId: playback.sessionId), sessionId: playback.sessionId, media: program, resumePosition: 0.0, channel: channel, program: program)
         } else if isPast {
-            guard let playback = await viewModel?.resolveArchivePlayback(channelId: channel.id, program: program) else { return }
+            guard let playback = await viewModel?.resolveArchivePlayback(program: program) else { return }
             coordinator.showPlayer(streamURL: ApiClient.playbackURL(sessionId: playback.sessionId), sessionId: playback.sessionId, media: program, channel: channel, program: program)
         }
     }

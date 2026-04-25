@@ -124,6 +124,7 @@ struct Media: Codable, Hashable, Identifiable {
     var programStart: Date? { details?.start }
     var programEnd: Date? { details?.end }
     var channelId: String? { details?.channelId }
+    var channelName: String? { details?.channelName }
 
     // MARK: - Computed: labels
 
@@ -146,6 +147,13 @@ struct Media: Codable, Hashable, Identifiable {
             }
         case .season:
             seasonTitle
+        case .program:
+            if let channel = channelName, let start = programStart, let end = programEnd {
+                channel + "  " + start.formatted(.dateTime.hour().minute()) + " - " + end.formatted(.dateTime.hour().minute())
+            }
+            else {
+                channelName
+            }
         default:
             year.map(String.init)
         }

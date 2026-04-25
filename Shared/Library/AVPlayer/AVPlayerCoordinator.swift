@@ -4,7 +4,6 @@ import Foundation
 import Observation
 
 struct AVPlayerMetadata {
-    var channel: String?
     var title: String?
     var subtitle: String?
     var description: String?
@@ -32,12 +31,14 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
     @ObservationIgnored private var timeControlObservation: NSKeyValueObservation?
     @ObservationIgnored private var durationObservation: NSKeyValueObservation?
     @ObservationIgnored private var endObserver: NSObjectProtocol?
+    @ObservationIgnored private var cachedAudioGroup: AVMediaSelectionGroup?
+    @ObservationIgnored private var cachedSubtitleGroup: AVMediaSelectionGroup?
 
     func play(_ url: URL) {
-        play(url, metadata: nil)
+        play(url, seekPosition: nil, metadata: nil)
     }
 
-    func play(_ url: URL, metadata: AVPlayerMetadata?) {
+    func play(_ url: URL, seekPosition: Double?, metadata: AVPlayerMetadata?) {
         cleanup()
 
         let options = [
@@ -61,7 +62,12 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
         #endif
 
         setupObservers(player: avPlayer, item: item)
-        avPlayer.play()
+        if seekPosition != nil {
+            seek(to: seekPosition!)
+        }
+        else {
+            avPlayer.play()
+        }
     }
 
     func updateMetadata(_ metadata: AVPlayerMetadata) {
@@ -85,7 +91,7 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
         }
         
 #if !os(iOS)
-        if let startDate = metadata.startDate, let endDate = metadata.endDate, let channel = metadata.channel {
+        if let startDate = metadata.startDate, let endDate = metadata.endDate, let channel = metadata.subtitle {
             let startDateItem = makeMetadataItem(identifier: AVMetadataIdentifier(AVKitMetadataIdentifierExactStartDate), value: startDate as (NSCopying & NSObjectProtocol))
             let endDateItem = makeMetadataItem(identifier: AVMetadataIdentifier(AVKitMetadataIdentifierExactEndDate), value: endDate as (NSCopying & NSObjectProtocol))
             let serviceItentifier = makeMetadataItem(identifier: AVMetadataIdentifier(AVKitMetadataIdentifierServiceIdentifier), value: channel as (NSCopying & NSObjectProtocol))
@@ -221,9 +227,7 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
         var tracks: [PlayerTrack] = []
         var trackID = 0
 
-        // Use synchronous deprecated API for trackList since it must return synchronously.
-        // The async loadMediaSelectionGroup is used in selectAudioTrack/selectSubtitleTrack.
-        if let audioGroup = item.asset.mediaSelectionGroup(forMediaCharacteristic: .audible) {
+        if let audioGroup = cachedAudioGroup {
             let selectedAudio = item.currentMediaSelection.selectedMediaOption(in: audioGroup)
             for option in audioGroup.options {
                 let locale = option.locale
@@ -241,7 +245,7 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
             }
         }
 
-        if let subtitleGroup = item.asset.mediaSelectionGroup(forMediaCharacteristic: .legible) {
+        if let subtitleGroup = cachedSubtitleGroup {
             let selectedSub = item.currentMediaSelection.selectedMediaOption(in: subtitleGroup)
             for option in subtitleGroup.options {
                 let locale = option.locale
@@ -311,12 +315,14 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
         }
 
         // Item status (ready to play)
-        statusObservation = item.observe(\.status, options: [.new]) { item, _ in
+        statusObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
             Task { @MainActor in
                 if item.status == .readyToPlay {
                     if item.duration.isNumeric {
                         propertyChange?(.duration, item.duration.seconds)
                     }
+                    self?.cachedAudioGroup = try? await item.asset.loadMediaSelectionGroup(for: .audible)
+                    self?.cachedSubtitleGroup = try? await item.asset.loadMediaSelectionGroup(for: .legible)
                     mediaLoaded?()
                 }
             }
@@ -369,6 +375,8 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
             NotificationCenter.default.removeObserver(observer)
             endObserver = nil
         }
+        cachedAudioGroup = nil
+        cachedSubtitleGroup = nil
         player?.pause()
     }
 }

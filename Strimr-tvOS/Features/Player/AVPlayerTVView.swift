@@ -36,7 +36,7 @@ struct AVPlayerTVView: View {
         }
         .onAppear {
             awaitingMediaLoad = true
-            coordinator.play(ApiClient.playbackURL(sessionId: viewModel.sessionId), metadata: makeMetadata())
+            coordinator.play(ApiClient.playbackURL(sessionId: viewModel.sessionId), seekPosition: viewModel.resumePosition, metadata: makeMetadata())
             configureTransportBarActions()
             viewModel.onSeek = { [coordinator] position in
                 coordinator.seek(to: position)
@@ -56,11 +56,6 @@ struct AVPlayerTVView: View {
     private func handleMediaLoaded() {
         guard awaitingMediaLoad else { return }
         awaitingMediaLoad = false
-
-        if let resume = viewModel.resumePosition, resume >= 0 {
-            coordinator.seek(to: resume)
-            viewModel.resumePosition = nil
-        }
     }
 
     private func handlePlaybackEnded() {
@@ -76,7 +71,7 @@ struct AVPlayerTVView: View {
                 viewModel.sessionId = next.sessionId
                 viewModel.title = next.title
                 let metadata = next.metadata
-                coordinator.play(ApiClient.playbackURL(sessionId: next.sessionId), metadata: metadata)
+                coordinator.play(ApiClient.playbackURL(sessionId: next.sessionId), seekPosition: 0.0, metadata: metadata)
                 isLoadingNext = false
             } else {
                 isLoadingNext = false
@@ -103,7 +98,7 @@ struct AVPlayerTVView: View {
                 awaitingMediaLoad = true
                 viewModel.title = live.title
                 viewModel.isLive = true
-                coordinator.play(ApiClient.playbackURL(sessionId: live.sessionId), metadata: live.metadata)
+                coordinator.play(ApiClient.playbackURL(sessionId: live.sessionId), seekPosition: nil, metadata: live.metadata)
                 configureTransportBarActions()
                 isLoadingNext = false
             } else {
@@ -114,7 +109,6 @@ struct AVPlayerTVView: View {
 
     private func makeMetadata() -> AVPlayerMetadata {
         AVPlayerMetadata(
-            channel: viewModel.channelName,
             title: viewModel.title,
             subtitle: viewModel.channelName,
             description: viewModel.mediaDescription,

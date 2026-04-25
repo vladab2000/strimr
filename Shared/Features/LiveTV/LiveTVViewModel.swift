@@ -161,11 +161,11 @@ final class LiveTVViewModel {
         return result
     }
 
-    func resolveArchivePlayback(channelId: String, program: Media) async -> Playback? {
+    func resolveArchivePlayback(program: Media) async -> Playback? {
         isResolvingStream = true
         defer { isResolvingStream = false }
 
-        guard let result = await manager.resolveArchivePlayback(channelId: channelId, program: program) else {
+        guard let result = await manager.resolveArchivePlayback(channelId: program.channelId!, program: program) else {
             errorMessage = String(localized: "epg.error.stream")
             return nil
         }

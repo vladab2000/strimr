@@ -31,12 +31,6 @@ enum SCItemType: String, Codable, Hashable {
         6: .program,
     ]
 
-    private static let toIntMapping: [SCItemType: Int] = {
-        var result: [SCItemType: Int] = [:]
-        for (key, value) in intMapping { result[value] = key }
-        return result
-    }()
-
     private static let stringMapping: [String: SCItemType] = [
         "folder": .folder,
         "movie": .movie,
@@ -56,10 +50,6 @@ enum SCItemType: String, Codable, Hashable {
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
-        if let intValue = SCItemType.toIntMapping[self] {
-            try container.encode(intValue)
-        } else {
-            try container.encode(rawValue)
-        }
+        try container.encode(rawValue)
     }
 }

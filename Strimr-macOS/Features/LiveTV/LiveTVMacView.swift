@@ -429,7 +429,7 @@ struct LiveTVMacView: View {
     }
 
     private func playArchive(channelId: String, program: Media) async {
-        guard let playback = await viewModel?.resolveArchivePlayback(channelId: channelId, program: program) else { return }
+        guard let playback = await viewModel?.resolveArchivePlayback(program: program) else { return }
         coordinator.showPlayer(streamURL: ApiClient.playbackURL(sessionId: playback.sessionId), sessionId: playback.sessionId, media: program)
     }
 

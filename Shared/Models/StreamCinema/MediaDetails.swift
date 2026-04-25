@@ -65,6 +65,7 @@ struct ProgramDetails: Codable, Hashable {
     let start: Date?
     let end: Date?
     let channelId: String?
+    let channelName: String?
 }
 
 /// Wrapper enum for polymorphic details decoding based on `kind`.
@@ -184,6 +185,11 @@ enum MediaDetailsVariant: Codable, Hashable {
 
     var channelId: String? {
         if case .program(let d) = self { return d.channelId }
+        return nil
+    }
+
+    var channelName: String? {
+        if case .program(let d) = self { return d.channelName }
         return nil
     }
 
