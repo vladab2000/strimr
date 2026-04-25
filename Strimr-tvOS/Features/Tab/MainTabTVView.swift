@@ -96,7 +96,7 @@ struct MainTabTVView: View {
             coordinator.resetPlayer()
             Task { await watchHistoryManager.load() }
         }) {
-            if let sessionId = coordinator.selectedSessionId {
+            if let sessionId = coordinator.selectedSessionId, sessionId.isEmpty == false {
                 AVPlayerTVView(
                     viewModel: makePlayerViewModel(streamURL: ApiClient.playbackURL(sessionId: sessionId), sessionId: sessionId),
                     onExit: coordinator.resetPlayer,
