@@ -63,7 +63,7 @@ struct MainTabTVView: View {
             Tab("", systemImage: "magnifyingglass", value: MainCoordinator.Tab.search, role: .search) {
                 NavigationStack(path: coordinator.pathBinding(for: .search)) {
                     SearchTVView(
-                        viewModel: SearchViewModel(),
+                        viewModel: SearchViewModel(settingsManager: settingsManager),
                         onSelectMedia: coordinator.showMediaDetail,
                     )
                     .navigationDestination(for: MainCoordinator.Route.self) { route in
@@ -96,9 +96,15 @@ struct MainTabTVView: View {
             coordinator.resetPlayer()
             Task { await watchHistoryManager.load() }
         }) {
-            if let streamURL = coordinator.selectedStreamURL {
+            if let sessionId = coordinator.selectedSessionId {
+                AVPlayerTVView(
+                    viewModel: makePlayerViewModel(streamURL: ApiClient.playbackURL(sessionId: sessionId), sessionId: sessionId),
+                    onExit: coordinator.resetPlayer,
+                )
+            }
+            else if let streamURL = coordinator.selectedStreamURL {
                 PlayerTVWrapper(
-                    viewModel: makePlayerViewModel(streamURL: streamURL),
+                    viewModel: makePlayerViewModel(streamURL: streamURL, sessionId: ""),
                     onExit: coordinator.resetPlayer,
                 )
             }
@@ -150,8 +156,8 @@ struct MainTabTVView: View {
         PlaybackLauncher(coordinator: coordinator, watchHistoryManager: watchHistoryManager)
     }
 
-    private func makePlayerViewModel(streamURL: URL) -> PlayerViewModel {
-        let vm = PlayerViewModel(streamURL: streamURL, title: coordinator.selectedMedia?.title ?? "")
+    private func makePlayerViewModel(streamURL: URL, sessionId: String = "") -> PlayerViewModel {
+        let vm = PlayerViewModel(streamURL: streamURL, sessionId: sessionId, title: coordinator.selectedMedia?.title ?? "")
         vm.resumePosition = coordinator.selectedResumePosition
         vm.skipIntroStart = coordinator.selectedSkipIntroStart
         vm.skipIntroEnd = coordinator.selectedSkipIntroEnd
@@ -179,7 +185,7 @@ struct MainTabTVView: View {
 
             // Go to live stream action
             vm.onGoToLive = {
-                guard let url = await channelMgr.resolveLiveStreamURL(for: channel) else { return nil }
+                guard let playback = await channelMgr.resolveLivePlayback(for: channel) else { return nil }
                 let currentProgram = await MainActor.run { channelMgr.currentProgram(for: channel) }
 
                 let metadata = AVPlayerMetadata(
@@ -191,7 +197,7 @@ struct MainTabTVView: View {
                     startDate: currentProgram?.programStart,
                     endDate: currentProgram?.programEnd
                 )
-                return (url: url, title: currentProgram?.title ?? channel.title, metadata: metadata)
+                return (sessionId: playback.sessionId, title: currentProgram?.title ?? channel.title, metadata: metadata)
             }
 
             // Auto-next-program for archive program playback
@@ -209,7 +215,7 @@ struct MainTabTVView: View {
                     // Only auto-play past programs (archive)
                     guard (nextProgram.programEnd ?? .distantFuture) < Date.now else { return nil }
 
-                    guard let url = await channelMgr.resolveArchiveStreamURL(channelId: channel.id, program: nextProgram) else { return nil }
+                    guard let playback = await channelMgr.resolveArchivePlayback(channelId: channel.id, program: nextProgram) else { return nil }
 
                     // Update coordinator so subsequent calls find the correct "current"
                     await MainActor.run { coord.selectedProgram = nextProgram }
@@ -223,7 +229,7 @@ struct MainTabTVView: View {
                         startDate: nextProgram.programStart,
                         endDate: nextProgram.programEnd
                     )
-                    return (url: url, title: nextProgram.title, metadata: metadata)
+                    return (sessionId: playback.sessionId, title: nextProgram.title, metadata: metadata)
                 }
             }
         }

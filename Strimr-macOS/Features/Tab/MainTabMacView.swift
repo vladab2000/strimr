@@ -56,7 +56,7 @@ struct MainTabMacView: View {
             case .search:
                 NavigationStack(path: coordinator.pathBinding(for: .search)) {
                     SearchMacView(
-                        viewModel: SearchViewModel(),
+                        viewModel: SearchViewModel(settingsManager: settingsManager),
                         onSelectMedia: coordinator.showMediaDetail,
                     )
                     .navigationDestination(for: MainCoordinator.Route.self) { route in
@@ -97,9 +97,9 @@ struct MainTabMacView: View {
             coordinator.resetPlayer()
             Task { await watchHistoryManager.load() }
         }) {
-            if let streamURL = coordinator.selectedStreamURL {
+            if let streamURL = coordinator.selectedStreamURL, let sessionId = coordinator.selectedSessionId {
                 PlayerMacWrapper(
-                    viewModel: makePlayerViewModel(streamURL: streamURL),
+                    viewModel: makePlayerViewModel(streamURL: streamURL, sessionId: sessionId),
                 )
                 .frame(minWidth: 800, minHeight: 450)
             }
@@ -133,8 +133,8 @@ struct MainTabMacView: View {
         PlaybackLauncher(coordinator: coordinator, watchHistoryManager: watchHistoryManager)
     }
 
-    private func makePlayerViewModel(streamURL: URL) -> PlayerViewModel {
-        let vm = PlayerViewModel(streamURL: streamURL, title: coordinator.selectedMedia?.title ?? "")
+    private func makePlayerViewModel(streamURL: URL, sessionId: String) -> PlayerViewModel {
+        let vm = PlayerViewModel(streamURL: streamURL, sessionId: sessionId, title: coordinator.selectedMedia?.title ?? "")
         vm.resumePosition = coordinator.selectedResumePosition
 
         let media = coordinator.selectedMedia

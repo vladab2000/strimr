@@ -5,6 +5,7 @@ import Observation
 @Observable
 final class PlayerViewModel {
     var streamURL: URL
+    var sessionId: String
     var title: String
     var isLive = false
     var isLoading = false
@@ -23,7 +24,7 @@ final class PlayerViewModel {
 
     /// Called when playback ends and a next program should be played.
     /// Returns the stream URL and metadata for the next program, or nil if none.
-    var onPlayNextProgram: (() async -> (url: URL, title: String, metadata: AVPlayerMetadata)?)?
+    var onPlayNextProgram: (() async -> (sessionId: String, title: String, metadata: AVPlayerMetadata)?)?
 
     /// Channel name displayed in metadata subtitle
     var channelName: String?
@@ -38,7 +39,7 @@ final class PlayerViewModel {
     var endDate: Date?
 
     /// Called to switch playback to the live stream of the current channel.
-    var onGoToLive: (() async -> (url: URL, title: String, metadata: AVPlayerMetadata)?)?
+    var onGoToLive: (() async -> (sessionId: String, title: String, metadata: AVPlayerMetadata)?)?
 
     // Skip intro
     var skipIntroStart: Double?
@@ -61,9 +62,33 @@ final class PlayerViewModel {
     private var lastSaveTime: Date = .distantPast
     private var hasCreatedWatchRecord = false
 
-    init(streamURL: URL, title: String) {
+    private var keepaliveTask: Task<Void, Never>?
+
+    init(streamURL: URL, sessionId: String, title: String) {
         self.streamURL = streamURL
+        self.sessionId = sessionId
         self.title = title
+    }
+
+    // MARK: - Keepalive
+
+    func startKeepalive() {
+        guard !sessionId.isEmpty else { return }
+        stopKeepalive()
+        keepaliveTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+                if !self.isPaused {
+                    await ApiClient.sendKeepalive(sessionId: self.sessionId)
+                }
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
+            }
+        }
+    }
+
+    func stopKeepalive() {
+        keepaliveTask?.cancel()
+        keepaliveTask = nil
     }
 
     func handlePropertyChange(

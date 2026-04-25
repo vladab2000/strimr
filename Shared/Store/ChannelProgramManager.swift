@@ -9,6 +9,9 @@ final class ChannelProgramManager {
 
     // MARK: - Public state
 
+    /// Available channel categories from the server.
+    var categories: [ChannelCategory] = []
+
     /// Channels for the currently active provider.
     var channels: [Media] = []
     var isLoadingChannels = false
@@ -56,16 +59,29 @@ final class ChannelProgramManager {
         Self.dateFormatter.string(from: date)
     }
 
+    // MARK: - Categories
+
+    /// Load categories from the server.
+    func loadCategories() async {
+        do {
+            let result = try await ApiClient.fetchCategories()
+            categories = result
+        } catch {
+            debugPrint("Failed to load categories:", error)
+            categories = []
+        }
+    }
+
     // MARK: - Channels
 
     /// Load channels if not already loaded.
-    func loadChannels() async {
+    func loadChannels(categoryId: Int? = nil) async {
         guard channels.isEmpty else { return }
-        await reloadChannels()
+        await reloadChannels(categoryId: categoryId)
     }
 
-    /// Reload channels (e.g. after provider change).
-    func reloadChannels() async {
+    /// Reload channels (e.g. after provider or category change).
+    func reloadChannels(categoryId: Int? = nil) async {
         loadTask?.cancel()
         lastProvider = provider
 
@@ -76,7 +92,7 @@ final class ChannelProgramManager {
             defer { isLoadingChannels = false }
 
             do {
-                let result = try await ApiClient.fetchChannels(providerType: provider)
+                let result = try await ApiClient.fetchChannels(providerType: provider, categoryId: categoryId)
                 guard !Task.isCancelled else { return }
                 channels = result
             } catch {
@@ -90,14 +106,14 @@ final class ChannelProgramManager {
     }
 
     /// Call on view appear — reloads only if provider changed since last load.
-    func reloadIfProviderChanged() {
+    func reloadIfProviderChanged(categoryId: Int? = nil) {
         let current = settingsManager.tvProvider
         guard lastProvider != current else { return }
         lastProvider = current
         loadTask?.cancel()
         channels = []
         resetAllPrograms()
-        Task { await reloadChannels() }
+        Task { await reloadChannels(categoryId: categoryId) }
     }
 
     // MARK: - Programs
@@ -139,6 +155,12 @@ final class ChannelProgramManager {
         }
     }
 
+    func loadNextDay() {
+        for i in 0..<channels.count {
+            self.loadNextDay(for: channels[i])
+        }
+    }
+    
     /// Load programs for the next day after the latest loaded day.
     func loadNextDay(for channel: Media) {
         let channelId = channel.id
@@ -187,13 +209,12 @@ final class ChannelProgramManager {
     // MARK: - Stream resolution
 
     /// Resolves a live stream URL for a channel.
-    func resolveLiveStreamURL(for channel: Media) async -> URL? {
+    func resolveLivePlayback(for channel: Media) async -> Playback? {
         do {
-            let stream = try await ApiClient.fetchLiveStream(
+            return try await ApiClient.fetchLiveStream(
                 channelId: channel.id,
                 providerType: provider
             )
-            return streamURL(from: stream)
         } catch {
             debugPrint("Failed to resolve live stream:", error)
             return nil
@@ -201,30 +222,16 @@ final class ChannelProgramManager {
     }
 
     /// Resolves a stream URL for an archive program.
-    func resolveArchiveStreamURL(channelId: String, program: Media) async -> URL? {
+    func resolveArchivePlayback(channelId: String, program: Media) async -> Playback? {
         do {
-            let stream = try await ApiClient.fetchArchiveStream(
+            return try await ApiClient.fetchArchiveStream(
                 channelId: channelId,
                 programId: program.id
             )
-            return streamURL(from: stream)
         } catch {
             debugPrint("Failed to resolve archive stream:", error)
             return nil
         }
-    }
-
-    // MARK: - Private
-
-    private func streamURL(from stream: Stream) -> URL? {
-        let urlString: String
-        if stream.isEncoded == true {
-            urlString = ApiClient.decodeStream(stream: stream)
-        } else {
-            guard let rawURL = stream.url else { return nil }
-            urlString = rawURL
-        }
-        return URL(string: urlString)
     }
 
     /// Merge fetched programs into the existing list, deduplicating by ID and sorting by start time.

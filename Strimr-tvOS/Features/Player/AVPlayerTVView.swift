@@ -36,13 +36,15 @@ struct AVPlayerTVView: View {
         }
         .onAppear {
             awaitingMediaLoad = true
-            coordinator.play(viewModel.streamURL, metadata: makeMetadata())
+            coordinator.play(ApiClient.playbackURL(sessionId: viewModel.sessionId), metadata: makeMetadata())
             configureTransportBarActions()
             viewModel.onSeek = { [coordinator] position in
                 coordinator.seek(to: position)
             }
+            viewModel.startKeepalive()
         }
         .onDisappear {
+            viewModel.stopKeepalive()
             viewModel.handleStop()
             coordinator.destruct()
         }
@@ -71,9 +73,10 @@ struct AVPlayerTVView: View {
         Task {
             if let next = await nextProvider() {
                 awaitingMediaLoad = true
+                viewModel.sessionId = next.sessionId
                 viewModel.title = next.title
                 let metadata = next.metadata
-                coordinator.play(next.url, metadata: metadata)
+                coordinator.play(ApiClient.playbackURL(sessionId: next.sessionId), metadata: metadata)
                 isLoadingNext = false
             } else {
                 isLoadingNext = false
@@ -100,7 +103,7 @@ struct AVPlayerTVView: View {
                 awaitingMediaLoad = true
                 viewModel.title = live.title
                 viewModel.isLive = true
-                coordinator.play(live.url, metadata: live.metadata)
+                coordinator.play(ApiClient.playbackURL(sessionId: live.sessionId), metadata: live.metadata)
                 configureTransportBarActions()
                 isLoadingNext = false
             } else {

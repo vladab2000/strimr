@@ -3,6 +3,7 @@ import SwiftUI
 @MainActor
 struct HomeMacView: View {
     @Environment(WatchHistoryManager.self) private var watchHistoryManager
+    @Environment(\.scenePhase) private var scenePhase
     @State var viewModel: HomeViewModel
     let onSelectMedia: (Media) -> Void
 
@@ -76,6 +77,11 @@ struct HomeMacView: View {
         }
         .onChange(of: watchHistoryManager.changeCounter) {
             viewModel.refreshWatchStatus()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                Task { await viewModel.reload() }
+            }
         }
         .refreshable {
             await viewModel.reload()

@@ -4,6 +4,7 @@ import Observation
 enum SearchFilter: String, CaseIterable, Identifiable {
     case movies
     case shows
+    case programs
 
     var id: String {
         rawValue
@@ -15,6 +16,8 @@ enum SearchFilter: String, CaseIterable, Identifiable {
             String(localized: "search.filter.movies")
         case .shows:
             String(localized: "search.filter.shows")
+        case .programs:
+            String(localized: "search.filter.programs")
         }
     }
 
@@ -24,6 +27,8 @@ enum SearchFilter: String, CaseIterable, Identifiable {
             "film.fill"
         case .shows:
             "tv.fill"
+        case .programs:
+            "play.tv.fill"
         }
     }
 
@@ -33,6 +38,8 @@ enum SearchFilter: String, CaseIterable, Identifiable {
             type == .movie
         case .shows:
             type == .tvshow || type == .season || type == .episode
+        case .programs:
+            type == .program || type == .channel
         }
     }
 
@@ -42,6 +49,8 @@ enum SearchFilter: String, CaseIterable, Identifiable {
             "movie"
         case .shows:
             "series"
+        case .programs:
+            "program"
         }
     }
 }
@@ -55,7 +64,12 @@ final class SearchViewModel {
     var errorMessage: String?
     var activeFilter: SearchFilter?
 
+    @ObservationIgnored private let settingsManager: SettingsManager
     @ObservationIgnored private var searchTask: Task<Void, Never>?
+
+    init(settingsManager: SettingsManager) {
+        self.settingsManager = settingsManager
+    }
 
     deinit {
         searchTask?.cancel()
@@ -112,9 +126,19 @@ final class SearchViewModel {
         do {
             guard let filter = activeFilter else { return }
             let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
-            let result = try await ApiClient.fetchSearch(text: trimmedQuery, type: filter.apiType)
+
+            let result: [Media]
+            if filter == .programs {
+                result = try await ApiClient.fetchProgramSearch(
+                    text: trimmedQuery,
+                    providerType: settingsManager.tvProvider
+                )
+            } else {
+                result = try await ApiClient.fetchSearch(text: trimmedQuery, type: filter.apiType)
+            }
+
             guard !Task.isCancelled else { return }
-            items = result.filter { $0.itemType.isSupported }
+            items = result
         } catch {
             guard !Task.isCancelled else { return }
             items = []

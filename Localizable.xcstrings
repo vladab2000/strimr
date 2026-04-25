@@ -706,6 +706,22 @@
         }
       }
     },
+    "search.badge.program" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PROGRAM"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PROGRAM"
+          }
+        }
+      }
+    },
     "search.badge.season" : {
       "localizations" : {
         "cs" : {
@@ -798,6 +814,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Movies"
+          }
+        }
+      }
+    },
+    "search.filter.programs" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Program TV"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TV Guide"
           }
         }
       }

@@ -39,7 +39,7 @@ struct MainTabView: View {
             Tab("tabs.search", systemImage: "magnifyingglass", value: MainCoordinator.Tab.search, role: .search) {
                 NavigationStack(path: coordinator.pathBinding(for: .search)) {
                     SearchView(
-                        viewModel: SearchViewModel(),
+                        viewModel: SearchViewModel(settingsManager: settingsManager),
                         onSelectMedia: coordinator.showMediaDetail,
                     )
                     .navigationDestination(for: MainCoordinator.Route.self) {
@@ -76,9 +76,9 @@ struct MainTabView: View {
             coordinator.resetPlayer()
             Task { await watchHistoryManager.load() }
         }) {
-            if let streamURL = coordinator.selectedStreamURL {
+            if let streamURL = coordinator.selectedStreamURL, let sessionId = coordinator.selectedSessionId {
                 PlayerWrapper(
-                    viewModel: makePlayerViewModel(streamURL: streamURL),
+                    viewModel: makePlayerViewModel(streamURL: streamURL, sessionId: sessionId),
                 )
             }
         }
@@ -111,8 +111,8 @@ struct MainTabView: View {
         PlaybackLauncher(coordinator: coordinator, watchHistoryManager: watchHistoryManager)
     }
 
-    private func makePlayerViewModel(streamURL: URL) -> PlayerViewModel {
-        let vm = PlayerViewModel(streamURL: streamURL, title: coordinator.selectedMedia?.title ?? "")
+    private func makePlayerViewModel(streamURL: URL, sessionId: String) -> PlayerViewModel {
+        let vm = PlayerViewModel(streamURL: streamURL, sessionId: sessionId, title: coordinator.selectedMedia?.title ?? "")
         vm.resumePosition = coordinator.selectedResumePosition
         vm.skipIntroStart = coordinator.selectedSkipIntroStart
         vm.skipIntroEnd = coordinator.selectedSkipIntroEnd

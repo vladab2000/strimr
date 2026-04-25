@@ -23,6 +23,7 @@ struct PlaybackLauncher {
             await MainActor.run {
                 coordinator.showPlayer(
                     streamURL: streamURL,
+                    sessionId: "",
                     media: media,
                     resumePosition: resume,
                     skipIntroStart: stream.skipIntroStart,

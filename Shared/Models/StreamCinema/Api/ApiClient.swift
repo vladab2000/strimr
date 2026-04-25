@@ -8,7 +8,7 @@
 import Foundation
 
 struct ApiClient {
-    static let baseURL = URL(string: "https://tv.lan.mujrd.cz:5020/api/")!
+    static let baseURL = URL(string: "https://tv.lan.mujrd.cz:5020/api/")! //"http://192.168.88.136:5020/api/")! //
     
     static func fetchMenu(urlPath: String = "/") async throws -> [Media] {
         try await fetch(path: "folder", queryItems: [URLQueryItem(name: "url", value: urlPath)])
@@ -64,19 +64,36 @@ struct ApiClient {
         try await performRequest(path: "favorites/remove", method: "POST", body: media)
     }
 
+    // MARK: - TV Program Search
+
+    static func fetchProgramSearch(text: String, providerType: ProviderType) async throws -> [Media] {
+        let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? text
+        return try await fetch(
+            path: "tv/programs/search/\(encoded)",
+            queryItems: [URLQueryItem(name: "providerType", value: String(providerType.rawValue))]
+        )
+    }
+
     // MARK: - TV Channels
 
-    static func fetchChannels(providerType: ProviderType, favorites: Bool = false) async throws -> [Media] {
+    static func fetchCategories() async throws -> [ChannelCategory] {
+        try await fetch(path: "tv/categories")
+    }
+
+    static func fetchChannels(providerType: ProviderType, categoryId: Int? = nil, favorites: Bool = false) async throws -> [Media] {
         var queryItems = [
             URLQueryItem(name: "providerType", value: String(providerType.rawValue)),
         ]
+        if let categoryId {
+            queryItems.append(URLQueryItem(name: "categoryId", value: String(categoryId)))
+        }
         if favorites {
             queryItems.append(URLQueryItem(name: "favorites", value: "true"))
         }
         return try await fetch(path: "tv/channels", queryItems: queryItems)
     }
 
-    static func fetchLiveStream(channelId: String, providerType: ProviderType? = nil) async throws -> Stream {
+    static func fetchLiveStream(channelId: String, providerType: ProviderType? = nil) async throws -> Playback {
         var queryItems: [URLQueryItem] = []
         if let providerType {
             queryItems.append(URLQueryItem(name: "providerType", value: String(providerType.rawValue)))
@@ -96,18 +113,28 @@ struct ApiClient {
         try await fetch(path: "tv/channels/\(channelId)/now-next")
     }
 
-    static func fetchArchiveStream(channelId: String, programId: String) async throws -> Stream {
+    static func fetchArchiveStream(channelId: String, programId: String) async throws -> Playback {
         try await fetch(path: "tv/channels/\(channelId)/archive/\(programId)")
     }
 
-    static func decodeStream(stream: Stream) -> String {
-        var components = URLComponents(string: "\(baseURL)tv/decode")!
-        components.queryItems = [
-            URLQueryItem(name: "url", value: stream.url ?? ""),
-            URLQueryItem(name: "type", value: String(stream.type ?? 0)),
-            URLQueryItem(name: "provider", value: String(stream.provider ?? 0)),
-        ]
-        return components.url?.absoluteString ?? ""
+    // MARK: - Playback
+
+    static func playbackURL(sessionId: String) -> URL {
+        URL(string: "\(baseURL)tv/playback/\(sessionId).m3u8")!
+    }
+
+    // MARK: - Keepalive
+
+    static func sendKeepalive(sessionId: String) async {
+        let url = URL(string: "\(baseURL)tv/keepalive/\(sessionId)")!
+        do {
+            let (_, response) = try await URLSession.shared.data(from: url)
+            if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+                debugPrint("Keepalive HTTP \(http.statusCode)")
+            }
+        } catch {
+            debugPrint("Keepalive failed:", error)
+        }
     }
 
     private static func fetch<T: Decodable>(path: String, queryItems: [URLQueryItem]? = nil) async throws -> T {

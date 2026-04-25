@@ -3,6 +3,7 @@ import SwiftUI
 @MainActor
 struct LiveTVView: View {
     @Environment(ChannelProgramManager.self) private var channelManager
+    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var coordinator: MainCoordinator
     @State private var viewModel: LiveTVViewModel?
 
@@ -44,6 +45,11 @@ struct LiveTVView: View {
         }
         .task { await viewModel?.load() }
         .refreshable { await viewModel?.reload() }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                viewModel?.refreshIfDayChanged()
+            }
+        }
         .overlay {
             if vm.isResolvingStream {
                 ProgressView()
@@ -101,7 +107,7 @@ struct LiveTVView: View {
                                 viewModel?.selectChannel(channel)
                             },
                             onPlay: {
-                                Task { await playChannel(channel) }
+                                Task { await playLive(channel: channel) }
                             }
                         )
                         .onAppear {
@@ -121,15 +127,15 @@ struct LiveTVView: View {
                     title: String(localized: "livetv.category.all"),
                     isSelected: vm.selectedCategory == nil
                 ) {
-                    viewModel?.selectedCategory = nil
+                    viewModel?.selectCategory(nil)
                 }
 
-                ForEach(vm.categories, id: \.self) { category in
+                ForEach(vm.categories) { category in
                     CategoryChip(
-                        title: category,
-                        isSelected: vm.selectedCategory == category
+                        title: category.name,
+                        isSelected: vm.selectedCategory?.id == category.id
                     ) {
-                        viewModel?.selectedCategory = category
+                        viewModel?.selectCategory(category)
                     }
                 }
             }
@@ -348,19 +354,14 @@ struct LiveTVView: View {
         return max(60, CGFloat(durationMinutes) * pixelsPerMinute)
     }
 
-    private func playChannel(_ channel: Media) async {
-        guard let url = await viewModel?.resolveStreamURL(for: channel) else { return }
-        coordinator.showPlayer(streamURL: url, media: channel)
-    }
-
     private func playLive(channel: Media) async {
-        guard let url = await viewModel?.resolveLiveStreamURL(for: channel) else { return }
-        coordinator.showPlayer(streamURL: url, media: channel)
+        guard let playback = await viewModel?.resolveLivePlayback(for: channel) else { return }
+        coordinator.showPlayer(streamURL: ApiClient.playbackURL(sessionId: playback.sessionId), sessionId: playback.sessionId, media: channel)
     }
 
     private func playArchive(channelId: String, program: Media) async {
-        guard let url = await viewModel?.resolveArchiveStreamURL(channelId: channelId, program: program) else { return }
-        coordinator.showPlayer(streamURL: url, media: program)
+        guard let playback = await viewModel?.resolveArchivePlayback(channelId: channelId, program: program) else { return }
+        coordinator.showPlayer(streamURL: ApiClient.playbackURL(sessionId: playback.sessionId), sessionId: playback.sessionId, media: program)
     }
 }
 

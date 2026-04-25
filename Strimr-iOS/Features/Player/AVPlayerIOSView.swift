@@ -34,8 +34,10 @@ struct AVPlayerIOSView: View {
             viewModel.onSeek = { [coordinator] position in
                 coordinator.seek(to: position)
             }
+            viewModel.startKeepalive()
         }
         .onDisappear {
+            viewModel.stopKeepalive()
             viewModel.handleStop()
             coordinator.destruct()
         }

@@ -3,6 +3,7 @@ import SwiftUI
 @MainActor
 struct LiveTVTVView: View {
     @Environment(ChannelProgramManager.self) private var channelManager
+    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var coordinator: MainCoordinator
 
     @State private var viewModel: LiveTVViewModel?
@@ -59,6 +60,11 @@ struct LiveTVTVView: View {
                 viewModel?.selectedProgram = vm.selectedChannel.flatMap { vm.currentProgram(for: $0) }
             }
         }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                viewModel?.refreshIfDayChanged()
+            }
+        }
         .overlay {
             if vm.isResolvingStream {
                 ProgressView()
@@ -113,20 +119,12 @@ struct LiveTVTVView: View {
     private var categoriesColumn: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
-                // "All" category
-                CategoryRowTV(
-                    title: String(localized: "livetv.category.all"),
-                    isSelected: vm.selectedCategory == nil
-                ) {
-                    viewModel?.selectedCategory = nil
-                }
-
-                ForEach(vm.categories, id: \.self) { category in
+                ForEach(vm.categories) { category in
                     CategoryRowTV(
-                        title: category,
-                        isSelected: vm.selectedCategory == category
+                        title: category.name,
+                        isSelected: vm.selectedCategory?.id == category.id
                     ) {
-                        viewModel?.selectedCategory = category
+                        viewModel?.selectCategory(category)
                     }
                 }
             }
@@ -238,41 +236,97 @@ struct LiveTVTVView: View {
     private let epgSpacing: CGFloat = 2
     private let timeHeaderHeight: CGFloat = 36
 
+    @FocusState var focusedID: String?
+    @State private var lastFocusedProgram: Media?
+    @State private var lastChannelID: String?
+    
     private var epgLayout: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            HStack(alignment: .top, spacing: 4) {
-                // Fixed channel column
-                VStack(spacing: 0) {
-                    Color.clear
-                        .frame(width: channelColumnWidth, height: timeHeaderHeight)
-                    LazyVStack(alignment: .leading, spacing: epgSpacing) {
-                        ForEach(vm.channels) { channel in
-                            epgChannelCell(channel)
-                                .frame(width: channelColumnWidth, height: rowHeight)
-                                .onAppear { viewModel?.loadProgramsIfNeeded(for: channel) }
-                        }
-                    }
-                    .frame(width: channelColumnWidth)
-                }
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 50) {
+                ForEach(vm.channels) { channel in
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(channel.name)
+                            .font(.headline)
+                            .padding(.leading, 80)
 
-                // Horizontally scrollable program area
-                ScrollView(.horizontal, showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        epgTimeHeader
-                            .frame(height: timeHeaderHeight)
-                        LazyVStack(alignment: .leading, spacing: epgSpacing) {
-                            ForEach(vm.channels) { channel in
-                                epgProgramRow(for: channel)
-                                    .frame(height: rowHeight)
+                        ScrollView(.horizontal) {
+                            LazyHStack(spacing: 20) {
+                                ForEach(vm.programsByChannel[channel.id] ?? []) { program in
+                                    ProgramCard(program: program)
+                                        .id(program.id) // Nutné pro scrollTarget
+                                        .focused($focusedID, equals: program.id)
+                                        .onAppear {
+                                            // Dočítání na konci řádku
+                                            if program.id == vm.programsByChannel[channel.id]?.last?.id {
+                                                vm.loadMoreData()
+                                            }
+                                        }
+                                }
                             }
+                            .padding(.horizontal, 80)
+                            .padding(.vertical, 20)
                         }
+                        // tvOS 17 feature: Přichytávání na střed/okraj při rychlém skrollování
+                        .scrollTargetBehavior(.viewAligned)
+                        .scrollIndicators(.hidden)
                     }
+                    .focusSection() // Umožňuje přímý vertikální skok mezi řádky
                 }
             }
         }
-        .edgesIgnoringSafeArea(.horizontal)
+        .onChange(of: focusedID) { newValue in
+            handleFocusChange(to: newValue)
+        }
+    }
+        
+    private func handleFocusChange(to newID: String?) {
+        guard let newID = newID else { return }
+        
+        // 1. Najdeme aktuální kanál a program
+        guard let currentChannel = vm.channels.first(where: { ch in (vm.programsByChannel[ch.id] ?? []).contains { $0.id == newID } }),
+              let currentProgram = vm.programsByChannel[currentChannel.id]?.first(where: { $0.id == newID }) else { return }
+
+        // 2. Kontrola vertikálního posunu (změna kanálu)
+        if let lastChID = lastChannelID, lastChID != currentChannel.id, let lastProg = lastFocusedProgram {
+            // Výpočet cíle podle času středu předchozího programu
+            if let idealTargetID = vm.findTargetID(midTime: lastProg.programStart!.addingTimeInterval(lastProg.programEnd!.timeIntervalSince(lastProg.programStart!)), inChannel: currentChannel.id) {
+                if idealTargetID != newID {
+                    focusedID = idealTargetID
+                    return // Přerušíme, abychom neukládali mezistav
+                }
+            }
+        }
+
+        // 3. Uložení stavu pro příští pohyb
+        lastFocusedProgram = currentProgram
+        lastChannelID = currentChannel.id
     }
 
+    struct ProgramCard: View {
+        let program: Media
+        @Environment(\.isFocused) var isFocused
+
+        var body: some View {
+            Button(action: {
+                print("Vybrán pořad: \(program.title)")
+            }) {
+                VStack(alignment: .leading) {
+                    Text(program.title)
+                        .font(.body)
+                        .bold()
+                    Text(program.programStart!, style: .time)
+                        .font(.caption2)
+                }
+                .padding()
+                .frame(	maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                    .background(isFocused ? Color.white : Color.gray.opacity(0.2))
+                    .foregroundColor(isFocused ? .black : .white)
+            }
+            .buttonStyle(.card) // Klíčové pro tvOS vzhled a focus
+            .frame(width: CGFloat(program.programEnd!.timeIntervalSince(program.programStart!) / 3600) * 400, height: 180)
+        }
+    }
+    
     private var epgTimeHeader: some View {
         HStack(spacing: 0) {
             ForEach(0..<24, id: \.self) { hour in
@@ -368,8 +422,8 @@ struct LiveTVTVView: View {
     }
 
     private func playChannel(_ channel: Media) async {
-        guard let url = await viewModel?.resolveStreamURL(for: channel) else { return }
-        coordinator.showPlayer(streamURL: url, media: channel, channel: channel)
+        guard let playback = await viewModel?.resolveLivePlayback(for: channel) else { return }
+        coordinator.showPlayer(streamURL: ApiClient.playbackURL(sessionId: playback.sessionId), sessionId: playback.sessionId, media: channel, channel: channel)
     }
 
     private func handleProgramTap(program: Media, channel: Media) async {
@@ -377,13 +431,11 @@ struct LiveTVTVView: View {
         let isPast = (program.programEnd ?? .distantFuture) < Date.now
 
         if isNow {
-            guard let url = await viewModel?.resolveArchiveStreamURL(channelId: channel.id, program: program) else { return }
-            coordinator.showPlayer(streamURL: url, media: program, channel: channel, program: program)
-//            guard let url = await viewModel?.resolveLiveStreamURL(for: channel) else { return }
-//            coordinator.showPlayer(streamURL: url, media: channel, channel: channel)
+            guard let playback = await viewModel?.resolveArchivePlayback(channelId: channel.id, program: program) else { return }
+            coordinator.showPlayer(streamURL: ApiClient.playbackURL(sessionId: playback.sessionId), sessionId: playback.sessionId, media: program, channel: channel, program: program)
         } else if isPast {
-            guard let url = await viewModel?.resolveArchiveStreamURL(channelId: channel.id, program: program) else { return }
-            coordinator.showPlayer(streamURL: url, media: program, channel: channel, program: program)
+            guard let playback = await viewModel?.resolveArchivePlayback(channelId: channel.id, program: program) else { return }
+            coordinator.showPlayer(streamURL: ApiClient.playbackURL(sessionId: playback.sessionId), sessionId: playback.sessionId, media: program, channel: channel, program: program)
         }
     }
 }

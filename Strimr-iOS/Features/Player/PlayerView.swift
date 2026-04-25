@@ -121,8 +121,10 @@ struct PlayerView: View {
             viewModel.onSeek = { [playerCoordinator] position in
                 playerCoordinator.seek(to: position)
             }
+            viewModel.startKeepalive()
         }
         .onDisappear {
+            viewModel.stopKeepalive()
             viewModel.handleStop()
             hideControlsWorkItem?.cancel()
             playerCoordinator.destruct()

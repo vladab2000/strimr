@@ -107,8 +107,10 @@ struct PlayerMacView: View {
             showControls(temporarily: true)
             playerCoordinator.setPlaybackRate(playbackRate)
             startPlayback(url: bindableViewModel.streamURL)
+            viewModel.startKeepalive()
         }
         .onDisappear {
+            viewModel.stopKeepalive()
             viewModel.handleStop()
             hideControlsWorkItem?.cancel()
             playerCoordinator.destruct()

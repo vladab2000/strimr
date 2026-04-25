@@ -3,6 +3,7 @@ import SwiftUI
 @MainActor
 struct LiveTVMacView: View {
     @Environment(ChannelProgramManager.self) private var channelManager
+    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var coordinator: MainCoordinator
     @State private var viewModel: LiveTVViewModel?
 
@@ -42,6 +43,11 @@ struct LiveTVMacView: View {
             viewModel?.reloadIfProviderChanged()
         }
         .task { await viewModel?.load() }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                viewModel?.refreshIfDayChanged()
+            }
+        }
         .overlay {
             if vm.isResolvingStream {
                 ProgressView()
@@ -106,15 +112,18 @@ struct LiveTVMacView: View {
 
     private var categoriesColumn: some View {
         List(selection: Binding(
-            get: { vm.selectedCategory },
-            set: { viewModel?.selectedCategory = $0 }
+            get: { vm.selectedCategory?.id },
+            set: { newId in
+                let category = vm.categories.first { $0.id == newId }
+                viewModel?.selectCategory(category)
+            }
         )) {
             Text(String(localized: "livetv.category.all"))
-                .tag(nil as String?)
+                .tag(nil as Int?)
 
-            ForEach(vm.categories, id: \.self) { category in
-                Text(category)
-                    .tag(category as String?)
+            ForEach(vm.categories) { category in
+                Text(category.name)
+                    .tag(category.id as Int?)
             }
         }
         .listStyle(.sidebar)
@@ -135,7 +144,7 @@ struct LiveTVMacView: View {
                 ChannelRowMac(
                     channel: channel,
                     currentProgram: vm.currentProgram(for: channel),
-                    onPlay: { Task { await playChannel(channel) } }
+                    onPlay: { Task { await playLive(channel: channel) } }
                 )
                 .tag(channel.id)
                 .onAppear { viewModel?.loadProgramsIfNeeded(for: channel) }
@@ -414,19 +423,14 @@ struct LiveTVMacView: View {
         return max(50, CGFloat(durationMinutes) * pixelsPerMinute)
     }
 
-    private func playChannel(_ channel: Media) async {
-        guard let url = await viewModel?.resolveStreamURL(for: channel) else { return }
-        coordinator.showPlayer(streamURL: url, media: channel)
-    }
-
     private func playLive(channel: Media) async {
-        guard let url = await viewModel?.resolveLiveStreamURL(for: channel) else { return }
-        coordinator.showPlayer(streamURL: url, media: channel)
+        guard let playback = await viewModel?.resolveLivePlayback(for: channel) else { return }
+        coordinator.showPlayer(streamURL: ApiClient.playbackURL(sessionId: playback.sessionId), sessionId: playback.sessionId, media: channel)
     }
 
     private func playArchive(channelId: String, program: Media) async {
-        guard let url = await viewModel?.resolveArchiveStreamURL(channelId: channelId, program: program) else { return }
-        coordinator.showPlayer(streamURL: url, media: program)
+        guard let playback = await viewModel?.resolveArchivePlayback(channelId: channelId, program: program) else { return }
+        coordinator.showPlayer(streamURL: ApiClient.playbackURL(sessionId: playback.sessionId), sessionId: playback.sessionId, media: program)
     }
 
     private func handleProgramTap(program: Media, channel: Media) async {
@@ -434,11 +438,9 @@ struct LiveTVMacView: View {
         let isPast = (program.programEnd ?? .distantFuture) < Date.now
 
         if isNow {
-            guard let url = await viewModel?.resolveLiveStreamURL(for: channel) else { return }
-            coordinator.showPlayer(streamURL: url, media: channel)
+            await playLive(channel: channel)
         } else if isPast {
-            guard let url = await viewModel?.resolveArchiveStreamURL(channelId: channel.id, program: program) else { return }
-            coordinator.showPlayer(streamURL: url, media: program)
+            await playArchive(channelId: channel.id, program: program)
         }
     }
 }

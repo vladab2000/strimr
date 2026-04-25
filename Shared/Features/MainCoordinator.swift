@@ -24,6 +24,7 @@ final class MainCoordinator: ObservableObject {
     @Published var morePath = NavigationPath()
 
     @Published var selectedStreamURL: URL?
+    @Published var selectedSessionId: String?
     @Published var selectedMedia: Media?
     @Published var selectedResumePosition: Double?
     @Published var selectedSkipIntroStart: Double?
@@ -77,7 +78,32 @@ final class MainCoordinator: ObservableObject {
             Task { await loadStreamsAndNavigate(media) }
             return
         }
+        if media.itemType == .program {
+            Task { await playProgram(media) }
+            return
+        }
         appendRoute(.mediaDetail(media))
+    }
+
+    private func playProgram(_ program: Media) async {
+        guard let channelId = program.channelId else {
+            debugPrint("Program has no channelId, cannot resolve archive stream")
+            return
+        }
+
+        isLoadingStreams = true
+        defer { isLoadingStreams = false }
+
+        do {
+            let playback = try await ApiClient.fetchArchiveStream(
+                channelId: channelId,
+                programId: program.id
+            )
+            let url = ApiClient.playbackURL(sessionId: playback.sessionId)
+            showPlayer(streamURL: url, sessionId: playback.sessionId, media: program)
+        } catch {
+            debugPrint("Failed to resolve program stream:", error)
+        }
     }
 
     private func loadStreamsAndNavigate(_ media: Media) async {
@@ -122,6 +148,7 @@ final class MainCoordinator: ObservableObject {
 
     func showPlayer(
         streamURL: URL,
+        sessionId: String,
         media: Media? = nil,
         resumePosition: Double? = nil,
         skipIntroStart: Double? = nil,
@@ -131,6 +158,7 @@ final class MainCoordinator: ObservableObject {
         program: Media? = nil
     ) {
         selectedStreamURL = streamURL
+        selectedSessionId = sessionId
         selectedMedia = media
         selectedResumePosition = resumePosition
         selectedSkipIntroStart = skipIntroStart
@@ -143,6 +171,7 @@ final class MainCoordinator: ObservableObject {
 
     func resetPlayer() {
         selectedStreamURL = nil
+        selectedSessionId = nil
         selectedMedia = nil
         selectedResumePosition = nil
         selectedSkipIntroStart = nil

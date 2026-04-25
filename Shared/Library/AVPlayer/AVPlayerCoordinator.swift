@@ -40,7 +40,15 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
     func play(_ url: URL, metadata: AVPlayerMetadata?) {
         cleanup()
 
-        let item = AVPlayerItem(url: url)
+        let options = [
+            "AVURLAssetHTTPHeaderFieldsKey": [
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+                "Referer": "https://www.oneplay.cz/"
+                ]
+            ]
+        
+        let asset = AVURLAsset(url: url, options: options)
+        let item = AVPlayerItem(asset: asset)
         if let metadata {
             applyMetadata(metadata, to: item)
         }
@@ -76,6 +84,7 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
             metadataItems.append(makeMetadataItem(identifier: .commonIdentifierDescription, value: description as NSString))
         }
         
+#if !os(iOS)
         if let startDate = metadata.startDate, let endDate = metadata.endDate, let channel = metadata.channel {
             let startDateItem = makeMetadataItem(identifier: AVMetadataIdentifier(AVKitMetadataIdentifierExactStartDate), value: startDate as (NSCopying & NSObjectProtocol))
             let endDateItem = makeMetadataItem(identifier: AVMetadataIdentifier(AVKitMetadataIdentifierExactEndDate), value: endDate as (NSCopying & NSObjectProtocol))
@@ -84,6 +93,7 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
             metadataItems.append(endDateItem)
             metadataItems.append(serviceItentifier)
         }
+#endif
 
         if let artworkURL = metadata.artworkURL {
             Task {
@@ -136,7 +146,9 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
             items.append(action)
         }
 
+#if !os(iOS)
         vc.transportBarCustomMenuItems = items
+#endif
     }
 
     func togglePlayback() {
@@ -320,6 +332,26 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
                 playbackEnded?()
             }
         }
+        
+        // Přidejte si observer na chyby
+        NotificationCenter.default.addObserver(forName: .AVPlayerItemNewErrorLogEntry, object: item, queue: .main) { _ in
+            guard let errorLog = player.currentItem?.errorLog() else { return }
+            for entry in errorLog.events {
+                print("Chyba přehrávání: \(entry.errorComment ?? "Neznámá chyba")")
+                print("Doména chyby: \(entry.errorDomain)")
+                print("Kód chyby: \(entry.errorStatusCode)")
+            }
+        }
+        
+        // Sledování síťových statistik (proč se buffer zastavil)
+        NotificationCenter.default.addObserver(forName: .AVPlayerItemNewAccessLogEntry, object: player.currentItem, queue: .main) { _ in
+            guard let accessLog = player.currentItem?.accessLog() else { return }
+            for entry in accessLog.events {
+                print("Indikovaný bitrate: \(entry.indicatedBitrate)")
+                print("Počet záseků (stalls): \(entry.numberOfStalls)")
+            }
+        }
+        
     }
 
     private func cleanup() {

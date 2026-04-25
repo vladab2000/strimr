@@ -4,6 +4,7 @@ import SwiftUI
 struct HomeTVView: View {
     @Environment(MediaFocusModel.self) private var focusModel
     @Environment(WatchHistoryManager.self) private var watchHistoryManager
+    @Environment(\.scenePhase) private var scenePhase
 
     @State var viewModel: HomeViewModel
     let onSelectMedia: (Media) -> Void
@@ -47,6 +48,11 @@ struct HomeTVView: View {
         }
         .onChange(of: watchHistoryManager.changeCounter) {
             viewModel.refreshWatchStatus()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                Task { await viewModel.reload() }
+            }
         }
         .onChange(of: heroMedia?.id) { _, _ in
             updateInitialFocus()

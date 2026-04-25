@@ -145,8 +145,10 @@ struct PlayerTVView: View {
             viewModel.onSeek = { [playerCoordinator] position in
                 playerCoordinator.seek(to: position)
             }
+            viewModel.startKeepalive()
         }
         .onDisappear {
+            viewModel.stopKeepalive()
             viewModel.handleStop()
             hideControlsWorkItem?.cancel()
             seekFeedbackWorkItem?.cancel()
