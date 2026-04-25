@@ -57,7 +57,7 @@ struct AVPlayerTVView: View {
         guard awaitingMediaLoad else { return }
         awaitingMediaLoad = false
 
-        if let resume = viewModel.resumePosition, resume > 0 {
+        if let resume = viewModel.resumePosition, resume >= 0 {
             coordinator.seek(to: resume)
             viewModel.resumePosition = nil
         }

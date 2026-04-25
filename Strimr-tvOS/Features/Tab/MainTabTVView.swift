@@ -234,33 +234,32 @@ struct MainTabTVView: View {
             }
         }
 
-        if !isLiveChannel, !isProgram {
-            let manager = watchHistoryManager
+        let manager = watchHistoryManager
 
-            vm.onCreateWatchRecord = {
-                guard let media else { return }
-                Task { @MainActor in
-                    await manager.createWatchRecord(for: media)
-                }
-            }
-
-            vm.onSavePosition = { position in
-                guard let media else { return }
-                Task { @MainActor in
-                    await manager.updatePosition(
-                        media: media,
-                        position: position
-                    )
-                }
-            }
-
-            vm.onMarkWatched = {
-                guard let media else { return }
-                Task { @MainActor in
-                    await manager.setWatched(media: media, watched: true)
-                }
+        vm.onCreateWatchRecord = {
+            guard let media else { return }
+            Task { @MainActor in
+                await manager.createWatchRecord(for: media)
             }
         }
+
+        vm.onSavePosition = { position in
+            guard let media else { return }
+            Task { @MainActor in
+                await manager.updatePosition(
+                    media: media,
+                    position: position
+                )
+            }
+        }
+
+        vm.onMarkWatched = {
+            guard let media else { return }
+            Task { @MainActor in
+                await manager.setWatched(media: media, watched: true)
+            }
+        }
+
         return vm
     }
 }

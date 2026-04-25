@@ -21,9 +21,9 @@ final class MediaImageViewModel {
     func load() async {
         imageURL = switch artworkKind {
         case .poster:
-            media.posterURL
+            media.posterURL ?? media.funartURL ?? media.thumbURL ?? media.logoURL
         case .art:
-            media.funartURL ?? media.logoURL
+            media.funartURL ?? media.thumbURL ?? media.logoURL
         }
     }
 }

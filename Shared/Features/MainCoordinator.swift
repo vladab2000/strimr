@@ -100,7 +100,14 @@ final class MainCoordinator: ObservableObject {
                 programId: program.id
             )
             let url = ApiClient.playbackURL(sessionId: playback.sessionId)
-            showPlayer(streamURL: url, sessionId: playback.sessionId, media: program)
+
+            let resume: Double? = if let pos = program.watchPosition, pos > 0, program.watchCompleted != true {
+                Double(pos)
+            } else {
+                nil
+            }
+            
+            showPlayer(streamURL: url, sessionId: playback.sessionId, media: program, resumePosition: resume)
         } catch {
             debugPrint("Failed to resolve program stream:", error)
         }
