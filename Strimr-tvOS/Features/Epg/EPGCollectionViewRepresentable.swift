@@ -12,6 +12,7 @@ struct EPGCollectionViewRepresentable: UIViewControllerRepresentable {
 
     let viewModel: LiveTVViewModel
     var onProgramSelected: ((Media, Media) -> Void)?
+    var onProgramFocused: ((Media?, Media?) -> Void)?
 
     @Binding var horizontalOffset: CGFloat
     @Binding var verticalOffset: CGFloat
@@ -23,10 +24,12 @@ struct EPGCollectionViewRepresentable: UIViewControllerRepresentable {
             verticalOffset: $verticalOffset
         )
         controller.onProgramSelected = onProgramSelected
+        controller.onProgramFocused = onProgramFocused
         return controller
     }
 
     func updateUIViewController(_ uiViewController: EPGViewController, context: Context) {
         uiViewController.onProgramSelected = onProgramSelected
+        uiViewController.onProgramFocused = onProgramFocused
     }
 }

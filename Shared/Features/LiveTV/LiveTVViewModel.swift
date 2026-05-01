@@ -1,32 +1,11 @@
 import Foundation
 import Observation
 
-enum LiveTVMode: String, CaseIterable, Identifiable {
-    case channels
-    case tvGuide
-
-    var id: String { rawValue }
-
-    var titleKey: String {
-        switch self {
-        case .channels: "livetv.mode.channels"
-        case .tvGuide: "livetv.mode.tvGuide"
-        }
-    }
-}
-
 @MainActor
 @Observable
 final class LiveTVViewModel {
-    var mode: LiveTVMode = .channels
-    var selectedCategory: ChannelCategory?
-    var selectedChannel: Media?
     var isResolvingStream = false
     var errorMessage: String?
-
-    // EPG state
-    var selectedDate: Date = .now
-    var selectedProgram: Media?
 
     private let manager: ChannelManager
 
@@ -48,13 +27,6 @@ final class LiveTVViewModel {
 
     var filteredChannels: [Media] { channels }
 
-    // MARK: - Selected channel programs
-
-    var selectedChannelPrograms: [Media] {
-        guard let channel = selectedChannel else { return [] }
-        return programsByChannel[channel.id] ?? []
-    }
-
     func currentProgram(for channel: Media) -> Media? {
         manager.currentProgram(for: channel)
     }
@@ -68,38 +40,20 @@ final class LiveTVViewModel {
         return (-3...0).compactMap { calendar.date(byAdding: .day, value: $0, to: today) }
     }
 
-    var baseDate: Date {
-        var calendar = Calendar.current
-        calendar.timeZone = TimeZone(abbreviation: "UTC")!
-        return calendar.startOfDay(for: selectedDate)
-    }
-
     // MARK: - Lifecycle
 
     func load() async {
         async let categoriesLoad: () = manager.loadCategories()
-        async let channelsLoad: () = manager.loadChannels(categoryId: selectedCategory?.id)
+        async let channelsLoad: () = manager.loadChannels()
         _ = await (categoriesLoad, channelsLoad)
     }
 
     func reload() async {
-        await manager.reloadChannels(categoryId: selectedCategory?.id)
-    }
-
-    func selectCategory(_ category: ChannelCategory?) {
-        guard selectedCategory?.id != category?.id else { return }
-        selectedCategory = category
-        selectedChannel = nil
-        selectedProgram = nil
-        manager.resetAllPrograms()
-        Task {
-            await manager.reloadChannels(categoryId: category?.id)
-            selectFirstChannelIfNeeded()
-        }
+        await manager.reloadChannels()
     }
 
     func reloadIfProviderChanged() {
-        manager.reloadIfProviderChanged(categoryId: selectedCategory?.id)
+        manager.reloadIfProviderChanged()
     }
 
     /// Refreshes programs if the calendar day has changed (e.g. after device sleep).
@@ -125,29 +79,12 @@ final class LiveTVViewModel {
 
     func dateChanged() {
         manager.resetAllPrograms()
-        selectedProgram = nil
     }
 
     // MARK: - Program loading
     
     func loadProgramsIfNeeded(for channel: Media, on date: Date, completion: @escaping () -> Void) {
         manager.loadProgramsForDateIfNeeded(for: channel, on: date, completion: completion)
-    }
-
-    func loadProgramsIfNeeded(for channel: Media) {
-        manager.loadProgramsForDateIfNeeded(for: channel, on: selectedDate)
-    }
-
-    func selectChannel(_ channel: Media) {
-        selectedChannel = channel
-        loadProgramsIfNeeded(for: channel)
-        selectedProgram = currentProgram(for: channel)
-    }
-
-    /// Auto-selects the first channel if none is selected yet.
-    func selectFirstChannelIfNeeded() {
-        guard selectedChannel == nil, let first = filteredChannels.first else { return }
-        selectChannel(first)
     }
 
     // MARK: - Stream resolution

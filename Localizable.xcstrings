@@ -283,6 +283,7 @@
       }
     },
     "livetv.mode.channels" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -299,6 +300,7 @@
       }
     },
     "livetv.mode.tvGuide" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {

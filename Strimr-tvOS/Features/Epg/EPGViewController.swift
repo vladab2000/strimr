@@ -12,9 +12,12 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
     
     var collectionView: UICollectionView!
     let epgLayout = EPGAbsoluteLayout()
-    
+
     let viewModel: LiveTVViewModel
     var onProgramSelected: ((Media, Media) -> Void)?
+    var onProgramFocused: ((Media?, Media?) -> Void)?
+
+    private var hasScrolledToCurrentTime = false
 
     @Binding var horizontalOffset: CGFloat
     @Binding var verticalOffset: CGFloat
@@ -33,27 +36,29 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+
         epgLayout.epgDataSource = self
-        
+
         collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: epgLayout)
         collectionView.backgroundColor = .clear
         collectionView.dataSource = self
         collectionView.delegate = self
-        
+
         collectionView.isUserInteractionEnabled = true
         collectionView.remembersLastFocusedIndexPath = true
-        
+
         collectionView.register(EPGCell.self, forCellWithReuseIdentifier: "EPGCell")
-        
+
         view.addSubview(collectionView)
-        
+
         collectionView.reloadData()
-        
-        // Počkáme na konec cyklu běhu aplikace, až mřížka zpracuje reload
-        DispatchQueue.main.async {
-            self.scrollToCurrentTime(animated: false)
-        }
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        // Spustíme načítání dnešních programů. Scroll na aktuální čas
+        // provedeme až po prvním úspěšném reloadSections (viz loadHistoryData).
+        loadInitialPrograms()
     }
     
     // MARK: - Synchronizace posunu
@@ -69,8 +74,12 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
     // Když dojde k pohybu fokusu, vyžádáme si od layoutu plynulý přepočet pozice
     func collectionView(_ collectionView: UICollectionView, didUpdateFocusIn context: UICollectionViewFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
         if let nextIndexPath = context.nextFocusedIndexPath {
-            // Řekneme kolekci, aby se plynule srolovala na střed označené položky
             collectionView.scrollToItem(at: nextIndexPath, at: .centeredHorizontally, animated: true)
+
+            let channel = nextIndexPath.section < viewModel.channels.count
+                ? viewModel.channels[nextIndexPath.section] : nil
+            let program = channel.flatMap { viewModel.sequentialEPGByChannel[$0.id]?[nextIndexPath.item] }
+            onProgramFocused?(program, channel)
         }
     }
     
@@ -172,6 +181,23 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
     
     // MARK: - Pomocné metody
 
+    /// Načte dnešní programy pro všechny kanály viditelné po prvním zobrazení EPG.
+    private func loadInitialPrograms() {
+        let today = Date()
+        let channelCount = viewModel.channels.count
+        guard channelCount > 0 else { return }
+
+        // Odhadneme viditelný rozsah sekcí dle výšky view a řádku
+        let rowTotal = epgLayout.rowHeight + epgLayout.rowSpacing
+        let visibleRowCount = Int(ceil(view.bounds.height / rowTotal)) + 1
+        let lastSection = min(channelCount - 1, visibleRowCount)
+
+        for section in 0...lastSection {
+            let channel = viewModel.channels[section]
+            loadHistoryData(channel: channel, targetDate: today)
+        }
+    }
+
     /// Převede rozsah X souřadnic na pole půlnočních datumů (UTC), které do rozsahu spadají.
     func getTargetDates(minX: CGFloat, maxX: CGFloat) -> [Date] {
         var calendar = Calendar.current
@@ -207,6 +233,12 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
                 // Počet položek se změnil (0 → 1000): reload sekce je nutný.
                 UIView.performWithoutAnimation {
                     self.collectionView.reloadSections(IndexSet(integer: sectionIndex))
+                }
+                // Po prvním úspěšném načtení scrollneme na aktuální čas.
+                // Teprve teď má layout nenulovou contentSize.
+                if !self.hasScrolledToCurrentTime {
+                    self.hasScrolledToCurrentTime = true
+                    self.scrollToCurrentTime(animated: false)
                 }
             } else {
                 // Počet položek stejný, změnily se jen layout atributy (přibyly programy do dne).
