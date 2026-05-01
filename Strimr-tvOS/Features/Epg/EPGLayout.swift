@@ -11,12 +11,18 @@ import OSLog
 class EPGAbsoluteLayout: UICollectionViewLayout {
     
     // MARK: - Konfigurace
-    // Fixní počátek osy (např. 7 dní zpět od prvního spuštění)
-    var timelineStartDate: Date = Date().addingTimeInterval(-7 * 24 * 60 * 60)
+    // Fixní počátek osy: půlnoc UTC 7 dní zpět (shodné s výpočtem v timelineLabel)
+    var timelineStartDate: Date = {
+        var cal = Calendar.current
+        cal.timeZone = TimeZone(abbreviation: "UTC")!
+        let sevenDaysAgo = cal.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        return cal.startOfDay(for: sevenDaysAgo)
+    }()
     
     let pointsPerMinute: CGFloat = 15.0
     let rowHeight: CGFloat = 80.0
     let rowSpacing: CGFloat = 4.0
+    let cellSpacing: CGFloat = 4.0
     
     // Cache pro uchování pozic buněk
     private var layoutCache: [IndexPath: UICollectionViewLayoutAttributes] = [:]
@@ -52,7 +58,7 @@ class EPGAbsoluteLayout: UICollectionViewLayout {
                 let minutesFromStart = start.timeIntervalSince(timelineStartDate) / 60
                 let xPosition = CGFloat(minutesFromStart) * pointsPerMinute
                 let durationMinutes = end.timeIntervalSince(start) / 60
-                let width = max(CGFloat(durationMinutes) * pointsPerMinute, 1)
+                let width = max(CGFloat(durationMinutes) * pointsPerMinute - cellSpacing, 1)
 
                 let attributes = UICollectionViewLayoutAttributes(forCellWith: IndexPath(item: item, section: section))
                 attributes.frame = CGRect(x: xPosition, y: yPosition, width: width, height: rowHeight)

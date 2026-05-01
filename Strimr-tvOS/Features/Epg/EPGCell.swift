@@ -13,6 +13,7 @@ class EPGCell: UICollectionViewCell {
     let timeLabel = UILabel()
     var programId: String?
     private(set) var isPlaceholder = false
+    private var normalBackgroundColor: UIColor = UIColor(white: 0.2, alpha: 1)
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -28,10 +29,7 @@ class EPGCell: UICollectionViewCell {
         contentView.clipsToBounds = true
         contentView.backgroundColor = UIColor.darkGray
         
-        // Bílý rámeček, abychom buňku viděli za každých okolností
-        contentView.layer.borderColor = UIColor.white.cgColor
-        contentView.layer.borderWidth = 2
-        
+
         // Setup Labelů
         titleLabel.font = UIFont.systemFont(ofSize: 24, weight: .bold)
         titleLabel.textColor = .white
@@ -64,8 +62,6 @@ class EPGCell: UICollectionViewCell {
     func configure(with program: Media) {
         self.programId = program.id
         isPlaceholder = false
-        contentView.layer.borderWidth = 2
-
         titleLabel.text = program.title
 
         let formatter = DateFormatter()
@@ -74,12 +70,10 @@ class EPGCell: UICollectionViewCell {
             timeLabel.text = "\(formatter.string(from: start)) - \(formatter.string(from: end))"
         }
 
-        // Barevné odlišení dle stavu
-        if let state = program.details?.programState {
-            contentView.backgroundColor = state.color
-        } else {
-            contentView.backgroundColor = UIColor.darkGray
-        }
+        let now = Date()
+        let isPast = (program.programStart ?? .distantFuture) < now
+        normalBackgroundColor = isPast ? UIColor(white: 0.2, alpha: 1) : UIColor(white: 0.45, alpha: 1)
+        contentView.backgroundColor = normalBackgroundColor
     }
 
     func configurePlaceholder() {
@@ -105,7 +99,7 @@ class EPGCell: UICollectionViewCell {
                 self.transform = CGAffineTransform(scaleX: 1.02, y: 1.02)
                 self.layer.zPosition = 10
             } else {
-                self.contentView.backgroundColor = UIColor.darkGray
+                self.contentView.backgroundColor = self.normalBackgroundColor
                 self.titleLabel.textColor = .white
                 self.timeLabel.textColor = .lightGray
                 self.transform = .identity
