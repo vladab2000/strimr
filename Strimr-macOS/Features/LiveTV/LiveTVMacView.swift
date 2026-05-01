@@ -2,7 +2,7 @@ import SwiftUI
 
 @MainActor
 struct LiveTVMacView: View {
-    @Environment(ChannelProgramManager.self) private var channelManager
+    @Environment(ChannelManager.self) private var channelManager
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var coordinator: MainCoordinator
     @State private var viewModel: LiveTVViewModel?
@@ -248,7 +248,9 @@ struct LiveTVMacView: View {
     }
 
     private func epgDateButton(_ date: Date) -> some View {
-        let isSelected = Calendar.current.isDate(date, inSameDayAs: vm.selectedDate)
+        var calendar = Calendar.current
+        calendar.timeZone = TimeZone(abbreviation: "UTC")!
+        let isSelected = calendar.isDate(date, inSameDayAs: vm.selectedDate)
         return Button {
             viewModel?.selectedDate = date
             viewModel?.dateChanged()

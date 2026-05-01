@@ -343,8 +343,6 @@ final class MPVPlayerViewController: UIViewController {
                             DispatchQueue.main.async {
                                 self.playDelegate?.propertyChange(mpv: mpv, property: playerProperty, data: value)
                             }
-                        default:
-                            break
                         }
                     }
                 case MPV_EVENT_END_FILE:
@@ -400,7 +398,7 @@ final class MPVPlayerViewController: UIViewController {
 
     func updateMetalLayerLayout() {
         debugPrint("updateMetalLayerLayout: \(view.bounds.size)")
-        let nativeScale = view.window?.screen.nativeScale ?? UIScreen.main.nativeScale
+        let nativeScale = view.window?.screen.nativeScale ?? 1.0
         let size = view.bounds.size
         let roundedDrawableSize = CGSize(
             width: (size.width * nativeScale).rounded(),

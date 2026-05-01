@@ -28,9 +28,9 @@ final class LiveTVViewModel {
     var selectedDate: Date = .now
     var selectedProgram: Media?
 
-    private let manager: ChannelProgramManager
+    private let manager: ChannelManager
 
-    init(manager: ChannelProgramManager) {
+    init(manager: ChannelManager) {
         self.manager = manager
     }
 
@@ -40,6 +40,7 @@ final class LiveTVViewModel {
     var isLoading: Bool { manager.isLoadingChannels }
     var hasContent: Bool { manager.hasChannels }
     var programsByChannel: [String: [Media]] { manager.programsByChannel }
+    var sequentialEPGByChannel: [String: [Media?]] { manager.sequentialEPGByChannel }
 
     // MARK: - Categories
 
@@ -61,13 +62,16 @@ final class LiveTVViewModel {
     // MARK: - EPG dates
 
     var availableDates: [Date] {
-        let calendar = Calendar.current
+        var calendar = Calendar.current
+        calendar.timeZone = TimeZone(abbreviation: "UTC")!
         let today = calendar.startOfDay(for: .now)
         return (-3...0).compactMap { calendar.date(byAdding: .day, value: $0, to: today) }
     }
 
     var baseDate: Date {
-        Calendar.current.startOfDay(for: selectedDate)
+        var calendar = Calendar.current
+        calendar.timeZone = TimeZone(abbreviation: "UTC")!
+        return calendar.startOfDay(for: selectedDate)
     }
 
     // MARK: - Lifecycle
@@ -100,7 +104,9 @@ final class LiveTVViewModel {
 
     /// Refreshes programs if the calendar day has changed (e.g. after device sleep).
     func refreshIfDayChanged() {
-        let calendar = Calendar.current
+        //TODO: Doplnění chybějích dnů do programu, aby bylo vždy načteno 14 dní epg
+/*        var calendar = Calendar.current
+        calendar.timeZone = TimeZone(abbreviation: "UTC")!
         let today = calendar.startOfDay(for: .now)
         let selectedDay = calendar.startOfDay(for: selectedDate)
 
@@ -114,7 +120,7 @@ final class LiveTVViewModel {
         if let channel = selectedChannel {
             loadProgramsIfNeeded(for: channel)
             selectedProgram = nil
-        }
+        }*/
     }
 
     func dateChanged() {
@@ -123,17 +129,13 @@ final class LiveTVViewModel {
     }
 
     // MARK: - Program loading
+    
+    func loadProgramsIfNeeded(for channel: Media, on date: Date, completion: @escaping () -> Void) {
+        manager.loadProgramsForDateIfNeeded(for: channel, on: date, completion: completion)
+    }
 
     func loadProgramsIfNeeded(for channel: Media) {
-        manager.loadProgramsIfNeeded(for: channel, on: selectedDate)
-    }
-
-    func loadNextDay(for channel: Media) {
-        manager.loadNextDay(for: channel)
-    }
-
-    func loadPreviousDay(for channel: Media) {
-        manager.loadPreviousDay(for: channel)
+        manager.loadProgramsForDateIfNeeded(for: channel, on: selectedDate)
     }
 
     func selectChannel(_ channel: Media) {
@@ -175,9 +177,5 @@ final class LiveTVViewModel {
     func findTargetID(midTime: Date, inChannel channelID: String) -> String? {
         guard let channel = channels.first(where: { $0.id == channelID }) else { return nil }
         return programsByChannel[channel.id]?.first { midTime >= $0.programStart! && midTime <= $0.programEnd! }?.id
-    }
-    
-    func loadMoreData() {
-        manager.loadNextDay()
     }
 }

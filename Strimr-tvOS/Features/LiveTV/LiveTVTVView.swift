@@ -2,7 +2,7 @@ import SwiftUI
 
 @MainActor
 struct LiveTVTVView: View {
-    @Environment(ChannelProgramManager.self) private var channelManager
+    @Environment(ChannelManager.self) private var channelManager
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var coordinator: MainCoordinator
 
@@ -36,7 +36,8 @@ struct LiveTVTVView: View {
                         channelsLayout
                             .focusSection()
                     case .tvGuide:
-                        epgLayout
+                        CombinedEPGView(viewModel: vm)
+                            .edgesIgnoringSafeArea(.horizontal)
                             .focusSection()
                     }
                 }
@@ -228,80 +229,7 @@ struct LiveTVTVView: View {
         }
     }
 
-    // MARK: - EPG Layout
-
-    private let channelColumnWidth: CGFloat = 200
-    private let rowHeight: CGFloat = 100
-    private let pixelsPerMinute: CGFloat = 6.66
-    private let epgSpacing: CGFloat = 2
-    private let timeHeaderHeight: CGFloat = 36
-
-    @FocusState var focusedID: String?
-    @State private var lastFocusedProgram: Media?
-    @State private var lastChannelID: String?
-    
-    private var epgLayout: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 50) {
-                ForEach(vm.channels) { channel in
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(channel.name)
-                            .font(.headline)
-                            .padding(.leading, 80)
-
-                        ScrollView(.horizontal) {
-                            LazyHStack(spacing: 20) {
-                                ForEach(vm.programsByChannel[channel.id] ?? []) { program in
-                                    ProgramCard(program: program)
-                                        .id(program.id) // Nutné pro scrollTarget
-                                        .focused($focusedID, equals: program.id)
-                                        .onAppear {
-                                            // Dočítání na konci řádku
-                                            if program.id == vm.programsByChannel[channel.id]?.last?.id {
-                                                vm.loadMoreData()
-                                            }
-                                        }
-                                }
-                            }
-                            .padding(.horizontal, 80)
-                            .padding(.vertical, 20)
-                        }
-                        // tvOS 17 feature: Přichytávání na střed/okraj při rychlém skrollování
-                        .scrollTargetBehavior(.viewAligned)
-                        .scrollIndicators(.hidden)
-                    }
-                    .focusSection() // Umožňuje přímý vertikální skok mezi řádky
-                }
-            }
-        }
-        .onChange(of: focusedID) { newValue in
-            handleFocusChange(to: newValue)
-        }
-    }
         
-    private func handleFocusChange(to newID: String?) {
-        guard let newID = newID else { return }
-        
-        // 1. Najdeme aktuální kanál a program
-        guard let currentChannel = vm.channels.first(where: { ch in (vm.programsByChannel[ch.id] ?? []).contains { $0.id == newID } }),
-              let currentProgram = vm.programsByChannel[currentChannel.id]?.first(where: { $0.id == newID }) else { return }
-
-        // 2. Kontrola vertikálního posunu (změna kanálu)
-        if let lastChID = lastChannelID, lastChID != currentChannel.id, let lastProg = lastFocusedProgram {
-            // Výpočet cíle podle času středu předchozího programu
-            if let idealTargetID = vm.findTargetID(midTime: lastProg.programStart!.addingTimeInterval(lastProg.programEnd!.timeIntervalSince(lastProg.programStart!)), inChannel: currentChannel.id) {
-                if idealTargetID != newID {
-                    focusedID = idealTargetID
-                    return // Přerušíme, abychom neukládali mezistav
-                }
-            }
-        }
-
-        // 3. Uložení stavu pro příští pohyb
-        lastFocusedProgram = currentProgram
-        lastChannelID = currentChannel.id
-    }
-
     struct ProgramCard: View {
         let program: Media
         @Environment(\.isFocused) var isFocused
@@ -327,56 +255,6 @@ struct LiveTVTVView: View {
         }
     }
     
-    private var epgTimeHeader: some View {
-        HStack(spacing: 0) {
-            ForEach(0..<24, id: \.self) { hour in
-                Text(String(format: "%02d:00", hour))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(width: pixelsPerMinute * 60, alignment: .leading)
-                    .padding(.leading, 4)
-            }
-        }
-    }
-
-    private func epgChannelCell(_ channel: Media) -> some View {
-        VStack(spacing: 6) {
-            channelLogo(channel)
-                .frame(width: 56, height: 56)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-
-            Text(channel.title)
-                .font(.caption2)
-                .lineLimit(1)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private func epgProgramRow(for channel: Media) -> some View {
-        let programs = vm.programsByChannel[channel.id] ?? []
-        let offset = epgLeadingOffset(for: programs)
-        return LazyHStack(alignment: .top, spacing: epgSpacing) {
-            if offset > 0 {
-                Color.clear
-                    .frame(width: offset, height: rowHeight)
-            }
-            ForEach(Array(programs.enumerated()), id: \.element.id) { index, program in
-                EPGProgramCellTV(
-                    program: program,
-                    width: epgProgramWidth(program),
-                    height: rowHeight - epgSpacing,
-                    isNow: isProgramNow(program),
-                    onTap: {
-                        Task { await handleProgramTap(program: program, channel: channel) }
-                    },
-                    onLoadNext: index == programs.count - 1 ? { viewModel?.loadNextDay(for: channel) } : nil,
-                    onLoadPrevious: index == 0 ? { viewModel?.loadPreviousDay(for: channel) } : nil
-                )
-            }
-        }
-        .onAppear { viewModel?.loadProgramsIfNeeded(for: channel) }
-    }
-
     // MARK: - Shared Helpers
 
     @ViewBuilder
@@ -403,22 +281,6 @@ struct LiveTVTVView: View {
         guard let start = program.programStart, let end = program.programEnd else { return false }
         let now = Date.now
         return start <= now && now < end
-    }
-
-    private func epgLeadingOffset(for programs: [Media]) -> CGFloat {
-        guard let firstStart = programs.first?.programStart else { return 0 }
-        let dayStart = vm.baseDate
-        let offsetMinutes = firstStart.timeIntervalSince(dayStart) / 60
-        guard offsetMinutes > 0 else { return 0 }
-        return CGFloat(offsetMinutes) * pixelsPerMinute
-    }
-
-    private func epgProgramWidth(_ program: Media) -> CGFloat {
-        guard let start = program.programStart, let end = program.programEnd else {
-            return 50
-        }
-        let durationMinutes = end.timeIntervalSince(start) / 60
-        return CGFloat(durationMinutes) * pixelsPerMinute
     }
 
     private func playChannel(_ channel: Media) async {
@@ -625,53 +487,3 @@ private struct ProgramRowTV: View {
         }
     }
 }
-
-// MARK: - EPG Program Cell (reused from previous EPG)
-
-private struct EPGProgramCellTV: View {
-    @FocusState private var isFocused: Bool
-
-    let program: Media
-    let width: CGFloat
-    let height: CGFloat
-    let isNow: Bool
-    let onTap: () -> Void
-    var onLoadNext: (() -> Void)?
-    var onLoadPrevious: (() -> Void)?
-
-    var body: some View {
-        Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(program.title)
-                    .font(.caption)
-                    .fontWeight(isNow ? .bold : .regular)
-                    .lineLimit(2)
-
-                if let start = program.programStart, let end = program.programEnd {
-                    Text("\(start.formatted(.dateTime.hour().minute())) – \(end.formatted(.dateTime.hour().minute()))")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .padding(8)
-            .frame(width: width, height: height, alignment: .topLeading)
-            .background(
-                RoundedRectangle(cornerRadius: 5)
-                    .fill(isNow ? Color.brandPrimary.opacity(0.25) : Color.gray.opacity(0.1))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 5)
-                    .strokeBorder(isNow ? Color.brandPrimary : Color.clear, lineWidth: 2)
-            )
-        }
-        .buttonStyle(.card)
-        .onMoveCommand { direction in
-            if direction == .right, let onLoadNext {
-                onLoadNext()
-            } else if direction == .left, let onLoadPrevious {
-                onLoadPrevious()
-            }
-        }
-    }
-}
-

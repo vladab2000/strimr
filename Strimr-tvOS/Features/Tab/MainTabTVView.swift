@@ -4,7 +4,7 @@ import Combine
 struct MainTabTVView: View {
     @Environment(SettingsManager.self) var settingsManager
     @Environment(WatchHistoryManager.self) var watchHistoryManager
-    @Environment(ChannelProgramManager.self) var channelManager
+    @Environment(ChannelManager.self) var channelManager
     @StateObject var coordinator = MainCoordinator()
     @State var homeViewModel: HomeViewModel
     @State private var currentDate = Date()

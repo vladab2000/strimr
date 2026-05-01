@@ -8,8 +8,8 @@
 import Foundation
 
 struct ApiClient {
-//    static let baseURL = URL(string: "http://192.168.88.136:5020/api/")!
-    static let baseURL = URL(string: "https://tv.lan.mujrd.cz:5020/api/")!
+    static let baseURL = URL(string: "http://192.168.88.136:5020/api/")!
+//    static let baseURL = URL(string: "https://tv.lan.mujrd.cz:5020/api/")!
 
     static func fetchMenu(urlPath: String = "/") async throws -> [Media] {
         try await fetch(path: "folder", queryItems: [URLQueryItem(name: "url", value: urlPath)])
@@ -102,8 +102,12 @@ struct ApiClient {
         return try await fetch(path: "tv/channels/\(channelId)/live", queryItems: queryItems.isEmpty ? nil : queryItems)
     }
 
-    static func fetchPrograms(channelId: String, date: String) async throws -> [Media] {
-        try await fetch(path: "tv/channels/\(channelId)/programs/\(date)")
+    static func fetchAllPrograms(channelId: String) async throws -> [Media] {
+        try await fetch(path: "tv/channels/\(channelId)/programs")
+    }
+
+    static func fetchProgramsForDate(channelId: String, date: Date) async throws -> [Media] {
+        try await fetch(path: "tv/channels/\(channelId)/programs/\(dateString(for: date))")
     }
 /*
     static func fetchPrograms(channelId: String, from: String, to: String) async throws -> [Media] {
@@ -264,5 +268,17 @@ struct ApiClient {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom(Self.decodeDate)
         return try decoder.decode(Response.self, from: data)
+    }
+    
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        //f.timeZone = TimeZone(identifier: "UTC")
+        return f
+    }()
+
+    private static func dateString(for date: Date) -> String {
+        dateFormatter.string(from: date)
     }
 }

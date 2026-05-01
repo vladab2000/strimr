@@ -193,6 +193,16 @@ enum MediaDetailsVariant: Codable, Hashable {
         return nil
     }
 
+    var programState: ProgramState? {
+        if case .program(let d) = self, let startTime = d.start, let endTime = d.end {
+            let now = Date()
+            if endTime < now { return .past }
+            if startTime > now { return .future }
+            return .current
+        }
+        return nil
+    }
+    
     // Codable: encode the inner value directly
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()

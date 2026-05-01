@@ -300,6 +300,35 @@ struct Media: Codable, Hashable, Identifiable {
             updatedUtc: nil
         )
     }
+    
+    static func createProgramPlaceholder(date: Date) -> Media {
+        var calendar = Calendar.current
+        calendar.timeZone = TimeZone(abbreviation: "UTC")!
+        return Media(
+            kind: .program,
+            id: UUID().uuidString,
+            name: "Načítám...",
+            description: nil,
+            url: "",
+            art: nil,
+            details: .program(ProgramDetails(
+                year: nil,
+                rating: nil,
+                duration: 86400,
+                langs: nil,
+                genres: nil,
+                country: nil,
+                start: calendar.startOfDay(for: date),
+                end:calendar.startOfDay(for: date).addingTimeInterval(86400),
+                channelId: nil,
+                channelName: nil,
+            )),
+            watchPosition: nil,
+            watchCompleted: nil,
+            isFavorite: nil,
+            updatedUtc: nil
+        )
+    }
 }
 
 // MARK: - Preview Data
