@@ -40,10 +40,12 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
         epgLayout.epgDataSource = self
 
         collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: epgLayout)
+        collectionView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         collectionView.backgroundColor = .clear
         collectionView.dataSource = self
         collectionView.delegate = self
 
+        collectionView.isScrollEnabled = false
         collectionView.isUserInteractionEnabled = true
         collectionView.remembersLastFocusedIndexPath = true
 
@@ -52,6 +54,11 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
         view.addSubview(collectionView)
 
         collectionView.reloadData()
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        collectionView.frame = view.bounds
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -74,7 +81,19 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
     // Když dojde k pohybu fokusu, vyžádáme si od layoutu plynulý přepočet pozice
     func collectionView(_ collectionView: UICollectionView, didUpdateFocusIn context: UICollectionViewFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
         if let nextIndexPath = context.nextFocusedIndexPath {
-            collectionView.scrollToItem(at: nextIndexPath, at: .centeredHorizontally, animated: true)
+            print("didUpdateFocusIn \(nextIndexPath.section),\(nextIndexPath.item)")
+
+            if let frame = collectionView.layoutAttributesForItem(at: nextIndexPath)?.frame {
+                let bounds = collectionView.bounds
+                var scrollPosition: UICollectionView.ScrollPosition = [.centeredVertically]
+                if frame.width > bounds.width {
+                    scrollPosition.insert(.left)
+                }
+                else if frame.minX < bounds.minX || frame.maxX > bounds.maxX {
+                    scrollPosition.insert(.centeredHorizontally)
+                }
+                collectionView.scrollToItem(at: nextIndexPath, at: scrollPosition, animated: false)
+            }
 
             let channel = nextIndexPath.section < viewModel.channels.count
                 ? viewModel.channels[nextIndexPath.section] : nil
@@ -84,10 +103,12 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
     }
     
     func collectionView(_ collectionView: UICollectionView, canFocusItemAt indexPath: IndexPath) -> Bool {
+        print("canFocusItemAt \(indexPath.section),\(indexPath.item)")
         return true
     }
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        print("didSelectItemAt \(indexPath.section),\(indexPath.item)")
         guard indexPath.section < viewModel.channels.count else { return }
         let channel = viewModel.channels[indexPath.section]
         guard let program = viewModel.sequentialEPGByChannel[channel.id]?[indexPath.item] else { return }
@@ -122,7 +143,7 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
 
         let channel = viewModel.channels[indexPath.section]
         if let program = viewModel.sequentialEPGByChannel[channel.id]?[indexPath.item] {
-            cell.configure(with: program)
+            cell.configure(with: program, indexPath: indexPath)
         } else {
             cell.configurePlaceholder()
         }
@@ -130,28 +151,47 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
         return cell
     }
     
+    func scrollToDate(_ date: Date, animated: Bool = true) {
+        let channelCount = viewModel.channels.count
+        guard channelCount > 0 else { return }
+
+        let rowTotal = epgLayout.rowHeight + epgLayout.rowSpacing
+        let visibleRowCount = Int(ceil(view.bounds.height / rowTotal)) + 1
+        let lastSection = min(channelCount - 1, visibleRowCount)
+
+        let group = DispatchGroup()
+        for section in 0...lastSection {
+            let channel = viewModel.channels[section]
+            group.enter()
+            loadHistoryData(channel: channel, targetDate: date) { group.leave() }
+        }
+
+        group.notify(queue: .main) { [weak self] in
+            guard let self else { return }
+            self.collectionView.layoutIfNeeded()
+            let targetX = self.epgLayout.xOffsetForDate(date)
+            let maxX = max(0, self.collectionView.contentSize.width - self.collectionView.bounds.width)
+            let clampedX = max(0, min(targetX, maxX))
+            self.collectionView.setContentOffset(CGPoint(x: clampedX, y: self.collectionView.contentOffset.y), animated: animated)
+        }
+    }
+
     func scrollToCurrentTime(animated: Bool = false) {
-        // 🔥 Donutíme kolekci, aby si vyžádala výpočet velikosti od layoutu (pokud má data)
+        print("scrollToCurrentTime \(Date())")
         collectionView.layoutIfNeeded()
-        
-        // 1. Zjistíme X souřadnici pro aktuální čas
-        let currentMinutesFromStart = Date().timeIntervalSince(epgLayout.timelineStartDate) / 60
-        let targetX = CGFloat(currentMinutesFromStart) * epgLayout.pointsPerMinute
-        
-        // 2. Chceme, aby byl aktuální čas uprostřed obrazovky
-        let halfScreenWidth = collectionView.bounds.width / 2
-        let centeredX = targetX - halfScreenWidth
-        
-        // 3. Ošetříme okraje, abychom nescrollovali do záporných hodnot
-        let maxOffsetX = max(0, collectionView.contentSize.width - collectionView.bounds.width)
-        let clampedX = max(0, min(centeredX, maxOffsetX))
-        
-        // 4. Provedeme posun
-        collectionView.setContentOffset(CGPoint(x: clampedX, y: collectionView.contentOffset.y), animated: animated)
+        let nowUTC = Date()
+        let targetX = epgLayout.xOffsetForDate(nowUTC) - EPGConstants.pointsPerMinute * 30
+//        let epgWidth = collectionView.bounds.width - EPGConstants.channelSidebarWidth
+//        let centeredX = targetX - epgWidth / 2
+//        let maxOffsetX = max(0, collectionView.contentSize.width - epgWidth)
+//        let clampedX = max(0, min(centeredX, maxOffsetX))
+        print("scrollToCurrentTime \(Date()) -> targetX: \(targetX), contentSize width: \(collectionView.contentSize.width), bounds width: \(collectionView.bounds.width)")
+        collectionView.setContentOffset(CGPoint(x: targetX, y: collectionView.contentOffset.y), animated: animated)
     }
     
     
     func checkDataOnScroll(_ scrollView: UIScrollView) {
+        print("checkDataOnScroll")
         let thresholdOffset = 120.0 * epgLayout.pointsPerMinute
 
         let visibleRect = CGRect(origin: scrollView.contentOffset, size: scrollView.bounds.size)
@@ -181,20 +221,28 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
     
     // MARK: - Pomocné metody
 
-    /// Načte dnešní programy pro všechny kanály viditelné po prvním zobrazení EPG.
+    /// Načte dnešní programy pro všechny kanály viditelné po prvním zobrazení EPG,
+    /// a až po jejich načtení provede jednorázový scroll na aktuální čas.
     private func loadInitialPrograms() {
         let today = Date()
         let channelCount = viewModel.channels.count
         guard channelCount > 0 else { return }
 
-        // Odhadneme viditelný rozsah sekcí dle výšky view a řádku
         let rowTotal = epgLayout.rowHeight + epgLayout.rowSpacing
         let visibleRowCount = Int(ceil(view.bounds.height / rowTotal)) + 1
         let lastSection = min(channelCount - 1, visibleRowCount)
 
+        let group = DispatchGroup()
         for section in 0...lastSection {
             let channel = viewModel.channels[section]
-            loadHistoryData(channel: channel, targetDate: today)
+            group.enter()
+            loadHistoryData(channel: channel, targetDate: today) { group.leave() }
+        }
+
+        group.notify(queue: .main) { [weak self] in
+            guard let self, !self.hasScrolledToCurrentTime else { return }
+            self.hasScrolledToCurrentTime = true
+            self.scrollToCurrentTime(animated: false)
         }
     }
 
@@ -221,8 +269,10 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
 
     // MARK: - Načtení historie (Zavolá se např. při scrollování doleva)
     
-    func loadHistoryData(channel: Media, targetDate: Date) {
+    func loadHistoryData(channel: Media, targetDate: Date, completion: (() -> Void)? = nil) {
         viewModel.loadProgramsIfNeeded(for: channel, on: targetDate, completion: { [weak self] in
+            print("loadHistoryData \(channel.name) \(targetDate)")
+            defer { completion?() }
             guard let self else { return }
             guard let sectionIndex = self.viewModel.channels.firstIndex(where: { $0.id == channel.id }) else { return }
 
@@ -230,19 +280,10 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
             let newCount = self.viewModel.sequentialEPGByChannel[channel.id]?.count ?? 0
 
             if currentCount != newCount {
-                // Počet položek se změnil (0 → 1000): reload sekce je nutný.
                 UIView.performWithoutAnimation {
                     self.collectionView.reloadSections(IndexSet(integer: sectionIndex))
                 }
-                // Po prvním úspěšném načtení scrollneme na aktuální čas.
-                // Teprve teď má layout nenulovou contentSize.
-                if !self.hasScrolledToCurrentTime {
-                    self.hasScrolledToCurrentTime = true
-                    self.scrollToCurrentTime(animated: false)
-                }
             } else {
-                // Počet položek stejný, změnily se jen layout atributy (přibyly programy do dne).
-                // invalidateLayout() fokus neresetuje.
                 self.collectionView.collectionViewLayout.invalidateLayout()
             }
         })
