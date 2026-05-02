@@ -98,47 +98,58 @@ final class ChannelManager {
     /// Cache: [ChannelID: [Datum: [Programy]]]
     private var epgCache: [String: [Date: [Media]]] = [:]
 
-    /// Per-channel loading tasks to avoid duplicate concurrent fetches.
+    /// Per-channel-per-date loading tasks to avoid duplicate concurrent fetches.
     @ObservationIgnored private var programTasks: [String: Task<Void, Never>] = [:]
-    
+
     /// Ensure programs are loaded for a channel on a specific day.
     /// Call from `onAppear` of channel rows in EPG.
-    func loadProgramsForDateIfNeeded(for channel: Media, on date: Date, completion: (() -> Void)? = nil) {
+    func loadProgramsForDateIfNeeded(for channel: Media, on date: Date, completion: ((ProgramLoadStatus) -> Void)? = nil) {
         let channelId = channel.id
 
         var calendar = Calendar.current
         calendar.timeZone = TimeZone(abbreviation: "UTC")!
         let dayStart = calendar.startOfDay(for: date)
+        let taskKey = "\(channelId)_\(Int(dayStart.timeIntervalSince1970))"
 
         if epgCache[channel.id] == nil { epgCache[channel.id] = [:] }
 
-        if epgCache[channelId]?[dayStart] != nil || programTasks[channelId] != nil {
+        if epgCache[channelId]?[dayStart] != nil || programTasks[taskKey] != nil {
+            completion?(.cached)
             return
         }
         epgCache[channel.id]?[dayStart] = []
 
         let task = Task { [weak self] in
-            guard let self else { return }
-            defer { self.programTasks[channelId] = nil }
+            guard let self else {
+                completion?(.error)
+                return
+            }
+            defer { self.programTasks[taskKey] = nil }
 
             do {
                 let programs = try await ApiClient.fetchProgramsForDate(
                     channelId: channelId,
                     date: dayStart
                 )
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled else {
+                    completion?(.canceled)
+                    return
+                }
 
                 epgCache[channel.id]?[dayStart] = programs
                 mergeProgramsSafely(programs, for: channelId)
                 rebuildSequentialEPG(for: channelId)
-                completion?()
+                completion?(.fetched)
 
             } catch {
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled else {
+                    completion?(.error)
+                    return
+                }
             }
         }
 
-        programTasks[channelId] = task
+        programTasks[taskKey] = task
     }
 
     /// Merges new programs into programsByChannel, deduplicating by programStart.
@@ -295,4 +306,11 @@ struct TimeRange: Hashable {
     func contains(_ date: Date) -> Bool {
         return date >= start && date < end
     }
+}
+
+enum ProgramLoadStatus {
+    case cached
+    case fetched
+    case canceled
+    case error
 }

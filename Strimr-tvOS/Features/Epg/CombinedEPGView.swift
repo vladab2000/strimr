@@ -92,7 +92,10 @@ struct CombinedEPGView: View {
         }
         .onPlayPauseCommand { showDayPicker = true }
         .fullScreenCover(isPresented: $showDayPicker) {
-            DatePickerRepresentable(isPresented: $showDayPicker) { date in
+            DatePickerRepresentable(
+                isPresented: $showDayPicker,
+                loadData: { date, completion in loadEPGData(for: date, completion: completion) }
+            ) { date in
                 scrollToDate = date
             }
             .ignoresSafeArea()
@@ -243,6 +246,40 @@ struct CombinedEPGView: View {
                 channel: channel,
                 program: program
             )
+        }
+    }
+
+    // MARK: - EPG data loading
+
+    private func loadEPGData(for targetDate: Date, completion: @escaping () -> Void) {
+        print("loadEPGData STARTED")
+        guard let viewModel else { completion(); return }
+        let channels = viewModel.channels
+        guard !channels.isEmpty else { completion(); return }
+
+        var cal = Calendar.current
+        cal.timeZone = TimeZone(abbreviation: "UTC")!
+        let today = cal.startOfDay(for: Date())
+        let target = cal.startOfDay(for: targetDate)
+
+        var dates: [Date] = []
+        var current = today
+        while current >= target {
+            dates.append(current)
+            guard let prev = cal.date(byAdding: .day, value: -1, to: current) else { break }
+            current = prev
+        }
+
+        let group = DispatchGroup()
+        for channel in channels.prefix(EPGConstants.visibleRows + 1) {
+            for date in dates {
+                group.enter()
+                viewModel.loadProgramsIfNeeded(for: channel, on: date) { _ in group.leave() }
+            }
+        }
+        group.notify(queue: .main) {
+            print("loadEPGData COMPLETE")
+            completion()
         }
     }
 

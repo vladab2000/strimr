@@ -19,6 +19,9 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
 
     private var hasScrolledToCurrentTime = false
 
+    private var focusedSectionNumber: Int? = nil
+    private var indexPathToFocus: IndexPath? = nil
+
     @Binding var horizontalOffset: CGFloat
     @Binding var verticalOffset: CGFloat
         
@@ -47,7 +50,7 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
 
         collectionView.isScrollEnabled = false
         collectionView.isUserInteractionEnabled = true
-        collectionView.remembersLastFocusedIndexPath = true
+        collectionView.remembersLastFocusedIndexPath = false
 
         collectionView.register(EPGCell.self, forCellWithReuseIdentifier: "EPGCell")
 
@@ -74,15 +77,20 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
             self.horizontalOffset = scrollView.contentOffset.x
             self.verticalOffset = scrollView.contentOffset.y
         }
-        
         checkDataOnScroll(scrollView)
     }
     
     // Když dojde ke změně fokusu, provedu případně vlastní rolování a zavolám onProgramFocused
     func collectionView(_ collectionView: UICollectionView, didUpdateFocusIn context: UICollectionViewFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
         if let nextIndexPath = context.nextFocusedIndexPath {
-            print("didUpdateFocusIn \(nextIndexPath.section),\(nextIndexPath.item)")
+//            print("didUpdateFocusIn \(nextIndexPath.section),\(nextIndexPath.item)")
 
+            if let nextPath = context.nextFocusedIndexPath, nextPath == self.indexPathToFocus {
+                // Úkol splněn, uvolníme zámek focusu
+//                print("didUpdateFocusIn INDEXPATH TO FOCUS IS THE SAME, CLEARING")
+                self.indexPathToFocus = nil
+            }
+            
             if let frame = collectionView.layoutAttributesForItem(at: nextIndexPath)?.frame {
                 let bounds = collectionView.bounds
                 var scrollPosition: UICollectionView.ScrollPosition = [.centeredVertically]
@@ -95,35 +103,37 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
                 collectionView.scrollToItem(at: nextIndexPath, at: scrollPosition, animated: false)
             }
 
+            focusedSectionNumber = nextIndexPath.section
             let channel = nextIndexPath.section < viewModel.channels.count
                 ? viewModel.channels[nextIndexPath.section] : nil
             let program = channel.flatMap { viewModel.sequentialEPGByChannel[$0.id]?[nextIndexPath.item] }
             onProgramFocused?(program, channel)
         }
     }
-    
-    func collectionView(_ collectionView: UICollectionView, canFocusItemAt indexPath: IndexPath) -> Bool {
-        print("canFocusItemAt \(indexPath.section),\(indexPath.item)")
-        return true
-    }
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        print("didSelectItemAt \(indexPath.section),\(indexPath.item)")
+//        print("didSelectItemAt \(indexPath.section),\(indexPath.item)")
         guard indexPath.section < viewModel.channels.count else { return }
         let channel = viewModel.channels[indexPath.section]
         guard let program = viewModel.sequentialEPGByChannel[channel.id]?[indexPath.item] else { return }
         onProgramSelected?(program, channel)
     }
     
-/*    override var preferredFocusEnvironments: [UIFocusEnvironment] {
-        // Řekne systému, že po načtení má hledat fokus uvnitř kolekce
-        return [collectionView]
-    }*/
-    
-    override var preferredFocusedView: UIView? {
-        return collectionView
+    func indexPathForPreferredFocusedView(in collectionView: UICollectionView) -> IndexPath? {
+//        print("indexPathForPreferredFocusedView")
+        return self.indexPathToFocus
     }
-    
+
+    // Pokud víme přesně, kam má jít focus (po scrollToDate), vrátíme přímo buňku.
+    // To je spolehlivější než indexPathForPreferredFocusedView, který tvOS někdy ignoruje.
+    override var preferredFocusEnvironments: [UIFocusEnvironment] {
+        if let indexPath = indexPathToFocus,
+           let cell = collectionView.cellForItem(at: indexPath) {
+//            print("preferredFocusEnvironments -> \(indexPath.section),\(indexPath.item)")
+            return [cell]
+        }
+        return [collectionView]
+    }
     // MARK: - UICollectionViewDataSource
     
     func numberOfSections(in collectionView: UICollectionView) -> Int {
@@ -133,16 +143,19 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         guard section < viewModel.channels.count else { return 0 }
         let channel = viewModel.channels[section]
+        //print("numberOfItemsInSection \(section), \(channel.name)")
         return viewModel.sequentialEPGByChannel[channel.id]?.count ?? 0
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "EPGCell", for: indexPath) as? EPGCell else {
+//            print("cellForItemAt REUSE FAILED \(indexPath.section),\(indexPath.item)")
             return UICollectionViewCell()
         }
 
         let channel = viewModel.channels[indexPath.section]
         if let program = viewModel.sequentialEPGByChannel[channel.id]?[indexPath.item] {
+//            print("cellForItemAt \(indexPath.section),\(indexPath.item)")
             cell.configure(with: program, indexPath: indexPath)
         } else {
             cell.configurePlaceholder()
@@ -151,47 +164,69 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
         return cell
     }
     
-    func scrollToDate(_ date: Date, animated: Bool = true) {
+    func scrollToDate(_ date: Date, animated: Bool = false) {
+        print("scrollToDate \(date) STARTED")
         let channelCount = viewModel.channels.count
         guard channelCount > 0 else { return }
 
-        let rowTotal = epgLayout.rowHeight + epgLayout.rowSpacing
-        let visibleRowCount = Int(ceil(view.bounds.height / rowTotal)) + 1
-        let lastSection = min(channelCount - 1, visibleRowCount)
+//        isScrollingProgrammatically = true
 
-        let group = DispatchGroup()
-        for section in 0...lastSection {
-            let channel = viewModel.channels[section]
-            group.enter()
-            loadHistoryData(channel: channel, targetDate: date) { group.leave() }
+        if let focusedSection = focusedSectionNumber {
+
+            let channel = viewModel.channels[focusedSection]
+
+            if let programs = viewModel.sequentialEPGByChannel[channel.id] {
+                if let programIndex = programs.firstIndex(where: { ($0?.programStart ?? Date()) <= date && ($0?.programEnd ?? Date()) >= date }) {
+
+                    let newIndexPath = IndexPath(item: programIndex, section: focusedSection)
+                    indexPathToFocus = newIndexPath
+
+                    // Synchronizace CollectionView s ViewModelem — DatePicker načetl nová data,
+                    // ale CollectionView o nich nevědí. Bez reloadData by checkDataOnScroll zavolal
+                    // reloadSections a přesunul focus na sekci 0.
+                    UIView.performWithoutAnimation {
+                        collectionView.reloadData()
+                    }
+
+                    let xOffset = epgLayout.xOffsetForDate(date)
+                    self.collectionView.setContentOffset(
+                        CGPoint(x: xOffset, y: self.collectionView.contentOffset.y),
+                        animated: false
+                    )
+                    self.collectionView.layoutIfNeeded()
+
+//                    print("scrollToDate \(date) SCROLL TO \(newIndexPath.section), \(newIndexPath.item)")
+
+                } else {
+//                    print("scrollToDate \(date) PROGRAM INDEX FOR DATE NOT FOUND")
+                }
+            } else {
+//                print("scrollToDate \(date) PROGRAMS FOR CHANNEL NOT FOUND")
+            }
+        } else {
+//            print("scrollToDate \(date) INDEXPATH NOT FOUND")
         }
 
-        group.notify(queue: .main) { [weak self] in
+        // Cells jsou nyní viditelné — preferredFocusEnvironments vrátí přímý odkaz na buňku
+        DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            self.collectionView.layoutIfNeeded()
-            let targetX = self.epgLayout.xOffsetForDate(date)
-            let maxX = max(0, self.collectionView.contentSize.width - self.collectionView.bounds.width)
-            let clampedX = max(0, min(targetX, maxX))
-            self.collectionView.setContentOffset(CGPoint(x: clampedX, y: self.collectionView.contentOffset.y), animated: animated)
+            self.setNeedsFocusUpdate()
+            self.updateFocusIfNeeded()
         }
     }
 
     func scrollToCurrentTime(animated: Bool = false) {
-        print("scrollToCurrentTime \(Date())")
+//        print("scrollToCurrentTime \(Date())")
         collectionView.layoutIfNeeded()
         let nowUTC = Date()
         let targetX = epgLayout.xOffsetForDate(nowUTC) - EPGConstants.pointsPerMinute * 30
-//        let epgWidth = collectionView.bounds.width - EPGConstants.channelSidebarWidth
-//        let centeredX = targetX - epgWidth / 2
-//        let maxOffsetX = max(0, collectionView.contentSize.width - epgWidth)
-//        let clampedX = max(0, min(centeredX, maxOffsetX))
-        print("scrollToCurrentTime \(Date()) -> targetX: \(targetX), contentSize width: \(collectionView.contentSize.width), bounds width: \(collectionView.bounds.width)")
+//        print("scrollToCurrentTime \(Date()) -> targetX: \(targetX), contentSize width: \(collectionView.contentSize.width), bounds width: \(collectionView.bounds.width)")
         collectionView.setContentOffset(CGPoint(x: targetX, y: collectionView.contentOffset.y), animated: animated)
     }
     
     
     func checkDataOnScroll(_ scrollView: UIScrollView) {
-        print("checkDataOnScroll")
+//        print("checkDataOnScroll STARTED")
         let thresholdOffset = 120.0 * epgLayout.pointsPerMinute
 
         let visibleRect = CGRect(origin: scrollView.contentOffset, size: scrollView.bounds.size)
@@ -217,6 +252,7 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
                 loadHistoryData(channel: channel, targetDate: date)
             }
         }
+//        print("checkDataOnScroll FINISHED")
     }
     
     // MARK: - Pomocné metody
@@ -224,6 +260,7 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
     /// Načte dnešní programy pro všechny kanály viditelné po prvním zobrazení EPG,
     /// a až po jejich načtení provede jednorázový scroll na aktuální čas.
     private func loadInitialPrograms() {
+//        print("loadInitialPrograms STARTED")
         let today = Date()
         let channelCount = viewModel.channels.count
         guard channelCount > 0 else { return }
@@ -240,6 +277,7 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
         }
 
         group.notify(queue: .main) { [weak self] in
+//            print("loadInitialPrograms FINISHED")
             guard let self, !self.hasScrolledToCurrentTime else { return }
             self.hasScrolledToCurrentTime = true
             self.scrollToCurrentTime(animated: false)
@@ -270,8 +308,7 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
     // MARK: - Načtení historie (Zavolá se např. při scrollování doleva)
     
     func loadHistoryData(channel: Media, targetDate: Date, completion: (() -> Void)? = nil) {
-        viewModel.loadProgramsIfNeeded(for: channel, on: targetDate, completion: { [weak self] in
-            print("loadHistoryData \(channel.name) \(targetDate)")
+        viewModel.loadProgramsIfNeeded(for: channel, on: targetDate, completion: { [weak self] status in
             defer { completion?() }
             guard let self else { return }
             guard let sectionIndex = self.viewModel.channels.firstIndex(where: { $0.id == channel.id }) else { return }

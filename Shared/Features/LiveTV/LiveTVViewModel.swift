@@ -83,8 +83,11 @@ final class LiveTVViewModel {
 
     // MARK: - Program loading
     
-    func loadProgramsIfNeeded(for channel: Media, on date: Date, completion: @escaping () -> Void) {
-        manager.loadProgramsForDateIfNeeded(for: channel, on: date, completion: completion)
+    func loadProgramsIfNeeded(for channel: Media, on date: Date, completion: @escaping (ProgramLoadStatus) -> Void) {
+        manager.loadProgramsForDateIfNeeded(for: channel, on: date, completion: {state in
+//            print("loadProgramsIfNeeded \(channel.name) \(date) \(state)")
+            completion(state)
+        })
     }
 
     // MARK: - Stream resolution

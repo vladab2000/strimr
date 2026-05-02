@@ -2,8 +2,9 @@ import UIKit
 import SwiftUI
 
 class TVOSDatePickerViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
-    
+
     var onDateSelected: ((Date) -> Void)?
+    var loadDataForDate: ((Date, @escaping () -> Void) -> Void)?
     private let tableView = UITableView()
     private let dates = (0...6).compactMap { Calendar.current.date(byAdding: .day, value: -$0, to: Date()) }
     private let activityIndicator = UIActivityIndicatorView(style: .large)
@@ -18,7 +19,7 @@ class TVOSDatePickerViewController: UIViewController, UITableViewDelegate, UITab
     }
 
     private func setupBlurBackground() {
-        let blurEffect = UIBlurEffect(style: .dark)
+        let blurEffect = UIBlurEffect(style: .regular)
         let blurView = UIVisualEffectView(effect: blurEffect)
         blurView.frame = view.bounds
         blurView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -91,8 +92,13 @@ class TVOSDatePickerViewController: UIViewController, UITableViewDelegate, UITab
     }
 
     func loadData(for date: Date, completion: @escaping () -> Void) {
-        // Simulace asynchronního načítání
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { completion() }
+        if let loader = loadDataForDate {
+            print("TVOSDatePickerViewController - loadDataForDate \(date)")
+
+            loader(date, completion)
+        } else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { completion() }
+        }
     }
 }
 
@@ -100,17 +106,21 @@ class TVOSDatePickerViewController: UIViewController, UITableViewDelegate, UITab
 
 struct DatePickerRepresentable: UIViewControllerRepresentable {
     @Binding var isPresented: Bool
+    var loadData: ((Date, @escaping () -> Void) -> Void)?
     var onDateSelected: (Date) -> Void
 
     func makeUIViewController(context: Context) -> TVOSDatePickerViewController {
         let vc = TVOSDatePickerViewController()
-        vc.onDateSelected = { [weak vc] date in
-            _ = vc // already dismissed at this point
+        vc.loadDataForDate = loadData
+        vc.onDateSelected = { date in
+//            print("DatePickerRepresentable - onDateSelected \(date)")
             isPresented = false
             onDateSelected(date)
         }
         return vc
     }
 
-    func updateUIViewController(_ uiViewController: TVOSDatePickerViewController, context: Context) {}
+    func updateUIViewController(_ uiViewController: TVOSDatePickerViewController, context: Context) {
+        uiViewController.loadDataForDate = loadData
+    }
 }
