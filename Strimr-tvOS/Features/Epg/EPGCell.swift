@@ -59,10 +59,10 @@ class EPGCell: UICollectionViewCell {
         timeLabel.frame = CGRect(x: 12, y: 50, width: width - 24, height: 25)
     }
     
-    func configure(with program: Media) {
+    func configure(with program: Media, indexPath: IndexPath) {
         self.programId = program.id
         isPlaceholder = false
-        titleLabel.text = program.title
+        titleLabel.text = "\(indexPath.row). \(indexPath.section) \(program.title)"
 
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
@@ -91,20 +91,18 @@ class EPGCell: UICollectionViewCell {
 
     override func didUpdateFocus(in context: UIFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
         guard !isPlaceholder else { return }
-        coordinator.addCoordinatedAnimations({
-            if self.isFocused {
-                self.contentView.backgroundColor = .white
-                self.titleLabel.textColor = .black
-                self.timeLabel.textColor = .black
-                self.transform = CGAffineTransform(scaleX: 1.02, y: 1.02)
-                self.layer.zPosition = 10
-            } else {
-                self.contentView.backgroundColor = self.normalBackgroundColor
-                self.titleLabel.textColor = .white
-                self.timeLabel.textColor = .lightGray
-                self.transform = .identity
-                self.layer.zPosition = 0
-            }
-        }, completion: nil)
+        if self.isFocused {
+            self.contentView.backgroundColor = .white
+            self.titleLabel.textColor = .black
+            self.timeLabel.textColor = .black
+            self.transform = .identity
+            self.layer.zPosition = 10
+        } else {
+            self.contentView.backgroundColor = self.normalBackgroundColor
+            self.titleLabel.textColor = .white
+            self.timeLabel.textColor = .lightGray
+            self.transform = .identity
+            self.layer.zPosition = 0
+        }
     }
 }
