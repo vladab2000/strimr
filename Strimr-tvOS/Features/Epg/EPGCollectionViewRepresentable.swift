@@ -16,6 +16,7 @@ struct EPGCollectionViewRepresentable: UIViewControllerRepresentable {
 
     @Binding var horizontalOffset: CGFloat
     @Binding var verticalOffset: CGFloat
+    @Binding var scrollToDate: Date?
 
     func makeUIViewController(context: Context) -> EPGViewController {
         let controller = EPGViewController(
@@ -31,5 +32,9 @@ struct EPGCollectionViewRepresentable: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: EPGViewController, context: Context) {
         uiViewController.onProgramSelected = onProgramSelected
         uiViewController.onProgramFocused = onProgramFocused
+        if let date = scrollToDate {
+            uiViewController.scrollToDate(date)
+            DispatchQueue.main.async { scrollToDate = nil }
+        }
     }
 }
