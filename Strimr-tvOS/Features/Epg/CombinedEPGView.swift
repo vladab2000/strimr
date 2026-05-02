@@ -8,12 +8,14 @@
 import SwiftUI
 import Combine
 
+@MainActor
 struct CombinedEPGView: View {
 
-    let viewModel: LiveTVViewModel
-
+    @Environment(ChannelManager.self) private var channelManager
+    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var coordinator: MainCoordinator
 
+    @State private var viewModel: LiveTVViewModel?
     @State private var horizontalOffset: CGFloat = 0
     @State private var verticalOffset: CGFloat = 0
     @State private var focusedProgram: Media? = nil
@@ -28,42 +30,63 @@ struct CombinedEPGView: View {
     let channelSidebarWidth = EPGConstants.channelSidebarWidth
     let timelineHeight = EPGConstants.timelineHeight
 
+    private var vm: LiveTVViewModel {
+        viewModel ?? LiveTVViewModel(manager: channelManager)
+    }
+
     var body: some View {
-        GeometryReader { geometry in
-            let heroHeight = geometry.size.height * 0.38
-            let epgHeight = geometry.size.height - heroHeight
+        ZStack {
+            Color("Background")
+                .ignoresSafeArea()
 
-            ZStack(alignment: .bottom) {
-
-                // MARK: - Pozadí (Hero obrázek nebo černá)
-                if let program = focusedProgram {
-                    MediaHeroBackgroundView(media: program)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .ignoresSafeArea()
-                } else {
-                    Color.black.ignoresSafeArea()
-                }
-
-                VStack(spacing: 0) {
-
-                    // MARK: - Hero obsah (název, popis, metadata)
-                    HStack(alignment: .top) {
-                        if let program = focusedProgram {
-                            MediaHeroContentView(media: program)
-                                .frame(maxWidth: geometry.size.width * 0.55, alignment: .topLeading)
-                                .padding(.leading, 80)
-                                .padding(.top, 32)
+            if vm.isLoading, !vm.hasContent {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if !vm.hasContent {
+                ContentUnavailableView(
+                    String(localized: "channels.empty.title"),
+                    systemImage: "tv",
+                    description: Text("channels.empty.description")
+                )
+            } else {
+                GeometryReader { proxy in
+                    ZStack(alignment: .bottom) {
+                        ZStack(alignment: .topLeading) {
+                            if let program = focusedProgram {
+                                MediaHeroBackgroundView(media: program)
+                                MediaHeroContentView(media: program)
+                                    .frame(maxWidth: proxy.size.width * 0.60, maxHeight: .infinity, alignment: .topLeading)
+                            }
                         }
-                        Spacer()
+                        
+                        VStack {
+                            Spacer()
+                            
+                            GeometryReader { epgGeometry in
+                                epgGrid(geometry: epgGeometry, height: EPGConstants.epgHeight)
+                            }
+                            .frame(height: EPGConstants.epgHeight)
+                        }
+                        .ignoresSafeArea(.all)
                     }
-                    .frame(height: heroHeight)
-
-                    // MARK: - EPG mřížka
-                    epgGrid(geometry: geometry, height: epgHeight)
+                    .focusSection()
                 }
             }
         }
-        .edgesIgnoringSafeArea(.all)
+        .onAppear {
+            if viewModel == nil {
+                viewModel = LiveTVViewModel(manager: channelManager)
+            }
+            viewModel?.reloadIfProviderChanged()
+        }
+        .task {
+            await viewModel?.load()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                viewModel?.refreshIfDayChanged()
+            }
+        }
         .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { _ in
             currentTime = Date()
         }
@@ -73,6 +96,13 @@ struct CombinedEPGView: View {
                 scrollToDate = date
             }
             .ignoresSafeArea()
+        }
+        .overlay {
+            if vm.isResolvingStream {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(.ultraThinMaterial)
+            }
         }
     }
 
@@ -115,7 +145,7 @@ struct CombinedEPGView: View {
 
             // MARK: - 1. Hlavní mřížka programů (UIKit)
             EPGCollectionViewRepresentable(
-                viewModel: viewModel,
+                viewModel: vm,
                 onProgramSelected: { program, channel in
                     Task { await handleProgramTap(program: program, channel: channel) }
                 },
@@ -173,7 +203,7 @@ struct CombinedEPGView: View {
 
             // MARK: - 3. Levý sloupec s kanály (SwiftUI)
             VStack(spacing: spacing) {
-                ForEach(viewModel.channels) { channel in
+                ForEach(vm.channels) { channel in
                     channelRow(channel, isSelected: channel.id == focusedChannel?.id)
                 }
             }
@@ -201,7 +231,7 @@ struct CombinedEPGView: View {
         let isPast = (program.programEnd ?? .distantFuture) < now
 
         if isNow || isPast {
-            guard let playback = await viewModel.resolveArchivePlayback(program: program) else { return }
+            guard let playback = await vm.resolveArchivePlayback(program: program) else { return }
             coordinator.showPlayer(
                 streamURL: ApiClient.playbackURL(sessionId: playback.sessionId),
                 sessionId: playback.sessionId,

@@ -78,7 +78,7 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
         checkDataOnScroll(scrollView)
     }
     
-    // Když dojde k pohybu fokusu, vyžádáme si od layoutu plynulý přepočet pozice
+    // Když dojde ke změně fokusu, provedu případně vlastní rolování a zavolám onProgramFocused
     func collectionView(_ collectionView: UICollectionView, didUpdateFocusIn context: UICollectionViewFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
         if let nextIndexPath = context.nextFocusedIndexPath {
             print("didUpdateFocusIn \(nextIndexPath.section),\(nextIndexPath.item)")

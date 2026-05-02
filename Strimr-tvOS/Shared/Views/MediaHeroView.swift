@@ -60,7 +60,7 @@ struct MediaHeroContentView: View {
             else {
                 Text(media.primaryLabel)
                     .font(.title2.bold())
-                    .lineLimit(2)
+                    .lineLimit(1)
             }
 
             if let secondary = media.secondaryLabel, media.itemType != .movie, media.itemType != .tvshow {
@@ -81,6 +81,7 @@ struct MediaHeroContentView: View {
                     .frame(minHeight: summaryLineHeight * CGFloat(summaryLineLimit), alignment: .top)
             }
         }
+        .padding(.top, -25)
     }
 
     private var summaryLineHeight: CGFloat {

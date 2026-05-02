@@ -42,7 +42,7 @@ struct MainTabTVView: View {
             
             Tab("tabs.liveTV", systemImage: "tv.fill", value: MainCoordinator.Tab.channels) {
                 NavigationStack(path: coordinator.pathBinding(for: .channels)) {
-                    LiveTVTVView()
+                    CombinedEPGView()
                         .navigationDestination(for: MainCoordinator.Route.self) { route in
                             destination(for: route)
                         }
