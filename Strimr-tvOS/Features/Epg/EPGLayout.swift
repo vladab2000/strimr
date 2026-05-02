@@ -19,10 +19,10 @@ class EPGAbsoluteLayout: UICollectionViewLayout {
         return cal.startOfDay(for: sevenDaysAgo)
     }()
     
-    let pointsPerMinute: CGFloat = 15.0
-    let rowHeight: CGFloat = 80.0
-    let rowSpacing: CGFloat = 4.0
-    let cellSpacing: CGFloat = 4.0
+    let pointsPerMinute = EPGConstants.pointsPerMinute
+    let rowHeight = EPGConstants.rowHeight
+    let rowSpacing = EPGConstants.rowSpacing
+    let cellSpacing = EPGConstants.cellSpacing
     
     // Cache pro uchování pozic buněk
     private var layoutCache: [IndexPath: UICollectionViewLayoutAttributes] = [:]

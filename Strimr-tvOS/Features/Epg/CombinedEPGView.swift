@@ -14,18 +14,19 @@ struct CombinedEPGView: View {
 
     @EnvironmentObject private var coordinator: MainCoordinator
 
-    // Stavy pro uložení aktuálního posunu mřížky
     @State private var horizontalOffset: CGFloat = 0
     @State private var verticalOffset: CGFloat = 0
     @State private var focusedProgram: Media? = nil
     @State private var focusedChannel: Media? = nil
     @State private var currentTime: Date = .now
+    @State private var showDayPicker = false
+    @State private var scrollToDate: Date? = nil
 
-    let hourWidth: CGFloat = 15*60 // Musí sedět s EPGLayoutem
-    let rowHeight: CGFloat = 80.0
-    let spacing: CGFloat = 4.0
-    let channelSidebarWidth: CGFloat = 250.0
-    let timelineHeight: CGFloat = 60.0
+    let hourWidth: CGFloat = EPGConstants.pointsPerMinute * 60
+    let rowHeight = EPGConstants.rowHeight
+    let spacing = EPGConstants.rowSpacing
+    let channelSidebarWidth = EPGConstants.channelSidebarWidth
+    let timelineHeight = EPGConstants.timelineHeight
 
     var body: some View {
         GeometryReader { geometry in
@@ -66,7 +67,16 @@ struct CombinedEPGView: View {
         .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { _ in
             currentTime = Date()
         }
+        .onPlayPauseCommand { showDayPicker = true }
+        .fullScreenCover(isPresented: $showDayPicker) {
+            DatePickerRepresentable(isPresented: $showDayPicker) { date in
+                scrollToDate = date
+            }
+            .ignoresSafeArea()
+        }
     }
+
+    // MARK: - Channel sidebar row
 
     @ViewBuilder
     private func channelRow(_ channel: Media, isSelected: Bool) -> some View {
@@ -97,6 +107,8 @@ struct CombinedEPGView: View {
         .animation(.easeInOut(duration: 0.15), value: isSelected)
     }
 
+    // MARK: - EPG Grid
+
     @ViewBuilder
     private func epgGrid(geometry: GeometryProxy, height: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
@@ -112,7 +124,8 @@ struct CombinedEPGView: View {
                     focusedChannel = channel
                 },
                 horizontalOffset: $horizontalOffset,
-                verticalOffset: $verticalOffset
+                verticalOffset: $verticalOffset,
+                scrollToDate: $scrollToDate
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.top, timelineHeight)
@@ -138,24 +151,24 @@ struct CombinedEPGView: View {
             .clipped()
             .padding(.leading, channelSidebarWidth)
 
-            // MARK: - 2b. Marker aktuálního času (přes celou výšku EPG)
+            // MARK: - 2b. Marker aktuálního času
             if nowVisibleX >= 0 && nowVisibleX <= geometry.size.width - channelSidebarWidth {
-                Rectangle()
-                    .fill(Color.red.opacity(0.7))
-                    .frame(width: 2, height: height)
-                    .overlay(alignment: .top) {
-                        Text(currentTimeLabel)
-                            .font(.caption2)
-                            .bold()
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(Color.red)
-                            .cornerRadius(4)
-                            .fixedSize()
-                            .offset(y: 6)
-                    }
-                    .padding(.leading, channelSidebarWidth + nowVisibleX)
+                VStack(spacing: 0) {
+                    Text(currentTimeLabel)
+                        .font(.caption2)
+                        .bold()
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Color.red)
+                        .cornerRadius(4)
+                        .fixedSize()
+                    Rectangle()
+                        .fill(Color.red.opacity(0.8))
+                        .frame(width: 3)
+                }
+                .frame(width: 3, height: height, alignment: .top)
+                .padding(.leading, channelSidebarWidth + nowVisibleX)
             }
 
             // MARK: - 3. Levý sloupec s kanály (SwiftUI)
@@ -170,16 +183,18 @@ struct CombinedEPGView: View {
             .frame(width: channelSidebarWidth, height: height, alignment: .top)
             .clipped()
 
-            // MARK: - 4. Prázdný statický roh
+            // MARK: - 4. Roh s datem
             Text(displayedDateString)
                 .font(.caption)
                 .foregroundColor(.white)
                 .frame(width: channelSidebarWidth, height: timelineHeight)
+                .background(Color.black)
         }
-        //.background(Color.black.opacity(0.85))
         .frame(height: height)
     }
-    
+
+    // MARK: - Program tap
+
     private func handleProgramTap(program: Media, channel: Media) async {
         let now = Date.now
         let isNow = (program.programStart ?? .distantFuture) <= now && now < (program.programEnd ?? .distantPast)
@@ -191,11 +206,17 @@ struct CombinedEPGView: View {
                 streamURL: ApiClient.playbackURL(sessionId: playback.sessionId),
                 sessionId: playback.sessionId,
                 media: program,
+                resumePosition: nil,
+                skipIntroStart: nil,
+                skipIntroEnd: nil,
+                skipTitlesStart: nil,
                 channel: channel,
                 program: program
             )
         }
     }
+
+    // MARK: - Helpers
 
     private var epgStartDate: Date {
         var cal = Calendar.current
@@ -211,7 +232,6 @@ struct CombinedEPGView: View {
         return formatter.string(from: currentTime)
     }
 
-    // halfIndex = index po 30 minutách od začátku EPG
     private func halfHourLabel(for halfIndex: Int) -> String {
         let cellDate = epgStartDate.addingTimeInterval(TimeInterval(halfIndex) * 30 * 60)
         let formatter = DateFormatter()
@@ -220,18 +240,15 @@ struct CombinedEPGView: View {
         return formatter.string(from: cellDate)
     }
 
-    // Výpočet zobrazeného dne na základě posunu mřížky
     private var displayedDateString: String {
         var utcCalendar = Calendar.current
         utcCalendar.timeZone = TimeZone(abbreviation: "UTC")!
         let sevenDaysAgo = utcCalendar.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-        let epgStartDate = utcCalendar.startOfDay(for: sevenDaysAgo)
+        let epgStart = utcCalendar.startOfDay(for: sevenDaysAgo)
 
-        // Převedeme horizontální posun na reálné UTC datum
         let pointsPerMinute = hourWidth / 60
-        let viewingDate = epgStartDate.addingTimeInterval(TimeInterval(horizontalOffset / pointsPerMinute * 60))
+        let viewingDate = epgStart.addingTimeInterval(TimeInterval(horizontalOffset / pointsPerMinute * 60))
 
-        // Porovnáme lokálním kalendářem, aby se přepínání Dnes/Včera dělo na lokální půlnoc
         let localCalendar = Calendar.current
         let today = localCalendar.startOfDay(for: Date())
         let viewingDay = localCalendar.startOfDay(for: viewingDate)
