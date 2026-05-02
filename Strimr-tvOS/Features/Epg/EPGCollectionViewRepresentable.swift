@@ -17,6 +17,10 @@ struct EPGCollectionViewRepresentable: UIViewControllerRepresentable {
     @Binding var horizontalOffset: CGFloat
     @Binding var verticalOffset: CGFloat
     @Binding var scrollToDate: Date?
+    @Binding var showDatePicker: Bool
+    var epgViewingDate: Date
+    var loadData: ((Date, @escaping () -> Void) -> Void)?
+    var onDateSelected: (Date) -> Void
 
     // MARK: - Coordinator
 
@@ -45,17 +49,39 @@ struct EPGCollectionViewRepresentable: UIViewControllerRepresentable {
         uiViewController.onProgramSelected = onProgramSelected
         uiViewController.onProgramFocused = onProgramFocused
 
+        // DatePicker — EPGViewController je prezentující VC, takže po zavření
+        // focus přirozeně vrátí přes jeho preferredFocusEnvironments.
+        if showDatePicker {
+            guard uiViewController.presentedViewController == nil else { return }
+            let picker = TVOSDatePickerViewController()
+            picker.initialDate = epgViewingDate
+            picker.loadDataForDate = loadData
+            picker.modalPresentationStyle = .overFullScreen
+            picker.modalTransitionStyle = .crossDissolve
+            picker.onDateSelected = { date in
+                DispatchQueue.main.async {
+                    showDatePicker = false
+                    onDateSelected(date)
+                }
+            }
+            picker.onDismiss = {
+                DispatchQueue.main.async { showDatePicker = false }
+            }
+            uiViewController.present(picker, animated: true)
+        } else {
+            if let presented = uiViewController.presentedViewController, !presented.isBeingDismissed {
+                presented.dismiss(animated: true)
+            }
+        }
+
+        // Scroll na datum — koordinátor brání opakovanému volání při re-renderech.
         if let date = scrollToDate {
-            // Spustíme scroll jen jednou pro dané datum — koordinátor si pamatuje
-            // naposledy zpracované datum mimo SwiftUI state, takže ho lze bezpečně
-            // nastavit i uprostřed view update bez "Modifying state during view update".
             if date != context.coordinator.consumedScrollDate {
                 context.coordinator.consumedScrollDate = date
                 uiViewController.scrollToDate(date)
                 DispatchQueue.main.async { scrollToDate = nil }
             }
         } else {
-            // scrollToDate bylo vymazáno — resetujeme koordinátor pro příští výběr.
             context.coordinator.consumedScrollDate = nil
         }
     }

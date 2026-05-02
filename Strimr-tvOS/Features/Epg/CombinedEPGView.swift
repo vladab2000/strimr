@@ -15,6 +15,9 @@ struct CombinedEPGView: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var coordinator: MainCoordinator
 
+    @Namespace private var epgNamespace
+    @FocusState private var isGridFocused: Bool
+    
     @State private var viewModel: LiveTVViewModel?
     @State private var horizontalOffset: CGFloat = 0
     @State private var verticalOffset: CGFloat = 0
@@ -66,7 +69,10 @@ struct CombinedEPGView: View {
                                 epgGrid(geometry: epgGeometry, height: EPGConstants.epgHeight)
                             }
                             .frame(height: EPGConstants.epgHeight)
+                            .focused($isGridFocused)
+                            .prefersDefaultFocus(in: epgNamespace)
                         }
+                        .focusScope(epgNamespace)
                         .ignoresSafeArea(.all)
                     }
                     .focusSection()
@@ -87,19 +93,28 @@ struct CombinedEPGView: View {
                 viewModel?.refreshIfDayChanged()
             }
         }
+        .onChange(of: showDayPicker) { _, isPresented in
+            if !isPresented {
+                // 3. Jakmile Picker zmizí, VYNUTÍME focus zpět na grid
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    isGridFocused = true
+                }
+            }
+        }
         .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { _ in
             currentTime = Date()
         }
         .onPlayPauseCommand { showDayPicker = true }
-        .fullScreenCover(isPresented: $showDayPicker) {
-            DatePickerRepresentable(
+        .background(
+            DatePickerPresentationHelper(
                 isPresented: $showDayPicker,
+                currentDate: epgViewingDate,
                 loadData: { date, completion in loadEPGData(for: date, completion: completion) }
             ) { date in
                 scrollToDate = date
             }
-            .ignoresSafeArea()
-        }
+            .frame(width: 1, height: 1)
+        )
         .overlay {
             if vm.isResolvingStream {
                 ProgressView()
@@ -137,7 +152,7 @@ struct CombinedEPGView: View {
         .padding(.horizontal, 12)
         .frame(width: channelSidebarWidth, height: rowHeight)
         .background(isSelected ? Color.white.opacity(0.9) : Color.gray.opacity(0.12))
-        .animation(.easeInOut(duration: 0.15), value: isSelected)
+        //.animation(.easeInOut(duration: 0.15), value: isSelected)
     }
 
     // MARK: - EPG Grid
@@ -158,7 +173,11 @@ struct CombinedEPGView: View {
                 },
                 horizontalOffset: $horizontalOffset,
                 verticalOffset: $verticalOffset,
-                scrollToDate: $scrollToDate
+                scrollToDate: $scrollToDate,
+                showDatePicker: $showDayPicker,
+                epgViewingDate: epgViewingDate,
+                loadData: { date, completion in loadEPGData(for: date, completion: completion) },
+                onDateSelected: { date in scrollToDate = date }
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.top, timelineHeight)
@@ -252,7 +271,7 @@ struct CombinedEPGView: View {
     // MARK: - EPG data loading
 
     private func loadEPGData(for targetDate: Date, completion: @escaping () -> Void) {
-        print("loadEPGData STARTED")
+//        print("loadEPGData STARTED")
         guard let viewModel else { completion(); return }
         let channels = viewModel.channels
         guard !channels.isEmpty else { completion(); return }
@@ -278,7 +297,7 @@ struct CombinedEPGView: View {
             }
         }
         group.notify(queue: .main) {
-            print("loadEPGData COMPLETE")
+//            print("loadEPGData COMPLETE")
             completion()
         }
     }
@@ -307,20 +326,19 @@ struct CombinedEPGView: View {
         return formatter.string(from: cellDate)
     }
 
-    private var displayedDateString: String {
+    private var epgViewingDate: Date {
         var utcCalendar = Calendar.current
         utcCalendar.timeZone = TimeZone(abbreviation: "UTC")!
         let sevenDaysAgo = utcCalendar.date(byAdding: .day, value: -7, to: Date()) ?? Date()
         let epgStart = utcCalendar.startOfDay(for: sevenDaysAgo)
-
         let pointsPerMinute = hourWidth / 60
-        let viewingDate = epgStart.addingTimeInterval(TimeInterval(horizontalOffset / pointsPerMinute * 60))
+        return epgStart.addingTimeInterval(TimeInterval(horizontalOffset / pointsPerMinute * 60))
+    }
 
-        let localCalendar = Calendar.current
-        let today = localCalendar.startOfDay(for: Date())
-        let viewingDay = localCalendar.startOfDay(for: viewingDate)
-        let dayDiff = localCalendar.dateComponents([.day], from: today, to: viewingDay).day ?? 0
-
+    private var displayedDateString: String {
+        let viewingDate = epgViewingDate
+        let cal = Calendar.current
+        let dayDiff = cal.dateComponents([.day], from: cal.startOfDay(for: Date()), to: cal.startOfDay(for: viewingDate)).day ?? 0
         switch dayDiff {
         case 0:  return "Dnes"
         case -1: return "Včera"
