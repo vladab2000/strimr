@@ -59,10 +59,10 @@ class EPGCell: UICollectionViewCell {
         timeLabel.frame = CGRect(x: 12, y: 50, width: width - 24, height: 25)
     }
     
-    func configure(with program: Media, indexPath: IndexPath) {
+    func configure(with program: Media) {
         self.programId = program.id
         isPlaceholder = false
-        titleLabel.text = "\(indexPath.row). \(indexPath.section) \(program.title)"
+        titleLabel.text = program.title
 
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"

@@ -170,7 +170,7 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
         let channel = viewModel.channels[indexPath.section]
         if let program = viewModel.sequentialEPGByChannel[channel.id]?[indexPath.item] {
 //            print("cellForItemAt \(indexPath.section),\(indexPath.item)")
-            cell.configure(with: program, indexPath: indexPath)
+            cell.configure(with: program)
         } else {
             cell.configurePlaceholder()
         }
