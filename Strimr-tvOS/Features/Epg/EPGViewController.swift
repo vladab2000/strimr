@@ -76,6 +76,7 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
     
     // MARK: - Synchronizace posunu
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+//        print("scrollViewDidScroll")
         let newX = scrollView.contentOffset.x
         let newY = scrollView.contentOffset.y
         DispatchQueue.main.async {
@@ -90,19 +91,19 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
         if let nextIndexPath = context.nextFocusedIndexPath {
 //            print("didUpdateFocusIn \(nextIndexPath.section),\(nextIndexPath.item)")
 
-            if let nextPath = context.nextFocusedIndexPath, nextPath == self.indexPathToFocus {
-                // Úkol splněn, uvolníme zámek focusu
+            // Pokud focus dorazil na cílovou buňku z programatického scrollu, neuvolňujeme
+            // scrollToItem — pozici viewportu nastaví setContentOffset ve scrollToDate.
+            // Zavoláme scrollToItem pouze při přirozeném pohybu focusu uživatelem.
+            let wasTargeted = nextIndexPath == self.indexPathToFocus
+            if wasTargeted {
 //                print("didUpdateFocusIn INDEXPATH TO FOCUS IS THE SAME, CLEARING")
                 self.indexPathToFocus = nil
-            }
-            
-            if let frame = collectionView.layoutAttributesForItem(at: nextIndexPath)?.frame {
+            } else if let frame = collectionView.layoutAttributesForItem(at: nextIndexPath)?.frame {
                 let bounds = collectionView.bounds
                 var scrollPosition: UICollectionView.ScrollPosition = [.centeredVertically]
                 if frame.width > bounds.width {
                     scrollPosition.insert(.left)
-                }
-                else if frame.minX < bounds.minX || frame.maxX > bounds.maxX {
+                } else if frame.minX < bounds.minX || frame.maxX > bounds.maxX {
                     scrollPosition.insert(.centeredHorizontally)
                 }
                 collectionView.scrollToItem(at: nextIndexPath, at: scrollPosition, animated: false)
@@ -202,12 +203,8 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
                         collectionView.reloadData()
                     }
 
-                    let xOffset = epgLayout.xOffsetForDate(date)
-                    self.collectionView.setContentOffset(
-                        CGPoint(x: xOffset, y: self.collectionView.contentOffset.y),
-                        animated: false
-                    )
-                    self.collectionView.layoutIfNeeded()
+                    collectionView.scrollToItem(at: newIndexPath, at: [.centeredVertically, .centeredHorizontally], animated: false)
+                    collectionView.layoutIfNeeded()
 
 //                    print("scrollToDate \(date) SCROLL TO \(newIndexPath.section), \(newIndexPath.item)")
 

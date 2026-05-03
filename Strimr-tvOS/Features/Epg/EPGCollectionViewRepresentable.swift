@@ -79,13 +79,15 @@ struct EPGCollectionViewRepresentable: UIViewControllerRepresentable {
             }
         }
 
-        // Scroll na datum — isScrollPending drží zámek od spuštění scrollu až po
-        // vymazání bindingu, takže žádný mezilehlý re-render nespustí scroll znovu.
+        // Scroll na datum — scrollToDate(date) se volá odloženě, aby neběželo uvnitř
+        // SwiftUI render cyklu. reloadData() uvnitř scrollToDate totiž nutí UIKit layout,
+        // který zpětně spouští SwiftUI render → AttributeGraph cycle.
+        // isScrollPending se nastaví synchronně, takže mezilehlé re-rendery scroll přeskočí.
         if let date = scrollToDate, !context.coordinator.isScrollPending {
             let coordinator = context.coordinator
             coordinator.isScrollPending = true
-            uiViewController.scrollToDate(date)
             DispatchQueue.main.async {
+                uiViewController.scrollToDate(date)
                 scrollToDate = nil
                 coordinator.isScrollPending = false
             }
