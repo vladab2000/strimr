@@ -76,9 +76,11 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
     
     // MARK: - Synchronizace posunu
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        let newX = scrollView.contentOffset.x
+        let newY = scrollView.contentOffset.y
         DispatchQueue.main.async {
-            self.horizontalOffset = scrollView.contentOffset.x
-            self.verticalOffset = scrollView.contentOffset.y
+            if self.horizontalOffset != newX { self.horizontalOffset = newX }
+            if self.verticalOffset != newY { self.verticalOffset = newY }
         }
         checkDataOnScroll(scrollView)
     }

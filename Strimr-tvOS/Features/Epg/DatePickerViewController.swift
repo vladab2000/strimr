@@ -32,6 +32,20 @@ class TVOSDatePickerViewController: UIViewController, UITableViewDelegate, UITab
         }
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        setNeedsFocusUpdate()
+        updateFocusIfNeeded()
+    }
+
+    override var preferredFocusEnvironments: [UIFocusEnvironment] {
+        if let row = initialRow,
+           let cell = tableView.cellForRow(at: IndexPath(row: row, section: 0)) {
+            return [cell]
+        }
+        return [tableView]
+    }
+
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         if isBeingDismissed && !hasSelectedDate {

@@ -105,16 +105,6 @@ struct CombinedEPGView: View {
             currentTime = Date()
         }
         .onPlayPauseCommand { showDayPicker = true }
-        .background(
-            DatePickerPresentationHelper(
-                isPresented: $showDayPicker,
-                currentDate: epgViewingDate,
-                loadData: { date, completion in loadEPGData(for: date, completion: completion) }
-            ) { date in
-                scrollToDate = date
-            }
-            .frame(width: 1, height: 1)
-        )
         .overlay {
             if vm.isResolvingStream {
                 ProgressView()
@@ -168,8 +158,10 @@ struct CombinedEPGView: View {
                     Task { await handleProgramTap(program: program, channel: channel) }
                 },
                 onProgramFocused: { program, channel in
-                    focusedProgram = program
-                    focusedChannel = channel
+                    DispatchQueue.main.async {
+                        focusedProgram = program
+                        focusedChannel = channel
+                    }
                 },
                 horizontalOffset: $horizontalOffset,
                 verticalOffset: $verticalOffset,

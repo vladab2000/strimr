@@ -25,9 +25,12 @@ struct EPGCollectionViewRepresentable: UIViewControllerRepresentable {
     // MARK: - Coordinator
 
     class Coordinator {
-        /// Datum, pro které už byl scroll spuštěn — brání opakovanému volání
-        /// při re-renderech způsobených ViewModel nebo focus změnami.
-        var consumedScrollDate: Date? = nil
+        /// True po dobu od spuštění scrollToDate až po vymazání scrollToDate binding.
+        /// Brání opakovanému scrollování při re-renderech způsobených focus nebo ViewModel změnami.
+        var isScrollPending = false
+        /// True jen tehdy, když jsme picker sami prezentovali — brání dismiss
+        /// jakéhokoliv jiného presentedViewController (např. přehrávače).
+        var hasPresented = false
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -53,6 +56,7 @@ struct EPGCollectionViewRepresentable: UIViewControllerRepresentable {
         // focus přirozeně vrátí přes jeho preferredFocusEnvironments.
         if showDatePicker {
             guard uiViewController.presentedViewController == nil else { return }
+            context.coordinator.hasPresented = true
             let picker = TVOSDatePickerViewController()
             picker.initialDate = epgViewingDate
             picker.loadDataForDate = loadData
@@ -67,22 +71,24 @@ struct EPGCollectionViewRepresentable: UIViewControllerRepresentable {
             picker.onDismiss = {
                 DispatchQueue.main.async { showDatePicker = false }
             }
-            uiViewController.present(picker, animated: true)
-        } else {
+            uiViewController.present(picker, animated: false)
+        } else if context.coordinator.hasPresented {
+            context.coordinator.hasPresented = false
             if let presented = uiViewController.presentedViewController, !presented.isBeingDismissed {
                 presented.dismiss(animated: true)
             }
         }
 
-        // Scroll na datum — koordinátor brání opakovanému volání při re-renderech.
-        if let date = scrollToDate {
-            if date != context.coordinator.consumedScrollDate {
-                context.coordinator.consumedScrollDate = date
-                uiViewController.scrollToDate(date)
-                DispatchQueue.main.async { scrollToDate = nil }
+        // Scroll na datum — isScrollPending drží zámek od spuštění scrollu až po
+        // vymazání bindingu, takže žádný mezilehlý re-render nespustí scroll znovu.
+        if let date = scrollToDate, !context.coordinator.isScrollPending {
+            let coordinator = context.coordinator
+            coordinator.isScrollPending = true
+            uiViewController.scrollToDate(date)
+            DispatchQueue.main.async {
+                scrollToDate = nil
+                coordinator.isScrollPending = false
             }
-        } else {
-            context.coordinator.consumedScrollDate = nil
         }
     }
 }
