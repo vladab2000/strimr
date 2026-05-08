@@ -54,6 +54,7 @@ struct PlayerControlsView: View {
                             skipIntroStart: skipIntroStart,
                             skipIntroEnd: skipIntroEnd,
                             skipTitlesStart: skipTitlesStart,
+                            isPaused: isPaused
                         )
                     }
                 }

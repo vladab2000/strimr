@@ -18,14 +18,14 @@ struct MainTabMacView: View {
                 Label("tabs.home", systemImage: "house.fill")
                     .tag(MainCoordinator.Tab.home)
 
+                Label("tabs.liveTV", systemImage: "tv.and.mediabox")
+                    .tag(MainCoordinator.Tab.channels)
+
                 Label("tabs.library", systemImage: "books.vertical.fill")
                     .tag(MainCoordinator.Tab.library)
 
                 Label("tabs.search", systemImage: "magnifyingglass")
                     .tag(MainCoordinator.Tab.search)
-
-                Label("tabs.liveTV", systemImage: "tv.and.mediabox")
-                    .tag(MainCoordinator.Tab.channels)
 
                 Label("tabs.more", systemImage: "gearshape")
                     .tag(MainCoordinator.Tab.more)

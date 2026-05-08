@@ -1,4 +1,14 @@
 import SwiftUI
+import Combine
+
+// MARK: - Scroll offset PreferenceKey
+
+private struct EPGScrollOffsetKey: PreferenceKey {
+    static let defaultValue = CGPoint.zero
+    static func reduce(value: inout CGPoint, nextValue: () -> CGPoint) { value = nextValue() }
+}
+
+// MARK: - LiveTVMacView
 
 @MainActor
 struct LiveTVMacView: View {
@@ -6,6 +16,13 @@ struct LiveTVMacView: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var coordinator: MainCoordinator
     @State private var viewModel: LiveTVViewModel?
+
+    // EPG scroll state
+    @State private var horizontalOffset: CGFloat = 0
+    @State private var verticalOffset: CGFloat = 0
+    @State private var epgScrollToDate: Date? = nil
+    @State private var currentTime: Date = .now
+    @State private var epgViewportSize: CGSize = .zero
 
     private var vm: LiveTVViewModel {
         viewModel ?? LiveTVViewModel(manager: channelManager)
@@ -70,6 +87,9 @@ struct LiveTVMacView: View {
             )
             .frame(minWidth: 400, minHeight: 250)
         }
+        .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { _ in
+            currentTime = Date()
+        }
     }
 
     // MARK: - Mode Picker
@@ -91,24 +111,19 @@ struct LiveTVMacView: View {
 
     private var channelsLayout: some View {
         HStack(spacing: 0) {
-            // Column 1: Categories
             categoriesColumn
                 .frame(width: 180)
 
             Divider()
 
-            // Column 2: Channels
             channelsColumn
                 .frame(width: 300)
 
             Divider()
 
-            // Column 3: Program detail
             programDetailColumn
         }
     }
-
-    // MARK: - Column 1: Categories
 
     private var categoriesColumn: some View {
         List(selection: Binding(
@@ -128,8 +143,6 @@ struct LiveTVMacView: View {
         }
         .listStyle(.sidebar)
     }
-
-    // MARK: - Column 2: Channels
 
     private var channelsColumn: some View {
         List(selection: Binding(
@@ -152,8 +165,6 @@ struct LiveTVMacView: View {
         }
         .listStyle(.plain)
     }
-
-    // MARK: - Column 3: Program Detail
 
     private var programDetailColumn: some View {
         Group {
@@ -201,8 +212,7 @@ struct LiveTVMacView: View {
                         .frame(height: 200)
                         .clipped()
                 } else {
-                    Color.gray.opacity(0.1)
-                        .frame(height: 200)
+                    Color.gray.opacity(0.1).frame(height: 200)
                 }
             }
         } else {
@@ -216,214 +226,333 @@ struct LiveTVMacView: View {
         }
     }
 
-    // MARK: - EPG Content
+    // MARK: - EPG Content (continuous multi-day grid)
 
-    private let channelColumnWidth: CGFloat = 100
-    private let rowHeight: CGFloat = 60
-    private let pixelsPerMinute: CGFloat = 3.33
-    private let epgSpacing: CGFloat = 1
-    private let timeHeaderHeight: CGFloat = 24
+    private let epgChannelWidth: CGFloat = 110
+    private let epgRowHeight: CGFloat = 60
+    private let epgRowSpacing: CGFloat = 1
+    private let epgTimelineHeight: CGFloat = 28
+    private let epgPPM: CGFloat = 3.5       // pixels per minute
+    private let epgDaysBack: Int = 6        // 6 days ago + today = 7 days total
+
+    private var epgStartDate: Date {
+        var cal = Calendar.current
+        cal.timeZone = TimeZone(abbreviation: "UTC")!
+        return cal.startOfDay(for: cal.date(byAdding: .day, value: -epgDaysBack, to: Date())!)
+    }
+
+    private var epgTotalDays: Int { epgDaysBack + 1 }
+    private var epgTotalWidth: CGFloat { CGFloat(epgTotalDays * 24 * 60) * epgPPM }
+    private var epgTotalHeight: CGFloat { CGFloat(vm.channels.count) * (epgRowHeight + epgRowSpacing) }
 
     private var epgContent: some View {
         VStack(spacing: 0) {
-            epgDateHeader
+            epgDateNav
+                .background(.bar)
 
-            epgGrid
+            GeometryReader { geo in
+                let scrollW = geo.size.width - epgChannelWidth
+                let scrollH = geo.size.height - epgTimelineHeight
+
+                ZStack(alignment: .topLeading) {
+                    // 1. Main scrollable program grid
+                    ScrollViewReader { proxy in
+                        ScrollView([.horizontal, .vertical], showsIndicators: true) {
+                            ZStack(alignment: .topLeading) {
+                                Color.clear
+                                    .frame(width: epgTotalWidth, height: epgTotalHeight)
+
+                                // Row backgrounds and program cells
+                                ForEach(Array(vm.channels.enumerated()), id: \.element.id) { idx, channel in
+                                    let yBase = CGFloat(idx) * (epgRowHeight + epgRowSpacing)
+
+                                    Rectangle()
+                                        .fill(idx % 2 == 0 ? Color.primary.opacity(0.04) : Color.clear)
+                                        .frame(width: epgTotalWidth, height: epgRowHeight)
+                                        .offset(y: yBase)
+
+                                    epgProgramCells(for: channel, yBase: yBase)
+                                }
+
+                                // Current time vertical line
+                                let nowX = epgXOffset(for: currentTime)
+                                if nowX >= 0 && nowX <= epgTotalWidth {
+                                    Rectangle()
+                                        .fill(Color.red.opacity(0.75))
+                                        .frame(width: 2, height: epgTotalHeight)
+                                        .offset(x: nowX)
+                                }
+
+                                // Day anchor markers (for programmatic scroll)
+                                ForEach(0..<epgTotalDays, id: \.self) { dayIdx in
+                                    let dayX = CGFloat(dayIdx) * CGFloat(24 * 60) * epgPPM
+                                    Color.clear.frame(width: 1, height: 1)
+                                        .id("epg-day-\(dayIdx)")
+                                        .offset(x: dayX)
+                                }
+
+                                // "Now" anchor (for initial scroll)
+                                Color.clear.frame(width: 1, height: 1)
+                                    .id("epg-now")
+                                    .offset(x: max(0, epgXOffset(for: Date()) - scrollW * 0.25))
+                            }
+                            .background(
+                                GeometryReader { gProxy in
+                                    Color.clear.preference(
+                                        key: EPGScrollOffsetKey.self,
+                                        value: CGPoint(
+                                            x: -gProxy.frame(in: .named("epgScroll")).minX,
+                                            y: -gProxy.frame(in: .named("epgScroll")).minY
+                                        )
+                                    )
+                                }
+                            )
+                        }
+                        .coordinateSpace(.named("epgScroll"))
+                        .onPreferenceChange(EPGScrollOffsetKey.self) { value in
+                            horizontalOffset = max(0, value.x)
+                            verticalOffset = max(0, value.y)
+                            epgViewportSize = CGSize(width: scrollW, height: scrollH)
+                            epgLoadVisibleData()
+                        }
+                        .onAppear {
+                            epgViewportSize = CGSize(width: scrollW, height: scrollH)
+                            DispatchQueue.main.async {
+                                proxy.scrollTo("epg-now", anchor: .leading)
+                                epgLoadInitialData()
+                            }
+                        }
+                        .onChange(of: epgScrollToDate) { _, date in
+                            guard let date else { return }
+                            let dayIdx = epgDayIndex(for: date)
+                            proxy.scrollTo("epg-day-\(dayIdx)", anchor: .leading)
+                            epgScrollToDate = nil
+                        }
+                    }
+                    .frame(width: scrollW, height: scrollH)
+                    .offset(x: epgChannelWidth, y: epgTimelineHeight)
+
+                    // 2. Sticky time header
+                    epgTimeHeader(width: scrollW)
+                        .frame(width: scrollW, height: epgTimelineHeight)
+                        .offset(x: epgChannelWidth)
+
+                    // 3. Sticky channel sidebar
+                    epgChannelSidebar(height: scrollH)
+                        .frame(width: epgChannelWidth, height: scrollH)
+                        .offset(y: epgTimelineHeight)
+
+                    // 4. Corner cap
+                    Rectangle()
+                        .fill(Color(.windowBackgroundColor))
+                        .frame(width: epgChannelWidth, height: epgTimelineHeight)
+                }
+            }
         }
     }
 
-    private var epgDateHeader: some View {
-        HStack(spacing: 16) {
-            Spacer()
+    // MARK: - EPG date nav
 
-            HStack(spacing: 8) {
-                ForEach(vm.availableDates, id: \.self) { date in
-                    epgDateButton(date)
+    private var epgDateNav: some View {
+        let visibleDate = epgDateForX(horizontalOffset)
+        return HStack(spacing: 8) {
+            ForEach(vm.availableDates, id: \.self) { date in
+                let isSelected = Calendar.current.isDate(date, inSameDayAs: visibleDate)
+                Button {
+                    epgScrollToDate = date
+                } label: {
+                    Text(date, format: .dateTime.weekday(.abbreviated).day())
+                        .font(.caption)
+                        .fontWeight(isSelected ? .bold : .regular)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(isSelected ? Color.brandPrimary : Color.gray.opacity(0.15)))
+                        .foregroundStyle(isSelected ? .white : .primary)
                 }
+                .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(.bar)
     }
 
-    private func epgDateButton(_ date: Date) -> some View {
-        var calendar = Calendar.current
-        calendar.timeZone = TimeZone(abbreviation: "UTC")!
-        let isSelected = calendar.isDate(date, inSameDayAs: vm.selectedDate)
-        return Button {
-            viewModel?.selectedDate = date
-            viewModel?.dateChanged()
-        } label: {
-            Text(date, format: .dateTime.weekday(.abbreviated).day())
-                .font(.caption)
-                .fontWeight(isSelected ? .bold : .regular)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(
-                    Capsule()
-                        .fill(isSelected ? Color.brandPrimary : Color.gray.opacity(0.15))
-                )
-                .foregroundStyle(isSelected ? .white : .primary)
-        }
-        .buttonStyle(.plain)
-    }
+    // MARK: - EPG time header
 
-    private var epgGrid: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            HStack(alignment: .top, spacing: 0) {
-                // Fixed channel column
-                VStack(spacing: 0) {
-                    Color.clear
-                        .frame(width: channelColumnWidth, height: timeHeaderHeight)
-                    LazyVStack(spacing: 0) {
-                        ForEach(vm.channels) { channel in
-                            epgChannelCell(channel)
-                                .frame(width: channelColumnWidth, height: rowHeight)
-                                .onAppear { viewModel?.loadProgramsIfNeeded(for: channel) }
-                            Divider()
-                        }
-                    }
-                }
-
-                // Horizontally scrollable program area
-                ScrollView(.horizontal, showsIndicators: true) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        epgTimeHeader
-                            .frame(height: timeHeaderHeight)
-                            .background(.bar)
-                        LazyVStack(alignment: .leading, spacing: 0) {
-                            ForEach(vm.channels) { channel in
-                                epgProgramRow(for: channel)
-                                    .frame(height: rowHeight)
-                                Divider()
-                            }
-                        }
-                    }
+    private func epgTimeHeader(width: CGFloat) -> some View {
+        ZStack(alignment: .leading) {
+            Color(.windowBackgroundColor)
+            HStack(spacing: 0) {
+                ForEach(0..<(epgTotalDays * 24), id: \.self) { hourIdx in
+                    let isNewDay = hourIdx % 24 == 0
+                    Text(epgHourLabel(hourIndex: hourIdx))
+                        .font(.caption2)
+                        .foregroundStyle(isNewDay ? .primary : .secondary)
+                        .fontWeight(isNewDay ? .semibold : .regular)
+                        .frame(width: epgPPM * 60, alignment: .leading)
+                        .padding(.leading, 4)
                 }
             }
+            .offset(x: -horizontalOffset)
+            .clipped()
         }
+        .clipped()
+    }
+
+    // MARK: - EPG channel sidebar
+
+    private func epgChannelSidebar(height: CGFloat) -> some View {
+        ZStack(alignment: .top) {
+            Color(.windowBackgroundColor)
+            VStack(spacing: epgRowSpacing) {
+                ForEach(vm.channels) { channel in
+                    epgChannelCell(channel)
+                        .frame(height: epgRowHeight)
+                }
+            }
+            .offset(y: -verticalOffset)
+            .frame(maxHeight: .infinity, alignment: .top)
+            .clipped()
+        }
+        .clipped()
     }
 
     private func epgChannelCell(_ channel: Media) -> some View {
-        VStack(spacing: 4) {
-            channelLogo(channel)
-                .frame(width: 36, height: 36)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-
-            Text(channel.title)
-                .font(.system(size: 9))
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private var epgTimeHeader: some View {
-        HStack(spacing: 0) {
-            ForEach(0..<24, id: \.self) { hour in
-                Text(String(format: "%02d:00", hour))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .frame(width: pixelsPerMinute * 60, alignment: .leading)
-                    .padding(.leading, 4)
-            }
-        }
-    }
-
-    private func epgProgramRow(for channel: Media) -> some View {
-        let programs = vm.programsByChannel[channel.id] ?? []
-        let offset = epgLeadingOffset(for: programs)
-        return HStack(spacing: epgSpacing) {
-            if programs.isEmpty {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.1))
-                    .frame(width: pixelsPerMinute * 60 * 24)
-            } else {
-                if offset > 0 {
-                    Color.clear
-                        .frame(width: offset, height: rowHeight)
-                }
-                ForEach(programs) { program in
-                    epgProgramCell(program)
-                }
-            }
-        }
-        .onAppear { viewModel?.loadProgramsIfNeeded(for: channel) }
-    }
-
-    private func epgProgramCell(_ program: Media) -> some View {
-        let width = epgProgramWidth(program)
-        let isNow = isProgramNow(program)
-        return Button {
-            viewModel?.selectedProgram = program
-        } label: {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(program.title)
-                    .font(.caption)
-                    .fontWeight(isNow ? .bold : .regular)
-                    .lineLimit(2)
-                if let start = program.programStart {
-                    Text(start, format: .dateTime.hour().minute())
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .padding(.horizontal, 4)
-            .padding(.vertical, 3)
-            .frame(width: width, height: rowHeight - 2, alignment: .topLeading)
-            .background(
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(isNow ? Color.brandPrimary.opacity(0.2) : Color.gray.opacity(0.1))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 4)
-                    .strokeBorder(isNow ? Color.brandPrimary : Color.clear, lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - Shared Helpers
-
-    @ViewBuilder
-    private func channelLogo(_ channel: Media) -> some View {
-        let imageURL = channel.logoURL ?? channel.posterURL ?? channel.thumbURL
-        if let imageURL {
-            AsyncImage(url: imageURL) { phase in
+        HStack(spacing: 6) {
+            let logoURL = channel.logoURL ?? channel.posterURL ?? channel.thumbURL
+            AsyncImage(url: logoURL) { phase in
                 if case .success(let image) = phase {
                     image.resizable().scaledToFit()
                 } else {
-                    Image(systemName: "tv")
-                        .foregroundStyle(.secondary)
+                    Image(systemName: "tv").foregroundStyle(.secondary)
                 }
             }
+            .frame(width: 28, height: 28)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+
+            Text(channel.name)
+                .font(.caption)
+                .lineLimit(2)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - EPG program cells
+
+    @ViewBuilder
+    private func epgProgramCells(for channel: Media, yBase: CGFloat) -> some View {
+        let programs = vm.programsByChannel[channel.id] ?? []
+        ForEach(programs, id: \.id) { program in
+            if let start = program.programStart, let end = program.programEnd {
+                let xPos = epgXOffset(for: start)
+                let width = max(2, epgProgramWidth(start: start, end: end))
+                Button {
+                    viewModel?.selectedProgram = program
+                } label: {
+                    epgProgramLabel(program)
+                        .frame(width: width - 1, height: epgRowHeight - 2, alignment: .topLeading)
+                }
+                .buttonStyle(.plain)
+                .offset(x: xPos, y: yBase + 1)
+            }
+        }
+    }
+
+    private func epgProgramLabel(_ program: Media) -> some View {
+        let isNow = isProgramNow(program)
+        return VStack(alignment: .leading, spacing: 2) {
+            Text(program.title)
+                .font(.caption)
+                .fontWeight(isNow ? .semibold : .regular)
+                .lineLimit(2)
+            if let start = program.programStart {
+                Text(start, format: .dateTime.hour().minute())
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 3)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(isNow ? Color.brandPrimary.opacity(0.18) : Color.gray.opacity(0.1))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .strokeBorder(isNow ? Color.brandPrimary.opacity(0.6) : Color.gray.opacity(0.2), lineWidth: 0.5)
+        )
+    }
+
+    // MARK: - EPG helpers
+
+    private func epgXOffset(for date: Date) -> CGFloat {
+        CGFloat(date.timeIntervalSince(epgStartDate) / 60) * epgPPM
+    }
+
+    private func epgProgramWidth(start: Date, end: Date) -> CGFloat {
+        CGFloat(end.timeIntervalSince(start) / 60) * epgPPM
+    }
+
+    private func epgDateForX(_ x: CGFloat) -> Date {
+        epgStartDate.addingTimeInterval(TimeInterval(x / epgPPM) * 60)
+    }
+
+    private func epgDayIndex(for date: Date) -> Int {
+        var cal = Calendar.current
+        cal.timeZone = TimeZone(abbreviation: "UTC")!
+        let dayStart = cal.startOfDay(for: date)
+        let days = cal.dateComponents([.day], from: epgStartDate, to: dayStart).day ?? 0
+        return max(0, min(epgTotalDays - 1, days))
+    }
+
+    private func epgHourLabel(hourIndex: Int) -> String {
+        let date = epgStartDate.addingTimeInterval(TimeInterval(hourIndex * 3600))
+        let formatter = DateFormatter()
+        formatter.timeZone = .current
+        if hourIndex % 24 == 0 {
+            formatter.dateFormat = "E d.M."
         } else {
-            Image(systemName: "tv")
-                .foregroundStyle(.secondary)
+            formatter.dateFormat = "HH:mm"
+        }
+        return formatter.string(from: date)
+    }
+
+    private func epgLoadInitialData() {
+        let today = Date()
+        let visibleRows = min(vm.channels.count, 15)
+        for idx in 0..<visibleRows {
+            viewModel?.loadProgramsIfNeeded(for: vm.channels[idx], on: today) { _ in }
         }
     }
 
-    private func isProgramNow(_ program: Media) -> Bool {
-        guard let start = program.programStart, let end = program.programEnd else { return false }
-        let now = Date.now
-        return start <= now && now < end
-    }
+    private func epgLoadVisibleData() {
+        guard !vm.channels.isEmpty else { return }
+        let bufferMinutes: Double = 120
+        let visibleMinDate = epgDateForX(max(0, horizontalOffset - CGFloat(bufferMinutes) * epgPPM))
+        let visibleMaxDate = epgDateForX(horizontalOffset + epgViewportSize.width + CGFloat(bufferMinutes) * epgPPM)
 
-    private func epgLeadingOffset(for programs: [Media]) -> CGFloat {
-        guard let firstStart = programs.first?.programStart else { return 0 }
-        let dayStart = vm.baseDate
-        let offsetMinutes = firstStart.timeIntervalSince(dayStart) / 60
-        guard offsetMinutes > 0 else { return 0 }
-        return CGFloat(offsetMinutes) * pixelsPerMinute
-    }
+        var cal = Calendar.current
+        cal.timeZone = TimeZone(abbreviation: "UTC")!
 
-    private func epgProgramWidth(_ program: Media) -> CGFloat {
-        guard let start = program.programStart, let end = program.programEnd else {
-            return pixelsPerMinute * 30
+        let rowTotal = epgRowHeight + epgRowSpacing
+        let firstRow = max(0, Int(verticalOffset / rowTotal) - 1)
+        let lastRow = min(vm.channels.count - 1, Int((verticalOffset + epgViewportSize.height) / rowTotal) + 1)
+        guard firstRow <= lastRow else { return }
+
+        var current = cal.startOfDay(for: visibleMinDate)
+        while current <= visibleMaxDate {
+            for idx in firstRow...lastRow {
+                viewModel?.loadProgramsIfNeeded(for: vm.channels[idx], on: current) { _ in }
+            }
+            guard let next = cal.date(byAdding: .day, value: 1, to: current) else { break }
+            current = next
         }
-        let durationMinutes = end.timeIntervalSince(start) / 60
-        return max(50, CGFloat(durationMinutes) * pixelsPerMinute)
     }
+
+    // MARK: - Playback
 
     private func playLive(channel: Media) async {
         guard let playback = await viewModel?.resolveLivePlayback(for: channel) else { return }
@@ -438,12 +567,17 @@ struct LiveTVMacView: View {
     private func handleProgramTap(program: Media, channel: Media) async {
         let isNow = isProgramNow(program)
         let isPast = (program.programEnd ?? .distantFuture) < Date.now
-
         if isNow {
             await playLive(channel: channel)
         } else if isPast {
             await playArchive(channelId: channel.id, program: program)
         }
+    }
+
+    private func isProgramNow(_ program: Media) -> Bool {
+        guard let start = program.programStart, let end = program.programEnd else { return false }
+        let now = Date.now
+        return start <= now && now < end
     }
 }
 
@@ -456,7 +590,6 @@ private struct ChannelRowMac: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            // Logo
             channelLogo
                 .frame(width: 40, height: 40)
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))

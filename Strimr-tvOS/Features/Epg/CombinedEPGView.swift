@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import Combine
 
 @MainActor
 struct CombinedEPGView: View {
@@ -93,6 +92,14 @@ struct CombinedEPGView: View {
                 viewModel?.refreshIfDayChanged()
             }
         }
+        .task(id: scenePhase) {
+            guard scenePhase == .active else { return }
+            currentTime = Date()
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                currentTime = Date()
+            }
+        }
         .onChange(of: showDayPicker) { _, isPresented in
             if !isPresented {
                 // 3. Jakmile Picker zmizí, VYNUTÍME focus zpět na grid
@@ -100,9 +107,6 @@ struct CombinedEPGView: View {
                     isGridFocused = true
                 }
             }
-        }
-        .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { _ in
-            currentTime = Date()
         }
         .onPlayPauseCommand { showDayPicker = true }
         .overlay {

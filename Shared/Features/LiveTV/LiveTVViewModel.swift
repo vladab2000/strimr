@@ -31,13 +31,45 @@ final class LiveTVViewModel {
         manager.currentProgram(for: channel)
     }
 
+    // MARK: - UI state (iOS / macOS)
+
+    var mode: LiveTVMode = .channels
+    var selectedDate: Date = .now
+    var selectedProgram: Media? = nil
+    var selectedChannel: Media? = nil
+    var selectedCategory: ChannelCategory? = nil
+
+    var baseDate: Date {
+        var cal = Calendar.current
+        cal.timeZone = TimeZone(abbreviation: "UTC")!
+        return cal.startOfDay(for: selectedDate)
+    }
+
+    var selectedChannelPrograms: [Media] {
+        guard let channel = selectedChannel else { return [] }
+        return programsByChannel[channel.id] ?? []
+    }
+
+    func selectChannel(_ channel: Media) {
+        selectedChannel = channel
+        loadProgramsIfNeeded(for: channel, on: selectedDate) { _ in }
+    }
+
+    func selectCategory(_ category: ChannelCategory?) {
+        selectedCategory = category
+    }
+
+    func loadProgramsIfNeeded(for channel: Media) {
+        loadProgramsIfNeeded(for: channel, on: selectedDate) { _ in }
+    }
+
     // MARK: - EPG dates
 
     var availableDates: [Date] {
         var calendar = Calendar.current
         calendar.timeZone = TimeZone(abbreviation: "UTC")!
         let today = calendar.startOfDay(for: .now)
-        return (-3...0).compactMap { calendar.date(byAdding: .day, value: $0, to: today) }
+        return (-6...0).compactMap { calendar.date(byAdding: .day, value: $0, to: today) }
     }
 
     // MARK: - Lifecycle

@@ -416,10 +416,10 @@ struct PlayerTVView: View {
         case .up:
             showControls(temporarily: true)
         case .left:
-            guard !controlsVisible, !viewModel.isLive else { return }
+            guard !controlsVisible, !viewModel.isLive, viewModel.isPaused else { return }
             quickSeek(by: -seekBackwardInterval)
         case .right:
-            guard !controlsVisible, !viewModel.isLive else { return }
+            guard !controlsVisible, !viewModel.isLive, viewModel.isPaused else { return }
             quickSeek(by: seekForwardInterval)
         default:
             break

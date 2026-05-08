@@ -39,6 +39,12 @@ struct StrimrApp: App {
 //TODO: Pamatovat si i HERO, pro jednotlivé stránky (když se mezi nimi přepíná zůstáva HERO z předchozí) - toto chování je způsobeno MediaFocusModel (globální pamatování Media přes celou aplikaci, asi by mělo být na stránku)
 //TODO: lokalizace
 //TODO: V HomeViewModel by mohlo být načítání MediaCarusel dynamicky, dle konfigurace
+//TODO: Výběr kategorií kanálů
 
 //TODO: Věci nutné upravit i na Serveru
 //TODO: podpora stránkování - nový typ v Media, nebo jen url, která slouží k dočtění další/předchozí stránky
+
+
+//TODO: Po probuzení a změně data je potřeba vylít programy, epg má totiž startovní osu nastavenou na Dnes - 7 dní, ne na konkrétní datum, aby fungovalo i zítra
+	
+

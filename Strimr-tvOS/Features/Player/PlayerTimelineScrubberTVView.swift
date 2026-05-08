@@ -88,10 +88,11 @@ struct PlayerTimelineScrubberTVView: View {
             guard isFocused else { return }
 
             startScrubbingIfNeeded()
+            
             consecutiveMoves += 1
             let multiplier = min(Double(consecutiveMoves), 5)
             let delta = scrubStep * multiplier
-
+            
             switch direction {
             case .left:
                 position = max(0, position - delta)
