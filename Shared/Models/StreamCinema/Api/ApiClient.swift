@@ -8,8 +8,8 @@
 import Foundation
 
 struct ApiClient {
-    static let baseURL = URL(string: "http://192.168.88.136:5020/api/")!
-    //static let baseURL = URL(string: "https://tv.lan.mujrd.cz:5020/api/")!
+    //static let baseURL = URL(string: "http://192.168.88.136:5020/api/")!
+    static let baseURL = URL(string: "https://tv.lan.mujrd.cz:5020/api/")!
 
     static func fetchMenu(urlPath: String = "/") async throws -> [Media] {
         try await fetch(path: "folder", queryItems: [URLQueryItem(name: "url", value: urlPath)])
@@ -18,13 +18,14 @@ struct ApiClient {
     static func fetchStream(urlPath: String = "/") async throws -> String {
         try await fetch(path: "stream", queryItems: [URLQueryItem(name: "url", value: urlPath)])
     }
-
+    
     // MARK: - Search
 
-    static func fetchSearch(text: String, type: String) async throws -> [Media] {
+    static func fetchSearch(text: String, type: String, source: ContentSource) async throws -> [Media] {
         try await fetch(path: "search", queryItems: [
             URLQueryItem(name: "text", value: text),
-            URLQueryItem(name: "type", value: type)
+            URLQueryItem(name: "type", value: type),
+            URLQueryItem(name: "source", value: source.rawValue)
         ])
     }
 

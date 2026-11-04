@@ -12,7 +12,12 @@ final class HomeViewModel {
 
     var watchHistoryManager: WatchHistoryManager?
 
+    @ObservationIgnored private let settingsManager: SettingsManager
     @ObservationIgnored private var loadTask: Task<Void, Never>?
+
+    init(settingsManager: SettingsManager) {
+        self.settingsManager = settingsManager
+    }
 
     var hasContent: Bool {
         !latestVideos.isEmpty || !latestShows.isEmpty || !continueWatching.isEmpty
@@ -55,10 +60,8 @@ final class HomeViewModel {
         defer { isLoading = false }
 
         do {
-            async let videosResult = ApiClient.fetchMenu(urlPath: "/FMovies/latestd")
-            async let showsResult = ApiClient.fetchMenu(urlPath: "/FSeries/latestd")
-
-            let (videos, shows) = try await (videosResult, showsResult)
+            let source = settingsManager.contentSource
+            let (videos, shows) = try await fetchForSource(source)
 
             guard !Task.isCancelled else { return }
 
@@ -69,6 +72,28 @@ final class HomeViewModel {
             latestVideos = []
             latestShows = []
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func fetchForSource(_ source: ContentSource) async throws -> ([Media], [Media]) {
+        switch source {
+        case .streamCinema:
+            async let videos = ApiClient.fetchMenu(urlPath: source.moviesPath)
+            async let shows = ApiClient.fetchMenu(urlPath: source.showsPath)
+            return try await (videos, shows)
+
+        case .bombuj:
+            async let videos = ApiClient.fetchMenu(urlPath: source.moviesPath)
+            async let shows = ApiClient.fetchMenu(urlPath: source.showsPath)
+            return try await (videos, shows)
+
+        case .all:
+            async let scVideos = ApiClient.fetchMenu(urlPath: ContentSource.streamCinema.moviesPath)
+            async let scShows = ApiClient.fetchMenu(urlPath: ContentSource.streamCinema.showsPath)
+            async let bombujVideos = ApiClient.fetchMenu(urlPath: source.bombujMoviesPath)
+            async let bombujShows = ApiClient.fetchMenu(urlPath: source.bombujShowsPath)
+            let (v1, s1, v2, s2) = try await (scVideos, scShows, bombujVideos, bombujShows)
+            return (v1 + v2, s1 + s2)
         }
     }
 }

@@ -24,6 +24,7 @@ struct PlaybackSettings: Codable, Equatable {
 struct AppSettings: Codable, Equatable {
     var playback = PlaybackSettings()
     var tvProvider: ProviderType = ProviderType.selectableCases.first ?? .sweetTV
+    var contentSource: ContentSource = .streamCinema
 
     init() {}
 
@@ -31,5 +32,6 @@ struct AppSettings: Codable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         playback = try container.decodeIfPresent(PlaybackSettings.self, forKey: .playback) ?? PlaybackSettings()
         tvProvider = try container.decodeIfPresent(ProviderType.self, forKey: .tvProvider) ?? ProviderType.selectableCases.first ?? .sweetTV
+        contentSource = try container.decodeIfPresent(ContentSource.self, forKey: .contentSource) ?? .streamCinema
     }
 }

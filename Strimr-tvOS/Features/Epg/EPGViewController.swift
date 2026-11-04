@@ -16,6 +16,7 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
     let viewModel: LiveTVViewModel
     var onProgramSelected: ((Media, Media) -> Void)?
     var onProgramFocused: ((Media?, Media?) -> Void)?
+    var onProgramLongPressed: ((Media, Media) -> Void)?
 
     private var hasScrolledToCurrentTime = false
 
@@ -56,6 +57,10 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
 
         collectionView.register(EPGCell.self, forCellWithReuseIdentifier: "EPGCell")
 
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+        longPress.minimumPressDuration = 0.8
+        collectionView.addGestureRecognizer(longPress)
+
         view.addSubview(collectionView)
 
         collectionView.reloadData()
@@ -74,6 +79,17 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
         loadInitialPrograms()
     }
     
+    // MARK: - Long press
+    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began,
+              let indexPath = lastFocusedIndexPath,
+              indexPath.section < viewModel.channels.count
+        else { return }
+        let channel = viewModel.channels[indexPath.section]
+        guard let program = viewModel.sequentialEPGByChannel[channel.id]?[indexPath.item] else { return }
+        onProgramLongPressed?(program, channel)
+    }
+
     // MARK: - Synchronizace posunu
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
 //        print("scrollViewDidScroll")
@@ -89,14 +105,14 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
     // Když dojde ke změně fokusu, provedu případně vlastní rolování a zavolám onProgramFocused
     func collectionView(_ collectionView: UICollectionView, didUpdateFocusIn context: UICollectionViewFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
         if let nextIndexPath = context.nextFocusedIndexPath {
-//            print("didUpdateFocusIn \(nextIndexPath.section),\(nextIndexPath.item)")
+            print("didUpdateFocusIn \(nextIndexPath.section),\(nextIndexPath.item)")
 
             // Pokud focus dorazil na cílovou buňku z programatického scrollu, neuvolňujeme
             // scrollToItem — pozici viewportu nastaví setContentOffset ve scrollToDate.
             // Zavoláme scrollToItem pouze při přirozeném pohybu focusu uživatelem.
             let wasTargeted = nextIndexPath == self.indexPathToFocus
             if wasTargeted {
-//                print("didUpdateFocusIn INDEXPATH TO FOCUS IS THE SAME, CLEARING")
+                print("didUpdateFocusIn INDEXPATH TO FOCUS IS THE SAME, CLEARING")
                 self.indexPathToFocus = nil
             } else if let frame = collectionView.layoutAttributesForItem(at: nextIndexPath)?.frame {
                 let bounds = collectionView.bounds
@@ -118,7 +134,7 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
     }
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-//        print("didSelectItemAt \(indexPath.section),\(indexPath.item)")
+        print("didSelectItemAt \(indexPath.section),\(indexPath.item)")
         guard indexPath.section < viewModel.channels.count else { return }
         let channel = viewModel.channels[indexPath.section]
         guard let program = viewModel.sequentialEPGByChannel[channel.id]?[indexPath.item] else { return }
@@ -135,10 +151,10 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
     override var preferredFocusEnvironments: [UIFocusEnvironment] {
         if let indexPath = indexPathToFocus ?? lastFocusedIndexPath,
            let cell = collectionView.cellForItem(at: indexPath) {
-//            print("preferredFocusEnvironments -> \(indexPath.section),\(indexPath.item)")
+            print("preferredFocusEnvironments -> \(indexPath.section),\(indexPath.item)")
             return [cell]
         }
-//        print("preferredFocusEnvironments -> default")
+        print("preferredFocusEnvironments -> default")
         return [collectionView]
     }
     
@@ -160,21 +176,23 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         guard section < viewModel.channels.count else { return 0 }
         let channel = viewModel.channels[section]
-        //print("numberOfItemsInSection \(section), \(channel.name)")
-        return viewModel.sequentialEPGByChannel[channel.id]?.count ?? 0
+        let count = viewModel.sequentialEPGByChannel[channel.id]?.count ?? 0
+//        print("numberOfItemsInSection \(section), \(channel.name) -> \(count)")
+        return count
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "EPGCell", for: indexPath) as? EPGCell else {
-//            print("cellForItemAt REUSE FAILED \(indexPath.section),\(indexPath.item)")
+            print("cellForItemAt REUSE FAILED \(indexPath.section),\(indexPath.item)")
             return UICollectionViewCell()
         }
 
         let channel = viewModel.channels[indexPath.section]
         if let program = viewModel.sequentialEPGByChannel[channel.id]?[indexPath.item] {
-//            print("cellForItemAt \(indexPath.section),\(indexPath.item)")
+            print("cellForItemAt \(indexPath.section),\(indexPath.item)")
             cell.configure(with: program)
         } else {
+            print("cellForItemAt PLACEHOLDER \(indexPath.section),\(indexPath.item)")
             cell.configurePlaceholder()
         }
 
@@ -182,7 +200,7 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
     }
     
     func scrollToDate(_ date: Date, animated: Bool = false) {
-//        print("scrollToDate \(date) STARTED")
+        print("scrollToDate \(date) STARTED")
         let channelCount = viewModel.channels.count
         guard channelCount > 0 else { return }
 
@@ -206,16 +224,16 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
                     collectionView.scrollToItem(at: newIndexPath, at: [.centeredVertically, .centeredHorizontally], animated: false)
                     collectionView.layoutIfNeeded()
 
-//                    print("scrollToDate \(date) SCROLL TO \(newIndexPath.section), \(newIndexPath.item)")
+                    print("scrollToDate \(date) SCROLL TO \(newIndexPath.section), \(newIndexPath.item)")
 
                 } else {
-//                    print("scrollToDate \(date) PROGRAM INDEX FOR DATE NOT FOUND")
+                    print("scrollToDate \(date) PROGRAM INDEX FOR DATE NOT FOUND")
                 }
             } else {
-//                print("scrollToDate \(date) PROGRAMS FOR CHANNEL NOT FOUND")
+                print("scrollToDate \(date) PROGRAMS FOR CHANNEL NOT FOUND")
             }
         } else {
-//            print("scrollToDate \(date) INDEXPATH NOT FOUND")
+            print("scrollToDate \(date) INDEXPATH NOT FOUND")
         }
 
         // Cells jsou nyní viditelné — preferredFocusEnvironments vrátí přímý odkaz na buňku
@@ -226,18 +244,29 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
         }
     }
 
+    /// Přepočítá počátek časové osy layoutu a provede reload.
+    /// Volá se po probuzení Apple TV, kdy se mohl změnit den.
+    func refreshTimeline() {
+        epgLayout.refreshTimelineStartDate()
+        collectionView.collectionViewLayout.invalidateLayout()
+        UIView.performWithoutAnimation {
+            collectionView.reloadData()
+        }
+        scrollToCurrentTime(animated: false)
+    }
+
     func scrollToCurrentTime(animated: Bool = false) {
-//        print("scrollToCurrentTime \(Date())")
+        print("scrollToCurrentTime \(Date())")
         collectionView.layoutIfNeeded()
         let nowUTC = Date()
         let targetX = epgLayout.xOffsetForDate(nowUTC) - EPGConstants.pointsPerMinute * 30
-//        print("scrollToCurrentTime \(Date()) -> targetX: \(targetX), contentSize width: \(collectionView.contentSize.width), bounds width: \(collectionView.bounds.width)")
+        print("scrollToCurrentTime \(Date()) -> targetX: \(targetX), contentSize width: \(collectionView.contentSize.width), bounds width: \(collectionView.bounds.width)")
         collectionView.setContentOffset(CGPoint(x: targetX, y: collectionView.contentOffset.y), animated: animated)
     }
     
     
     func checkDataOnScroll(_ scrollView: UIScrollView) {
-//        print("checkDataOnScroll STARTED")
+        print("checkDataOnScroll STARTED")
         let thresholdOffset = 120.0 * epgLayout.pointsPerMinute
 
         let visibleRect = CGRect(origin: scrollView.contentOffset, size: scrollView.bounds.size)
@@ -256,14 +285,42 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
         )
         guard firstSection <= lastSection else { return }
 
+        let group = DispatchGroup()
         for section in firstSection...lastSection {
             guard section < viewModel.channels.count else { continue }
             let channel = viewModel.channels[section]
             for date in targetDates {
-                loadHistoryData(channel: channel, targetDate: date)
+                group.enter()
+                loadHistoryData(channel: channel, targetDate: date) { group.leave() }
             }
         }
-//        print("checkDataOnScroll FINISHED")
+        
+        group.notify(queue: .main) { [weak self] in
+            print("checkDataOnScroll FINISHED")
+            guard let self else { return }
+            
+            UIView.performWithoutAnimation {
+                self.collectionView.reloadData()
+                self.setNeedsFocusUpdate()
+                self.updateFocusIfNeeded()
+            }
+
+/*            for section in firstSection...lastSection {
+                let currentCount = self.collectionView.numberOfItems(inSection: section)
+                let channel = viewModel.channels[section]
+                let newCount = self.viewModel.sequentialEPGByChannel[channel.id]?.count ?? 0
+
+                if currentCount != newCount {
+                    UIView.performWithoutAnimation {
+                        self.collectionView.reloadSections(IndexSet(integer: section))
+                    }
+                } else {
+                    self.collectionView.collectionViewLayout.invalidateLayout()
+                    break
+                }
+            }*/
+        }
+        print("checkDataOnScroll PRE-FINISHED")
     }
     
     // MARK: - Pomocné metody
@@ -271,7 +328,7 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
     /// Načte dnešní programy pro všechny kanály viditelné po prvním zobrazení EPG,
     /// a až po jejich načtení provede jednorázový scroll na aktuální čas.
     private func loadInitialPrograms() {
-//        print("loadInitialPrograms STARTED")
+        print("loadInitialPrograms STARTED")
         let today = Date()
         let channelCount = viewModel.channels.count
         guard channelCount > 0 else { return }
@@ -280,22 +337,54 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
         let visibleRowCount = Int(ceil(view.bounds.height / rowTotal)) + 1
         let lastSection = min(channelCount - 1, visibleRowCount)
 
+        // Načítáme dnešní UTC den i včerejší UTC den: česká vysílací den začíná ~22:00 CEST
+        // (20:00 UTC) a pokrývá celé odpoledne/večer lokálního dne. Programy z tohoto
+        // vysílacího dne jsou v API pod klíčem D-1 UTC, ne D UTC.
+        var utcCal = Calendar.current
+        utcCal.timeZone = TimeZone(abbreviation: "UTC")!
+        let yesterday = utcCal.date(byAdding: .day, value: -1, to: today)!
+
         let group = DispatchGroup()
         for section in 0...lastSection {
             let channel = viewModel.channels[section]
             group.enter()
             loadHistoryData(channel: channel, targetDate: today) { group.leave() }
+            group.enter()
+            loadHistoryData(channel: channel, targetDate: yesterday) { group.leave() }
         }
 
         group.notify(queue: .main) { [weak self] in
-//            print("loadInitialPrograms FINISHED")
-            guard let self, !self.hasScrolledToCurrentTime else { return }
+            print("loadInitialPrograms FINISHED")
+            guard let self else { return }
+/*            for section in 0...lastSection {
+                let currentCount = self.collectionView.numberOfItems(inSection: section)
+                let channel = viewModel.channels[section]
+                let newCount = self.viewModel.sequentialEPGByChannel[channel.id]?.count ?? 0
+
+                if currentCount != newCount {
+                    UIView.performWithoutAnimation {
+                        self.collectionView.reloadSections(IndexSet(integer: section))
+                    }
+                } else {
+                    self.collectionView.collectionViewLayout.invalidateLayout()
+                    break
+                }
+            }*/
+            UIView.performWithoutAnimation {
+                self.collectionView.reloadData()
+                self.setNeedsFocusUpdate()
+                self.updateFocusIfNeeded()
+            }
+            
+            guard !self.hasScrolledToCurrentTime else { return }
             self.hasScrolledToCurrentTime = true
             self.scrollToCurrentTime(animated: false)
         }
     }
 
     /// Převede rozsah X souřadnic na pole půlnočních datumů (UTC), které do rozsahu spadají.
+    /// Zahrnuje vždy i den před prvním viditelným dnem, protože česká vysílací den
+    /// začíná ~22:00 CEST (20:00 UTC) a odpolední programy jsou v API pod D-1 UTC.
     func getTargetDates(minX: CGFloat, maxX: CGFloat) -> [Date] {
         var calendar = Calendar.current
         calendar.timeZone = TimeZone(abbreviation: "UTC")!
@@ -304,7 +393,8 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
         let maxDate = epgLayout.dateForXOffset(maxX)
 
         var dates: [Date] = []
-        var current = calendar.startOfDay(for: minDate)
+        // Začínáme den před minDate — každý UTC den D závisí na API datech pro D a D-1.
+        var current = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: minDate))!
         let end = calendar.startOfDay(for: maxDate)
 
         while current <= end {
@@ -319,7 +409,7 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
     // MARK: - Načtení historie (Zavolá se např. při scrollování doleva)
     
     func loadHistoryData(channel: Media, targetDate: Date, completion: (() -> Void)? = nil) {
-//        print("loadHistoryData \(channel.name) - \(targetDate)")
+        print("loadHistoryData \(channel.name) - \(targetDate)")
         viewModel.loadProgramsIfNeeded(for: channel, on: targetDate, completion: { [weak self] status in
             defer { completion?() }
             guard let self else { return }
@@ -327,10 +417,13 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
 
             if status != .fetched { return }
 
-//            print("loadHistoryData COMPLETE \(channel.name) - \(targetDate) \(status)")
-
             let currentCount = self.collectionView.numberOfItems(inSection: sectionIndex)
             let newCount = self.viewModel.sequentialEPGByChannel[channel.id]?.count ?? 0
+            
+            print("RELOAD section=\(sectionIndex) currentCount=\(currentCount) newCount=\(newCount)")
+            print("loadHistoryData COMPLETE \(channel.name) - \(targetDate) \(status)")
+
+            /*
 
             if currentCount != newCount {
                 UIView.performWithoutAnimation {
@@ -338,7 +431,7 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
                 }
             } else {
                 self.collectionView.collectionViewLayout.invalidateLayout()
-            }
+            }*/
         })
     }
 }

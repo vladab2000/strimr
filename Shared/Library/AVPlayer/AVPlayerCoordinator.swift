@@ -31,14 +31,35 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
     @ObservationIgnored private var timeControlObservation: NSKeyValueObservation?
     @ObservationIgnored private var durationObservation: NSKeyValueObservation?
     @ObservationIgnored private var endObserver: NSObjectProtocol?
+    @ObservationIgnored private var backgroundObserver: NSObjectProtocol?
+    @ObservationIgnored private var foregroundObserver: NSObjectProtocol?
     @ObservationIgnored private var cachedAudioGroup: AVMediaSelectionGroup?
     @ObservationIgnored private var cachedSubtitleGroup: AVMediaSelectionGroup?
+
+    // MARK: - Bitrate monitoring
+    @ObservationIgnored private var bitrateMonitorTimer: Timer?
+    @ObservationIgnored private var lowBitrateStartDate: Date?
+    @ObservationIgnored private var lastKnownPeakBitrate: Double = 0
+
+    // MARK: - Wake restart
+    @ObservationIgnored private var currentURL: URL?
+    @ObservationIgnored private var currentMetadata: AVPlayerMetadata?
+    @ObservationIgnored private var backgroundEntryDate: Date?
+    @ObservationIgnored private var wasPlayingBeforeBackground = false
+
+    private static let lowBitrateThresholdFraction = 0.3
+    private static let lowBitrateDuration: TimeInterval = 30
+    private static let bitrateMonitorInterval: TimeInterval = 10
+    // Minimální doba v pozadí (sekundy) po které restartujeme stream po probuzení
+    private static let backgroundRestartThreshold: TimeInterval = 60
 
     func play(_ url: URL) {
         play(url, seekPosition: nil, metadata: nil)
     }
 
     func play(_ url: URL, seekPosition: Double?, metadata: AVPlayerMetadata?) {
+        currentURL = url
+        currentMetadata = metadata
         cleanup()
 
         let options = [
@@ -47,7 +68,7 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
                 "Referer": "https://www.oneplay.cz/"
                 ]
             ]
-        
+
         let asset = AVURLAsset(url: url, options: options)
         let item = AVPlayerItem(asset: asset)
         if let metadata {
@@ -89,7 +110,7 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
         if let description = metadata.description {
             metadataItems.append(makeMetadataItem(identifier: .commonIdentifierDescription, value: description as NSString))
         }
-        
+
 #if !os(iOS)
         if let startDate = metadata.startDate, let endDate = metadata.endDate, let channel = metadata.subtitle {
             let startDateItem = makeMetadataItem(identifier: AVMetadataIdentifier(AVKitMetadataIdentifierExactStartDate), value: startDate as (NSCopying & NSObjectProtocol))
@@ -267,6 +288,8 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
     }
 
     func destruct() {
+        currentURL = nil
+        currentMetadata = nil
         cleanup()
         player = nil
         playerViewController?.player = nil
@@ -338,8 +361,7 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
                 playbackEnded?()
             }
         }
-        
-        // Přidejte si observer na chyby
+
         NotificationCenter.default.addObserver(forName: .AVPlayerItemNewErrorLogEntry, object: item, queue: .main) { _ in
             guard let errorLog = player.currentItem?.errorLog() else { return }
             for entry in errorLog.events {
@@ -348,8 +370,7 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
                 print("Kód chyby: \(entry.errorStatusCode)")
             }
         }
-        
-        // Sledování síťových statistik (proč se buffer zastavil)
+
         NotificationCenter.default.addObserver(forName: .AVPlayerItemNewAccessLogEntry, object: player.currentItem, queue: .main) { _ in
             guard let accessLog = player.currentItem?.accessLog() else { return }
             for entry in accessLog.events {
@@ -357,10 +378,118 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
                 print("Počet záseků (stalls): \(entry.numberOfStalls)")
             }
         }
-        
+
+        // Sledujeme přechod do pozadí — zaznamenáme stav přehrávání
+        backgroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            self.wasPlayingBeforeBackground = self.player?.timeControlStatus == .playing
+            self.backgroundEntryDate = Date()
+        }
+
+        // Po probuzení: pokud přehrávač běžel a aplikace spala dost dlouho → nová instance AVPlayer
+        foregroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.handleForeground()
+            }
+        }
+
+        // Periodický monitor bitrate — detekuje pokles kvality během přehrávání
+        startBitrateMonitor()
+    }
+
+    // MARK: - Wake restart
+
+    private func handleForeground() {
+        guard
+            wasPlayingBeforeBackground,
+            let bgDate = backgroundEntryDate,
+            Date().timeIntervalSince(bgDate) >= Self.backgroundRestartThreshold,
+            let url = currentURL
+        else {
+            backgroundEntryDate = nil
+            return
+        }
+        backgroundEntryDate = nil
+        print("Wake: aplikace spala \(Int(Date().timeIntervalSince(bgDate)))s — restartuji přehrávač")
+        play(url, seekPosition: nil, metadata: currentMetadata)
+    }
+
+    // MARK: - Bitrate monitor
+
+    private func startBitrateMonitor() {
+        bitrateMonitorTimer?.invalidate()
+        lowBitrateStartDate = nil
+        lastKnownPeakBitrate = 0
+
+        bitrateMonitorTimer = Timer.scheduledTimer(
+            withTimeInterval: Self.bitrateMonitorInterval,
+            repeats: true
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.checkBitrate()
+            }
+        }
+    }
+
+    private func checkBitrate() {
+        guard let player,
+              player.timeControlStatus == .playing,
+              let event = player.currentItem?.accessLog()?.events.last else {
+            return
+        }
+
+        let indicated = event.indicatedBitrate
+        guard indicated > 0 else { return }
+
+        if indicated > lastKnownPeakBitrate {
+            lastKnownPeakBitrate = indicated
+        }
+
+        guard lastKnownPeakBitrate > 0 else { return }
+
+        let ratio = indicated / lastKnownPeakBitrate
+        print("Bitrate monitor: indicated=\(Int(indicated)) peak=\(Int(lastKnownPeakBitrate)) ratio=\(String(format: "%.2f", ratio))")
+
+        if ratio < Self.lowBitrateThresholdFraction {
+            if lowBitrateStartDate == nil {
+                lowBitrateStartDate = Date()
+            }
+
+            let elapsed = Date().timeIntervalSince(lowBitrateStartDate!)
+            print("Bitrate monitor: low bitrate detected for \(Int(elapsed))s")
+
+            if elapsed >= Self.lowBitrateDuration {
+                resetBitrateAdaptation()
+            }
+        } else {
+            lowBitrateStartDate = nil
+        }
+    }
+
+    // Po 30s na nízké kvalitě odstraníme omezení a dáme AVPlayer šanci přehodnotit
+    private func resetBitrateAdaptation() {
+        print("Bitrate reset: vynucené přehodnocení ABR")
+        lowBitrateStartDate = nil
+        lastKnownPeakBitrate = 0
+        player?.currentItem?.preferredPeakBitRate = 0
     }
 
     private func cleanup() {
+        bitrateMonitorTimer?.invalidate()
+        bitrateMonitorTimer = nil
+        lowBitrateStartDate = nil
+        lastKnownPeakBitrate = 0
+        backgroundEntryDate = nil
+        wasPlayingBeforeBackground = false
+
         if let token = timeObserverToken {
             player?.removeTimeObserver(token)
             timeObserverToken = nil
@@ -374,6 +503,14 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
         if let observer = endObserver {
             NotificationCenter.default.removeObserver(observer)
             endObserver = nil
+        }
+        if let observer = backgroundObserver {
+            NotificationCenter.default.removeObserver(observer)
+            backgroundObserver = nil
+        }
+        if let observer = foregroundObserver {
+            NotificationCenter.default.removeObserver(observer)
+            foregroundObserver = nil
         }
         cachedAudioGroup = nil
         cachedSubtitleGroup = nil

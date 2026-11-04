@@ -11,6 +11,7 @@ import SwiftUI
 struct CombinedEPGView: View {
 
     @Environment(ChannelManager.self) private var channelManager
+    @Environment(WatchHistoryManager.self) private var watchHistoryManager
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var coordinator: MainCoordinator
 
@@ -25,6 +26,10 @@ struct CombinedEPGView: View {
     @State private var currentTime: Date = .now
     @State private var showDayPicker = false
     @State private var scrollToDate: Date? = nil
+    @State private var timelineStartDate: Date? = nil
+    @State private var refreshToken: Int = 0
+    @State private var isVisible = false
+    @State private var historyProgram: Media? = nil
 
     let hourWidth: CGFloat = EPGConstants.pointsPerMinute * 60
     let rowHeight = EPGConstants.rowHeight
@@ -79,18 +84,22 @@ struct CombinedEPGView: View {
             }
         }
         .onAppear {
+            isVisible = true
             if viewModel == nil {
                 viewModel = LiveTVViewModel(manager: channelManager)
             }
             viewModel?.reloadIfProviderChanged()
         }
+        .onDisappear {
+            isVisible = false
+        }
         .task {
             await viewModel?.load()
         }
         .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .active {
-                viewModel?.refreshIfDayChanged()
-            }
+            guard isVisible, newPhase == .active else { return }
+            viewModel?.refreshIfDayChanged()
+            refreshToken += 1
         }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
@@ -107,6 +116,17 @@ struct CombinedEPGView: View {
                     isGridFocused = true
                 }
             }
+        }
+        .fullScreenCover(item: $historyProgram) { program in
+            ProgramHistoryView(
+                program: program,
+                providerType: vm.provider,
+                onPlay: { item in
+                    historyProgram = nil
+                    coordinator.showMediaDetail(item)
+                },
+                onDismiss: { historyProgram = nil }
+            )
         }
         .onPlayPauseCommand { showDayPicker = true }
         .overlay {
@@ -167,13 +187,20 @@ struct CombinedEPGView: View {
                         focusedChannel = channel
                     }
                 },
+                onProgramLongPressed: { program, _ in
+                    historyProgram = program
+                },
                 horizontalOffset: $horizontalOffset,
                 verticalOffset: $verticalOffset,
                 scrollToDate: $scrollToDate,
                 showDatePicker: $showDayPicker,
                 epgViewingDate: epgViewingDate,
                 loadData: { date, completion in loadEPGData(for: date, completion: completion) },
-                onDateSelected: { date in scrollToDate = date }
+                onDateSelected: { date in scrollToDate = date },
+                refreshToken: refreshToken,
+                onTimelineStartDate: { date in
+                    if timelineStartDate != date { timelineStartDate = date }
+                }
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.top, timelineHeight)
@@ -250,11 +277,20 @@ struct CombinedEPGView: View {
 
         if isNow || isPast {
             guard let playback = await vm.resolveArchivePlayback(program: program) else { return }
+
+            // Vyhledání uložené pozice z historie sledování
+            let watchRecord = watchHistoryManager.continueWatching.first { $0.id == program.id }
+            let resume: Double? = if let pos = watchRecord?.watchPosition, pos > 0, watchRecord?.watchCompleted != true {
+                Double(pos)
+            } else {
+                nil
+            }
+
             coordinator.showPlayer(
                 streamURL: ApiClient.playbackURL(sessionId: playback.sessionId),
                 sessionId: playback.sessionId,
                 media: program,
-                resumePosition: nil,
+                resumePosition: resume,
                 skipIntroStart: nil,
                 skipIntroEnd: nil,
                 skipTitlesStart: nil,
@@ -301,6 +337,7 @@ struct CombinedEPGView: View {
     // MARK: - Helpers
 
     private var epgStartDate: Date {
+        if let timelineStartDate { return timelineStartDate }
         var cal = Calendar.current
         cal.timeZone = TimeZone(abbreviation: "UTC")!
         let sevenDaysAgo = cal.date(byAdding: .day, value: -7, to: Date()) ?? Date()
@@ -323,12 +360,8 @@ struct CombinedEPGView: View {
     }
 
     private var epgViewingDate: Date {
-        var utcCalendar = Calendar.current
-        utcCalendar.timeZone = TimeZone(abbreviation: "UTC")!
-        let sevenDaysAgo = utcCalendar.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-        let epgStart = utcCalendar.startOfDay(for: sevenDaysAgo)
         let pointsPerMinute = hourWidth / 60
-        return epgStart.addingTimeInterval(TimeInterval(horizontalOffset / pointsPerMinute * 60))
+        return epgStartDate.addingTimeInterval(TimeInterval(horizontalOffset / pointsPerMinute * 60))
     }
 
     private var displayedDateString: String {

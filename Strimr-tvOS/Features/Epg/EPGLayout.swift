@@ -11,13 +11,21 @@ import OSLog
 class EPGAbsoluteLayout: UICollectionViewLayout {
     
     // MARK: - Konfigurace
-    // Fixní počátek osy: půlnoc UTC 7 dní zpět (shodné s výpočtem v timelineLabel)
-    var timelineStartDate: Date = {
+    // Počátek osy: půlnoc UTC 7 dní zpět (shodné s výpočtem v timelineLabel)
+    var timelineStartDate: Date = computeTimelineStart()
+
+    /// Přepočítá timelineStartDate na aktuální "7 dní zpět".
+    /// Volá se po probuzení zařízení, kdy se mohl změnit den.
+    func refreshTimelineStartDate() {
+        timelineStartDate = Self.computeTimelineStart()
+    }
+
+    private static func computeTimelineStart() -> Date {
         var cal = Calendar.current
         cal.timeZone = TimeZone(abbreviation: "UTC")!
         let sevenDaysAgo = cal.date(byAdding: .day, value: -7, to: Date()) ?? Date()
         return cal.startOfDay(for: sevenDaysAgo)
-    }()
+    }
     
     let pointsPerMinute = EPGConstants.pointsPerMinute
     let rowHeight = EPGConstants.rowHeight
@@ -38,13 +46,17 @@ class EPGAbsoluteLayout: UICollectionViewLayout {
 
         let channels = dataSource.viewModel.channels
         let sequentialEPG = dataSource.viewModel.sequentialEPGByChannel
+        var maxRightEdge: CGFloat = 0
 
         layoutCache.removeAll()
-        var maxRightEdge: CGFloat = 0
 
         let numberOfSections = collectionView.numberOfSections
 
         for section in 0..<numberOfSections {
+
+            var minX: CGFloat = 999999999		
+            var maxX: CGFloat = 0
+
             let channel = channels[section]
             guard let programs = sequentialEPG[channel.id] else { continue }
 
@@ -55,20 +67,28 @@ class EPGAbsoluteLayout: UICollectionViewLayout {
                       let start = program.programStart,
                       let end = program.programEnd else { continue }
 
-                let minutesFromStart = start.timeIntervalSince(timelineStartDate) / 60
-                let xPosition = CGFloat(minutesFromStart) * pointsPerMinute
-                let durationMinutes = end.timeIntervalSince(start) / 60
-                let width = max(CGFloat(durationMinutes) * pointsPerMinute - cellSpacing, 1)
+                let startPosition = xOffsetForDate(start)
+                let endPosition = xOffsetForDate(end) - cellSpacing
 
                 let attributes = UICollectionViewLayoutAttributes(forCellWith: IndexPath(item: item, section: section))
-                attributes.frame = CGRect(x: xPosition, y: yPosition, width: width, height: rowHeight)
+                attributes.frame = CGRect(x: startPosition, y: yPosition, width: endPosition - startPosition, height: rowHeight)
                 layoutCache[IndexPath(item: item, section: section)] = attributes
-                maxRightEdge = max(maxRightEdge, xPosition + width)
+                minX = min(minX, startPosition)
+                maxX = max(maxX, endPosition)
+                maxRightEdge = max(maxRightEdge, endPosition)
+                if section != 0 { continue }
+                print("program \(program.name) start=\(start), end=\(end)")
             }
+            print("prepare→ section=\(section) minX=\(Int(minX)) maxX=\(Int(maxX)) from \(dateForXOffset(minX)) to \(dateForXOffset(maxX))")
         }
 
         let totalHeight = CGFloat(numberOfSections) * (rowHeight + rowSpacing)
         contentSize = CGSize(width: maxRightEdge, height: totalHeight)
+
+        let now = Date()
+        let nowX = xOffsetForDate(now)
+        let coversNow = layoutCache.values.filter { $0.frame.minX <= nowX && $0.frame.maxX >= nowX }.count
+        print("prepare→ cache=\(layoutCache.count) nowX=\(Int(nowX)) coversNow=\(coversNow)")
     }
     
     // Tato metoda vrací cílový posun (offset) mřížky po změně fokusu
@@ -99,8 +119,23 @@ class EPGAbsoluteLayout: UICollectionViewLayout {
     }
     
     override func layoutAttributesForElements(in rect: CGRect) -> [UICollectionViewLayoutAttributes]? {
-        // Vracíme pouze ty prvky, které jsou zrovna viditelné na obrazovce
-        return layoutCache.values.filter { $0.frame.intersects(rect) }
+        let result = layoutCache.values.filter { $0.frame.intersects(rect) }
+
+        if result.isEmpty, !layoutCache.isEmpty {
+            let xMatch = layoutCache.values.filter {
+                $0.frame.minX < rect.maxX && $0.frame.maxX > rect.minX
+            }.count
+            let yMatch = layoutCache.values.filter {
+                $0.frame.minY < rect.maxY && $0.frame.maxY > rect.minY
+            }.count
+            print("NO MATCH — rect=\(rect) xMatch=\(xMatch) yMatch=\(yMatch)")
+/*            for (indexPath, attributes) in layoutCache {
+                if indexPath.section != 0 { continue }
+                print("\t[\(indexPath)] \(attributes.frame)")
+            }*/
+        }
+
+        return result
     }
     
     override func layoutAttributesForItem(at indexPath: IndexPath) -> UICollectionViewLayoutAttributes? {

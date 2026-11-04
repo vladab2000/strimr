@@ -28,8 +28,17 @@ final class SettingsManager {
         settings.tvProvider
     }
 
+    var contentSource: ContentSource {
+        settings.contentSource
+    }
+
     func setTvProvider(_ provider: ProviderType) {
         settings.tvProvider = provider
+        persist()
+    }
+
+    func setContentSource(_ source: ContentSource) {
+        settings.contentSource = source
         persist()
     }
 

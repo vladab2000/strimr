@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(SettingsManager.self) private var settingsManager
 
     init() {
         ErrorReporter.start()
@@ -10,7 +11,7 @@ struct ContentView: View {
         ZStack {
             Color("Background").ignoresSafeArea()
 
-            MainTabTVView(homeViewModel: HomeViewModel())
+            MainTabTVView(homeViewModel: HomeViewModel(settingsManager: settingsManager))
         }
     }
 }

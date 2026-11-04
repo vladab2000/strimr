@@ -13,6 +13,7 @@ struct EPGCollectionViewRepresentable: UIViewControllerRepresentable {
     let viewModel: LiveTVViewModel
     var onProgramSelected: ((Media, Media) -> Void)?
     var onProgramFocused: ((Media?, Media?) -> Void)?
+    var onProgramLongPressed: ((Media, Media) -> Void)?
 
     @Binding var horizontalOffset: CGFloat
     @Binding var verticalOffset: CGFloat
@@ -21,6 +22,8 @@ struct EPGCollectionViewRepresentable: UIViewControllerRepresentable {
     var epgViewingDate: Date
     var loadData: ((Date, @escaping () -> Void) -> Void)?
     var onDateSelected: (Date) -> Void
+    var refreshToken: Int = 0
+    var onTimelineStartDate: ((Date) -> Void)?
 
     // MARK: - Coordinator
 
@@ -31,6 +34,10 @@ struct EPGCollectionViewRepresentable: UIViewControllerRepresentable {
         /// True jen tehdy, když jsme picker sami prezentovali — brání dismiss
         /// jakéhokoliv jiného presentedViewController (např. přehrávače).
         var hasPresented = false
+        /// Čítač požadavků na refresh timeline (po probuzení zařízení).
+        var lastHandledRefreshToken: Int = 0
+        /// Poslední oznámená timelineStartDate — posílá se do SwiftUI jen při změně.
+        var lastReportedStartDate: Date?
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -51,6 +58,22 @@ struct EPGCollectionViewRepresentable: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: EPGViewController, context: Context) {
         uiViewController.onProgramSelected = onProgramSelected
         uiViewController.onProgramFocused = onProgramFocused
+        uiViewController.onProgramLongPressed = onProgramLongPressed
+
+        // Refresh timeline po probuzení zařízení — provede se jen jednou na každý token
+        if refreshToken != context.coordinator.lastHandledRefreshToken {
+            context.coordinator.lastHandledRefreshToken = refreshToken
+            uiViewController.refreshTimeline()
+        }
+
+        // Oznámíme aktuální timelineStartDate zpět do SwiftUI — jen při změně
+        let layoutStart = uiViewController.epgLayout.timelineStartDate
+        if layoutStart != context.coordinator.lastReportedStartDate {
+            context.coordinator.lastReportedStartDate = layoutStart
+            DispatchQueue.main.async {
+                onTimelineStartDate?(layoutStart)
+            }
+        }
 
         // DatePicker — EPGViewController je prezentující VC, takže po zavření
         // focus přirozeně vrátí přes jeho preferredFocusEnvironments.

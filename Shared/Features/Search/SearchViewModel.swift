@@ -134,7 +134,11 @@ final class SearchViewModel {
                     providerType: settingsManager.tvProvider
                 )
             } else {
-                result = try await ApiClient.fetchSearch(text: trimmedQuery, type: filter.apiType)
+                result = try await ApiClient.fetchSearch(
+                    text: trimmedQuery,
+                    type: filter.apiType,
+                    source: settingsManager.contentSource
+                )
             }
 
             guard !Task.isCancelled else { return }

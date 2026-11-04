@@ -77,16 +77,19 @@ final class MediaDetailViewModel {
 
         do {
             let items = try await ApiClient.fetchMenu(urlPath: urlPath)
-            let fetchedSeasons = items
-                .filter { $0.itemType == .season }
-            
+
+            // Server may return an enriched version of the series alongside seasons
+            if let enriched = items.first(where: { $0.itemType == .tvshow }) {
+                media = enriched
+            }
+
+            let fetchedSeasons = items.filter { $0.itemType == .season }
+
             if fetchedSeasons.isEmpty {
                 let season = Media.createSeason(from: media)
                 seasons = [season]
 
-                let fetchedEpisodes = items
-                    .filter { $0.itemType == .episode }
-                
+                let fetchedEpisodes = items.filter { $0.itemType == .episode }
                 episodes = fetchedEpisodes
             } else {
                 seasons = fetchedSeasons

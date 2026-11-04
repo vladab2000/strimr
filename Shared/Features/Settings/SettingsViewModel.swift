@@ -61,4 +61,11 @@ final class SettingsViewModel {
             set: { self.settingsManager.setTvProvider($0) },
         )
     }
+
+    var contentSourceBinding: Binding<ContentSource> {
+        Binding(
+            get: { self.settingsManager.contentSource },
+            set: { self.settingsManager.setContentSource($0) },
+        )
+    }
 }

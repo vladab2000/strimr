@@ -24,6 +24,7 @@ final class LiveTVViewModel {
     // MARK: - Categories
 
     var categories: [ChannelCategory] { manager.categories }
+    var provider: ProviderType { manager.provider }
 
     var filteredChannels: [Media] { channels }
 

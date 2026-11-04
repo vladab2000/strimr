@@ -137,14 +137,20 @@ final class ChannelManager {
                 }
 
                 epgCache[channel.id]?[dayStart] = programs
+                let sorted = programs.compactMap(\.programStart).sorted()
+                let first = sorted.first.map { "\($0)" } ?? "nil"
+                let last = sorted.last.map { "\($0)" } ?? "nil"
+                print("API[\(dayStart) ch=\(channelId.prefix(4))] → \(programs.count) programs \(first)…\(last)")
                 mergeProgramsSafely(programs, for: channelId)
                 rebuildSequentialEPG(for: channelId)
                 completion?(.fetched)
 
             } catch {
-                guard !Task.isCancelled else {
+                if Task.isCancelled {
+                    completion?(.canceled)
+                } else {
+                    print("API FETCH ERROR [\(channelId) \(dayStart)]: \(error)")
                     completion?(.error)
-                    return
                 }
             }
         }
@@ -223,9 +229,20 @@ final class ChannelManager {
             }
         }
 
+        let now = Date()
+        let inCacheNow = channelCache.values.flatMap { $0 }.filter {
+            guard let s = $0.programStart, let e = $0.programEnd else { return false }
+            return s <= now && e > now
+        }.count
+        let inSeqNow = sequence.compactMap { $0 }.filter {
+            guard let s = $0.programStart, let e = $0.programEnd else { return false }
+            return s <= now && e > now
+        }.count
+        print("rebuildEPG[\(channelId.prefix(4))]: inCacheNow=\(inCacheNow) inSeqNow=\(inSeqNow)")
+
         sequentialEPGByChannel[channelId] = sequence
     }
-    
+
     /// Vrátí aktuálně vysílaný pořad pro daný kanál.
     func currentProgram(for channel: Media) -> Media? {
         let now = Date()

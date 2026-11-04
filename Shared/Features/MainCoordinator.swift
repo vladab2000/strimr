@@ -117,24 +117,26 @@ final class MainCoordinator: ObservableObject {
         isLoadingStreams = true
         defer { isLoadingStreams = false }
 
-        let streams = await fetchStreams(for: media)
-        appendRoute(.streamSelection(media: media, streams: streams))
+        let (streams, richer) = await fetchStreams(for: media)
+        appendRoute(.streamSelection(media: richer ?? media, streams: streams))
     }
 
-    private func fetchStreams(for media: Media) async -> [Stream] {
-        // Try inline streams first
+    private func fetchStreams(for media: Media) async -> ([Stream], Media?) {
+        // Inline streams: skip folder fetch, no enriched media available
         if let inlineStreams = media.streams, !inlineStreams.isEmpty {
-            return StreamSorter.sorted(inlineStreams)
+            return (StreamSorter.sorted(inlineStreams), nil)
         }
 
         let urlPath = media.url
         do {
             let items = try await ApiClient.fetchMenu(urlPath: urlPath)
             let allStreams = items.flatMap { $0.streams ?? [] }
-            return StreamSorter.sorted(allStreams)
+            // Look for an enriched version of the same item returned alongside streams
+            let richer = items.first(where: { $0.id == media.id })
+            return (StreamSorter.sorted(allStreams), richer)
         } catch {
             debugPrint("Failed to fetch streams:", error)
-            return []
+            return ([], nil)
         }
     }
 
