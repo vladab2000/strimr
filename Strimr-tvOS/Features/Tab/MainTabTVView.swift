@@ -159,6 +159,7 @@ struct MainTabTVView: View {
     private func makePlayerViewModel(streamURL: URL, sessionId: String = "") -> PlayerViewModel {
         let vm = PlayerViewModel(streamURL: streamURL, sessionId: sessionId, title: coordinator.selectedMedia?.title ?? "")
         vm.resumePosition = coordinator.selectedResumePosition
+        vm.externalSubtitles = coordinator.selectedExternalSubtitles
         vm.skipIntroStart = coordinator.selectedSkipIntroStart
         vm.skipIntroEnd = coordinator.selectedSkipIntroEnd
         vm.skipTitlesStart = coordinator.selectedSkipTitlesStart

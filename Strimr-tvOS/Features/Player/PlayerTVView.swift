@@ -142,6 +142,7 @@ struct PlayerTVView: View {
             playerCoordinator.setPlaybackRate(playbackRate)
             awaitingMediaLoad = true
             playerCoordinator.play(viewModel.streamURL)
+            playerCoordinator.addExternalSubtitles(viewModel.externalSubtitles)
             viewModel.onSeek = { [playerCoordinator] position in
                 playerCoordinator.seek(to: position)
             }

@@ -54,9 +54,15 @@ struct MPVPlayerView: UIViewControllerRepresentable {
         @ObservationIgnored var onPropertyChange: ((MPVPlayerViewController, PlayerProperty, Any?) -> Void)?
         @ObservationIgnored var onPlaybackEnded: (() -> Void)?
         @ObservationIgnored var onMediaLoaded: (() -> Void)?
+        /// Externí titulky čekající na načtení videa (sub-add funguje až po MPV_EVENT_FILE_LOADED)
+        @ObservationIgnored var pendingSubtitles: [ExternalSubtitle] = []
 
         func play(_ url: URL) {
             player?.loadFile(url)
+        }
+
+        func addExternalSubtitles(_ subtitles: [ExternalSubtitle]) {
+            pendingSubtitles = subtitles
         }
 
         func togglePlayback() {
@@ -116,6 +122,8 @@ struct MPVPlayerView: UIViewControllerRepresentable {
 
         func fileLoaded() {
             player?.setPlaybackRate(playbackRate)
+            pendingSubtitles.forEach { player?.addSubtitle($0) }
+            pendingSubtitles = []
             onMediaLoaded?()
         }
     }

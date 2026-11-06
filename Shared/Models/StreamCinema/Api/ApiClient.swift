@@ -18,7 +18,12 @@ struct ApiClient {
     static func fetchStream(urlPath: String = "/") async throws -> String {
         try await fetch(path: "stream", queryItems: [URLQueryItem(name: "url", value: urlPath)])
     }
-    
+
+    /// Stream URL včetně externích titulků (Bombuj má titulky jako samostatný .vtt)
+    static func fetchResolvedStream(urlPath: String) async throws -> ResolvedStream {
+        try await fetch(path: "stream/resolve", queryItems: [URLQueryItem(name: "url", value: urlPath)])
+    }
+
     // MARK: - Search
 
     static func fetchSearch(text: String, type: String, source: ContentSource) async throws -> [Media] {

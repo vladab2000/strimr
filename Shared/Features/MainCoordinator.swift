@@ -30,6 +30,7 @@ final class MainCoordinator: ObservableObject {
     @Published var selectedSkipIntroStart: Double?
     @Published var selectedSkipIntroEnd: Double?
     @Published var selectedSkipTitlesStart: Double?
+    @Published var selectedExternalSubtitles: [ExternalSubtitle] = []
     @Published var isPresentingPlayer = false
 
     /// Channel context for LiveTV playback (auto-next program)
@@ -163,6 +164,7 @@ final class MainCoordinator: ObservableObject {
         skipIntroStart: Double? = nil,
         skipIntroEnd: Double? = nil,
         skipTitlesStart: Double? = nil,
+        externalSubtitles: [ExternalSubtitle] = [],
         channel: Media? = nil,
         program: Media? = nil
     ) {
@@ -173,6 +175,7 @@ final class MainCoordinator: ObservableObject {
         selectedSkipIntroStart = skipIntroStart
         selectedSkipIntroEnd = skipIntroEnd
         selectedSkipTitlesStart = skipTitlesStart
+        selectedExternalSubtitles = externalSubtitles
         selectedChannel = channel
         selectedProgram = program
         isPresentingPlayer = true
@@ -186,6 +189,7 @@ final class MainCoordinator: ObservableObject {
         selectedSkipIntroStart = nil
         selectedSkipIntroEnd = nil
         selectedSkipTitlesStart = nil
+        selectedExternalSubtitles = []
         selectedChannel = nil
         selectedProgram = nil
         isPresentingPlayer = false

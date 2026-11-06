@@ -13,4 +13,11 @@ protocol PlayerCoordinating: AnyObject {
     func selectSubtitleTrack(id: Int?)
     func trackList() -> [PlayerTrack]
     func destruct()
+    /// Přidá externí titulky; volat po play(_:), přehrávač je načte až s videem
+    func addExternalSubtitles(_ subtitles: [ExternalSubtitle])
+}
+
+extension PlayerCoordinating {
+    // Přehrávače bez podpory externích titulků (VLC, AVPlayer) je ignorují
+    func addExternalSubtitles(_: [ExternalSubtitle]) {}
 }

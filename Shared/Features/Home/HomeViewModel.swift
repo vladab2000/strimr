@@ -82,7 +82,7 @@ final class HomeViewModel {
             async let shows = ApiClient.fetchMenu(urlPath: source.showsPath)
             return try await (videos, shows)
 
-        case .bombuj:
+        case .bombuj, .uzi:
             async let videos = ApiClient.fetchMenu(urlPath: source.moviesPath)
             async let shows = ApiClient.fetchMenu(urlPath: source.showsPath)
             return try await (videos, shows)
@@ -92,8 +92,10 @@ final class HomeViewModel {
             async let scShows = ApiClient.fetchMenu(urlPath: ContentSource.streamCinema.showsPath)
             async let bombujVideos = ApiClient.fetchMenu(urlPath: source.bombujMoviesPath)
             async let bombujShows = ApiClient.fetchMenu(urlPath: source.bombujShowsPath)
-            let (v1, s1, v2, s2) = try await (scVideos, scShows, bombujVideos, bombujShows)
-            return (v1 + v2, s1 + s2)
+            async let uziVideos = ApiClient.fetchMenu(urlPath: source.uziMoviesPath)
+            async let uziShows = ApiClient.fetchMenu(urlPath: source.uziShowsPath)
+            let (v1, s1, v2, s2, v3, s3) = try await (scVideos, scShows, bombujVideos, bombujShows, uziVideos, uziShows)
+            return (v1 + v2 + v3, s1 + s2 + s3)
         }
     }
 }

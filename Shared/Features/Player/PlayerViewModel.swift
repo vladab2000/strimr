@@ -16,6 +16,9 @@ final class PlayerViewModel {
     var bufferedAhead = 0.0
     var isPaused = false
 
+    /// Externí titulky ke streamu (např. Bombuj .vtt) — přehrávač je přidá po načtení videa
+    var externalSubtitles: [ExternalSubtitle] = []
+
     var resumePosition: Double?
     var onSavePosition: ((Int) -> Void)?
     var onCreateWatchRecord: (() -> Void)?

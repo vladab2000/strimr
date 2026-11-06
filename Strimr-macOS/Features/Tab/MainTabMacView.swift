@@ -136,6 +136,7 @@ struct MainTabMacView: View {
     private func makePlayerViewModel(streamURL: URL, sessionId: String) -> PlayerViewModel {
         let vm = PlayerViewModel(streamURL: streamURL, sessionId: sessionId, title: coordinator.selectedMedia?.title ?? "")
         vm.resumePosition = coordinator.selectedResumePosition
+        vm.externalSubtitles = coordinator.selectedExternalSubtitles
 
         let media = coordinator.selectedMedia
         let isLiveChannel = media?.itemType == .channel

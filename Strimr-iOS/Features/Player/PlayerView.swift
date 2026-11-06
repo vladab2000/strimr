@@ -306,6 +306,7 @@ struct PlayerView: View {
         activePlaybackURL = url
         awaitingMediaLoad = true
         playerCoordinator.play(url)
+        playerCoordinator.addExternalSubtitles(viewModel.externalSubtitles)
         playerCoordinator.setPlaybackRate(playbackRate)
         showControls(temporarily: true)
     }

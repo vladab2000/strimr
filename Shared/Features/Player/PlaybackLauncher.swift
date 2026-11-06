@@ -11,8 +11,8 @@ struct PlaybackLauncher {
         guard let urlPath = stream.url else { return }
 
         do {
-            let urlStr = try await ApiClient.fetchStream(urlPath: urlPath)
-            guard let streamURL = URL(string: urlStr) else { return }
+            let resolved = try await ApiClient.fetchResolvedStream(urlPath: urlPath)
+            guard let streamURL = URL(string: resolved.url) else { return }
 
             let resume: Double? = if let pos = media.watchPosition, pos > 0, media.watchCompleted != true {
                 Double(pos)
@@ -28,7 +28,8 @@ struct PlaybackLauncher {
                     resumePosition: resume,
                     skipIntroStart: stream.skipIntroStart,
                     skipIntroEnd: stream.skipIntroEnd,
-                    skipTitlesStart: stream.skipTitlesStart
+                    skipTitlesStart: stream.skipTitlesStart,
+                    externalSubtitles: resolved.subtitles ?? []
                 )
             }
         } catch {

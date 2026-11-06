@@ -155,6 +155,12 @@ final class MPVPlayerViewController: UIViewController {
         command("loadfile", args: args)
     }
 
+    /// Přidá externí titulky (URL .vtt/.srt) — volat až po načtení souboru (MPV_EVENT_FILE_LOADED)
+    func addSubtitle(_ subtitle: ExternalSubtitle) {
+        // sub-add <url> <select|auto> <title> <lang>
+        command("sub-add", args: [subtitle.url, subtitle.isDefault ? "select" : "auto", subtitle.label ?? "", subtitle.lang ?? ""])
+    }
+
     func togglePause() {
         getFlag(MPVProperty.pause) ? play() : pause()
     }
