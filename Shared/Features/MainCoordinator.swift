@@ -5,6 +5,8 @@ import SwiftUI
 final class MainCoordinator: ObservableObject {
     enum Tab: Hashable {
         case home
+        case movies
+        case shows
         case library
         case search
         case channels
@@ -18,6 +20,8 @@ final class MainCoordinator: ObservableObject {
 
     @Published var tab: Tab = .home
     @Published var homePath = NavigationPath()
+    @Published var moviesPath = NavigationPath()
+    @Published var showsPath = NavigationPath()
     @Published var libraryPath = NavigationPath()
     @Published var searchPath = NavigationPath()
     @Published var channelsPath = NavigationPath()
@@ -38,6 +42,10 @@ final class MainCoordinator: ObservableObject {
     @Published var selectedProgram: Media?
 
     @Published var isLoadingStreams = false
+    /// Text pod ukazatelem průběhu (např. při čekání na stream ze serveru)
+    @Published var loadingMessage: String?
+    /// Chyba přehrávání zobrazená v alertu
+    @Published var errorMessage: String?
 
     var playbackLauncher: PlaybackLauncher?
 
@@ -47,6 +55,10 @@ final class MainCoordinator: ObservableObject {
                 switch tab {
                 case .home:
                     self.homePath
+                case .movies:
+                    self.moviesPath
+                case .shows:
+                    self.showsPath
                 case .library:
                     self.libraryPath
                 case .search:
@@ -61,6 +73,10 @@ final class MainCoordinator: ObservableObject {
                 switch tab {
                 case .home:
                     self.homePath = newValue
+                case .movies:
+                    self.moviesPath = newValue
+                case .shows:
+                    self.showsPath = newValue
                 case .library:
                     self.libraryPath = newValue
                 case .search:
@@ -111,6 +127,7 @@ final class MainCoordinator: ObservableObject {
             showPlayer(streamURL: url, sessionId: playback.sessionId, media: program, resumePosition: resume)
         } catch {
             debugPrint("Failed to resolve program stream:", error)
+            showError(error)
         }
     }
 
@@ -145,6 +162,10 @@ final class MainCoordinator: ObservableObject {
         switch tab {
         case .home:
             homePath.append(route)
+        case .movies:
+            moviesPath.append(route)
+        case .shows:
+            showsPath.append(route)
         case .library:
             libraryPath.append(route)
         case .search:
@@ -154,6 +175,10 @@ final class MainCoordinator: ObservableObject {
         case .more:
             break
         }
+    }
+
+    func showError(_ error: Error) {
+        errorMessage = error.localizedDescription
     }
 
     func showPlayer(

@@ -62,6 +62,7 @@ final class SettingsViewModel {
         )
     }
 
+    /// Poskytovatel pro hledání (Filmy a Seriály mají řadu pro každý zdroj)
     var contentSourceBinding: Binding<ContentSource> {
         Binding(
             get: { self.settingsManager.contentSource },

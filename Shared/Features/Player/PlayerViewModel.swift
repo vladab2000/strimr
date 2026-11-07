@@ -7,6 +7,8 @@ final class PlayerViewModel {
     var streamURL: URL
     var sessionId: String
     var title: String
+    /// Menší řádek nad názvem v ovládání (např. "S01E02 - Název epizody")
+    var subtitle: String?
     var isLive = false
     var isLoading = false
     var errorMessage: String?

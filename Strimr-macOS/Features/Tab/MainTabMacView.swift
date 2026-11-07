@@ -5,10 +5,14 @@ struct MainTabMacView: View {
     @Environment(WatchHistoryManager.self) var watchHistoryManager
     @StateObject var coordinator = MainCoordinator()
     @State var homeViewModel: HomeViewModel
+    @State var moviesViewModel: CatalogViewModel
+    @State var showsViewModel: CatalogViewModel
     @State private var selectedTab: MainCoordinator.Tab? = .home
 
-    init(homeViewModel: HomeViewModel) {
+    init(homeViewModel: HomeViewModel, moviesViewModel: CatalogViewModel, showsViewModel: CatalogViewModel) {
         _homeViewModel = State(initialValue: homeViewModel)
+        _moviesViewModel = State(initialValue: moviesViewModel)
+        _showsViewModel = State(initialValue: showsViewModel)
     }
 
     var body: some View {
@@ -20,6 +24,12 @@ struct MainTabMacView: View {
 
                 Label("tabs.liveTV", systemImage: "tv.and.mediabox")
                     .tag(MainCoordinator.Tab.channels)
+
+                Label("Filmy", systemImage: "film.fill")
+                    .tag(MainCoordinator.Tab.movies)
+
+                Label("Seriály", systemImage: "play.rectangle.on.rectangle.fill")
+                    .tag(MainCoordinator.Tab.shows)
 
                 Label("tabs.library", systemImage: "books.vertical.fill")
                     .tag(MainCoordinator.Tab.library)
@@ -40,6 +50,18 @@ struct MainTabMacView: View {
                         viewModel: homeViewModel,
                         onSelectMedia: coordinator.showMediaDetail,
                     )
+                    .navigationDestination(for: MainCoordinator.Route.self) { route in
+                        destination(for: route)
+                    }
+                }
+            case .movies, .shows:
+                let isMovies = (selectedTab ?? .home) == .movies
+                NavigationStack(path: coordinator.pathBinding(for: isMovies ? .movies : .shows)) {
+                    CatalogListView(
+                        viewModel: isMovies ? moviesViewModel : showsViewModel,
+                        onSelectMedia: coordinator.showMediaDetail,
+                    )
+                    .id(isMovies)
                     .navigationDestination(for: MainCoordinator.Route.self) { route in
                         destination(for: route)
                     }
@@ -78,11 +100,27 @@ struct MainTabMacView: View {
         }
         .overlay {
             if coordinator.isLoadingStreams {
-                ProgressView()
+                ProgressView {
+                    if let message = coordinator.loadingMessage {
+                        Text(message)
+                    }
+                }
                     .controlSize(.large)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(.ultraThinMaterial)
             }
+        }
+        .alert(
+            "Přehrávání se nezdařilo",
+            isPresented: Binding(
+                get: { coordinator.errorMessage != nil },
+                set: { if !$0 { coordinator.errorMessage = nil } }
+            ),
+            presenting: coordinator.errorMessage
+        ) { _ in
+            Button("OK", role: .cancel) {}
+        } message: { message in
+            Text(message)
         }
         .environmentObject(coordinator)
         .onChange(of: selectedTab) { _, newTab in

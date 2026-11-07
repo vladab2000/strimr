@@ -1,7 +1,11 @@
 import SwiftUI
 
+/// Ovládání přehrávače ve stylu systémového přehrávače Apple TV: vlevo menší řádek (epizoda) a název,
+/// vpravo kulatá tlačítka titulků, zvuku a rychlosti, pod nimi časová osa s časem u přehrávací hlavy.
+/// Pozastavení/spuštění stiskem na časové ose nebo tlačítkem Play/Pause na ovladači.
 struct PlayerControlsTVView: View {
     var title: String
+    var subtitle: String?
     var isPaused: Bool
     var supportsHDR: Bool
     @Binding var position: Double
@@ -12,11 +16,7 @@ struct PlayerControlsTVView: View {
     var onShowAudioSettings: () -> Void
     var onShowSubtitleSettings: () -> Void
     var onShowSpeedSettings: () -> Void
-    var onSeekBackward: () -> Void
     var onPlayPause: () -> Void
-    var onSeekForward: () -> Void
-    var seekBackwardSeconds: Int
-    var seekForwardSeconds: Int
     var onScrubbingChanged: (Bool) -> Void
     var onUserInteraction: () -> Void
     var isLive: Bool
@@ -25,43 +25,67 @@ struct PlayerControlsTVView: View {
     var skipTitlesStart: Double?
     @FocusState private var focusedControl: FocusTarget?
 
-    private var playbackBadges: [PlayerControlBadge] {
-        var badges: [PlayerControlBadge] = []
-
-        if supportsHDR {
-            badges.append(
-                PlayerControlBadge(
-                    id: "hdr",
-                    title: String(localized: "player.badge.hdr"),
-                    systemImage: "sparkles",
-                ),
-            )
-        }
-
-        return badges
-    }
-
     var body: some View {
-        VStack(spacing: 16) {
-            HStack(alignment: .top, spacing: 12) {
+        VStack(alignment: .leading, spacing: 0) {
+            Spacer()
+
+            HStack(alignment: .bottom, spacing: 24) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(title)
-                        .font(.title2.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
+                    if let subtitle, !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.callout.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.85))
+                            .lineLimit(1)
+                    }
+
+                    HStack(alignment: .firstTextBaseline, spacing: 16) {
+                        Text(title)
+                            .font(.title2.weight(.bold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+
+                        if supportsHDR {
+                            PlayerBadge(String(localized: "player.badge.hdr"), systemImage: "sparkles")
+                        }
+
+                        if isLive {
+                            Text("LIVE")
+                                .font(.caption.weight(.bold))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(.red, in: Capsule())
+                                .foregroundStyle(.white)
+                        }
+                    }
                 }
 
                 Spacer()
-            }
 
-            Spacer()
+                HStack(spacing: 20) {
+                    PlayerRoundButton(
+                        systemImage: "captions.bubble",
+                        accessibilityLabel: "player.settings.subtitles",
+                        action: onShowSubtitleSettings,
+                    )
 
-            if !isScrubbing {
-                PlayerAuxiliaryControlsTVRow(
-                    badges: playbackBadges,
-                )
-                .padding(.horizontal, 24)
+                    PlayerRoundButton(
+                        systemImage: "waveform",
+                        accessibilityLabel: "player.settings.audio",
+                        action: onShowAudioSettings,
+                    )
+                    .focused($focusedControl, equals: .audio)
+
+                    if !isLive {
+                        PlayerRoundButton(
+                            systemImage: "gauge.with.dots.needle.67percent",
+                            accessibilityLabel: "player.settings.speed",
+                            action: onShowSpeedSettings,
+                        )
+                    }
+                }
             }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 16)
 
             if !isLive {
                 PlayerTimelineView(
@@ -73,124 +97,47 @@ struct PlayerControlsTVView: View {
                     skipIntroStart: skipIntroStart,
                     skipIntroEnd: skipIntroEnd,
                     skipTitlesStart: skipTitlesStart,
+                    onSelect: onPlayPause,
+                    isPaused: isPaused,
                 )
-            }
-
-            ZStack {
-                HStack(spacing: 36) {
-                    if !isLive {
-                        PlayerSettingButton(
-                            systemImage: "speedometer",
-                            action: onShowSpeedSettings,
-                        )
-                    }
-
-                    PlayerSettingButton(
-                        systemImage: "speaker.wave.2",
-                        action: onShowAudioSettings,
-                    )
-
-                    PlayerSettingButton(
-                        systemImage: "captions.bubble",
-                        action: onShowSubtitleSettings,
-                    )
-
-                    Spacer()
-                }
-
-                if !isLive {
-                    HStack(spacing: 30) {
-                        PlayerIconButton(
-                            systemName: iconName(prefix: "gobackward", seconds: seekBackwardSeconds),
-                            accessibilityLabel: String(localized: "player.controls.rewindSeconds \(seekBackwardSeconds)"),
-                            action: onSeekBackward,
-                        )
-
-                        PlayPauseButton(isPaused: isPaused, action: onPlayPause)
-                            .focused($focusedControl, equals: .playPause)
-
-                        PlayerIconButton(
-                            systemName: iconName(prefix: "goforward", seconds: seekForwardSeconds),
-                            accessibilityLabel: String(
-                                localized: "player.controls.skipForwardSeconds \(seekForwardSeconds)",
-                            ),
-                            action: onSeekForward,
-                        )
-                    }
-                }
+                .focused($focusedControl, equals: .timeline)
             }
         }
-        .padding(.horizontal, 40)
-        .padding(.vertical, 28)
+        .padding(.horizontal, 60)
+        .padding(.bottom, 50)
         .background {
             PlayerControlsTVBackground()
         }
         .onAppear {
-            focusedControl = .playPause
+            // Jako systémový přehrávač: fokus na časové ose (vlevo/vpravo posun, stisk = pauza)
+            focusedControl = isLive ? .audio : .timeline
         }
         .onMoveCommand { _ in
             onUserInteraction()
         }
     }
-
-    private func iconName(prefix: String, seconds: Int) -> String {
-        let supported = [5, 10, 15, 30, 45, 60]
-        guard supported.contains(seconds) else { return prefix }
-        return "\(prefix).\(seconds)"
-    }
-}
-
-private struct PlayerControlBadge: Identifiable {
-    var id: String
-    var title: String
-    var systemImage: String?
-}
-
-private struct PlayerAuxiliaryControlsTVRow: View {
-    var badges: [PlayerControlBadge]
-
-    var body: some View {
-        HStack {
-            Spacer()
-            if !badges.isEmpty {
-                HStack(spacing: 8) {
-                    ForEach(badges) { badge in
-                        PlayerBadge(badge.title, systemImage: badge.systemImage)
-                    }
-                }
-            }
-        }
-    }
 }
 
 private enum FocusTarget: Hashable {
-    case playPause
+    case timeline
+    case audio
 }
 
 private struct PlayerControlsTVBackground: View {
     var body: some View {
         VStack(spacing: 0) {
-            LinearGradient(
-                colors: [
-                    .black.opacity(0.55),
-                    .clear,
-                ],
-                startPoint: .top,
-                endPoint: .bottom,
-            )
-            .frame(height: 200)
-
             Spacer()
 
             LinearGradient(
                 colors: [
                     .clear,
-                    .black.opacity(0.7),
+                    .black.opacity(0.45),
+                    .black.opacity(0.8),
                 ],
                 startPoint: .top,
                 endPoint: .bottom,
             )
-            .frame(height: 280)
+            .frame(height: 440)
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)

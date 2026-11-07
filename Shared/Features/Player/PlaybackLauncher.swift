@@ -10,9 +10,24 @@ struct PlaybackLauncher {
     ) async {
         guard let urlPath = stream.url else { return }
 
+        // Získání streamu může trvat i několik sekund (uzi.la spouští přehrávač na serveru)
+        await MainActor.run {
+            coordinator.loadingMessage = "Připravuji přehrávání…"
+            coordinator.isLoadingStreams = true
+        }
+        defer {
+            Task { @MainActor in
+                coordinator.isLoadingStreams = false
+                coordinator.loadingMessage = nil
+            }
+        }
+
         do {
             let resolved = try await ApiClient.fetchResolvedStream(urlPath: urlPath)
-            guard let streamURL = URL(string: resolved.url) else { return }
+            guard let streamURL = URL(string: resolved.url) else {
+                await MainActor.run { coordinator.errorMessage = "Server vrátil neplatnou adresu streamu." }
+                return
+            }
 
             let resume: Double? = if let pos = media.watchPosition, pos > 0, media.watchCompleted != true {
                 Double(pos)
@@ -34,6 +49,7 @@ struct PlaybackLauncher {
             }
         } catch {
             debugPrint("Failed to resolve stream:", error)
+            await MainActor.run { coordinator.showError(error) }
         }
     }
 }

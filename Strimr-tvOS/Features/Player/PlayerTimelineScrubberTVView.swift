@@ -9,6 +9,7 @@ struct PlayerTimelineScrubberTVView: View {
     var skipIntroStart: Double?
     var skipIntroEnd: Double?
     var skipTitlesStart: Double?
+    var onSelect: (() -> Void)?
 
     @State private var consecutiveMoves = 0
     @State private var isScrubbing = false
@@ -34,20 +35,22 @@ struct PlayerTimelineScrubberTVView: View {
             let bufferedWidth = width * min(max(bufferedProgress, 0), 1)
             let thumbX = min(max(progressWidth, 0), width)
 
+            let barHeight: CGFloat = isFocused ? 10 : 6
+
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(Color.white.opacity(0.35))
-                    .frame(height: 8, alignment: .center)
+                    .fill(Color.white.opacity(0.25))
+                    .frame(height: barHeight, alignment: .center)
 
                 Capsule()
-                    .fill(Color.white.opacity(0.65))
+                    .fill(Color.white.opacity(0.45))
                     .frame(width: bufferedWidth)
-                    .frame(height: 8, alignment: .center)
+                    .frame(height: barHeight, alignment: .center)
 
                 Capsule()
                     .fill(Color.white)
                     .frame(width: progressWidth)
-                    .frame(height: 8, alignment: .center)
+                    .frame(height: barHeight, alignment: .center)
 
                 // Intro region
                 if let introEnd = skipIntroEnd, introEnd > 0, upperBound > 0 {
@@ -56,7 +59,7 @@ struct PlayerTimelineScrubberTVView: View {
                     let w = width * ((introEnd - introStart) / upperBound)
                     RoundedRectangle(cornerRadius: 4, style: .continuous)
                         .fill(Color.yellow.opacity(0.5))
-                        .frame(width: max(w, 3), height: 8)
+                        .frame(width: max(w, 3), height: barHeight)
                         .offset(x: x)
                 }
 
@@ -66,24 +69,40 @@ struct PlayerTimelineScrubberTVView: View {
                     let w = width - x
                     RoundedRectangle(cornerRadius: 4, style: .continuous)
                         .fill(Color.blue.opacity(0.4))
-                        .frame(width: max(w, 3), height: 8)
+                        .frame(width: max(w, 3), height: barHeight)
                         .offset(x: x)
                 }
 
-                Circle()
+                // Jezdec jen při fokusu (systémový přehrávač ho bez fokusu nezobrazuje)
+                Capsule()
                     .fill(Color.white)
-                    .frame(width: 28, height: 28)
-                    .scaleEffect(isFocused ? 1.0 : 0.75)
-                    .shadow(color: .black.opacity(0.45), radius: 10, x: 0, y: 6)
-                    .offset(x: max(0, thumbX - 16))
-                    .animation(.easeInOut(duration: 0.15), value: isFocused)
+                    .frame(width: 6, height: 30)
+                    .shadow(color: .black.opacity(0.45), radius: 8, x: 0, y: 4)
+                    .offset(x: max(0, thumbX - 3))
+                    .opacity(isFocused ? 1 : 0)
+
+                // Čas nad jezdcem při posouvání
+                if isScrubbing {
+                    Text(Self.formatTime(position))
+                        .font(.callout.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(.white, in: Capsule())
+                        .fixedSize()
+                        .position(x: min(max(thumbX, 50), width - 50), y: -34)
+                }
             }
+            .frame(maxHeight: .infinity)
             .animation(.easeInOut(duration: 0.15), value: isFocused)
         }
         .contentShape(Rectangle())
         .frame(maxWidth: .infinity, maxHeight: 32)
         .focusable()
         .focused($isFocused)
+        .onTapGesture {
+            onSelect?()
+        }
         .onMoveCommand { direction in
             guard isFocused else { return }
 
@@ -113,6 +132,14 @@ struct PlayerTimelineScrubberTVView: View {
             commitWorkItem?.cancel()
         }
         .accessibilityHidden(true)
+    }
+
+    static func formatTime(_ seconds: Double) -> String {
+        let total = max(Int(seconds.rounded()), 0)
+        let hours = total / 3600, minutes = (total % 3600) / 60, secs = total % 60
+        return hours > 0
+            ? String(format: "%d:%02d:%02d", hours, minutes, secs)
+            : String(format: "%02d:%02d", minutes, secs)
     }
 
     private func startScrubbingIfNeeded() {

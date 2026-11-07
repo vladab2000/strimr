@@ -7,8 +7,8 @@ struct SettingsView: View {
     var body: some View {
         let viewModel = SettingsViewModel(settingsManager: settingsManager)
         List {
-            Section("Zdroj obsahu") {
-                Picker("Poskytovatel filmů a seriálů", selection: viewModel.contentSourceBinding) {
+            Section("Hledání") {
+                Picker("Poskytovatel pro hledání", selection: viewModel.contentSourceBinding) {
                     ForEach(ContentSource.allCases) { source in
                         Text(source.displayName).tag(source)
                     }

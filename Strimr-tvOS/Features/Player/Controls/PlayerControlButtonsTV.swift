@@ -55,16 +55,20 @@ struct SkipMarkerButton: View {
     }
 }
 
-struct PlayerSettingButton: View {
+/// Kulaté ikonové tlačítko vpravo od názvu (titulky, zvuk) jako v systémovém přehrávači
+struct PlayerRoundButton: View {
     var systemImage: String
+    var accessibilityLabel: LocalizedStringKey
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .foregroundStyle(.foreground)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                .font(.body.weight(.semibold))
+                .frame(width: 36, height: 36)
         }
+        .buttonStyle(.glass)
+        .buttonBorderShape(.circle)
+        .accessibilityLabel(Text(accessibilityLabel))
     }
 }

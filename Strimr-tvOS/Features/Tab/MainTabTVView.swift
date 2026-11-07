@@ -7,11 +7,15 @@ struct MainTabTVView: View {
     @Environment(ChannelManager.self) var channelManager
     @StateObject var coordinator = MainCoordinator()
     @State var homeViewModel: HomeViewModel
+    @State var moviesViewModel: CatalogViewModel
+    @State var showsViewModel: CatalogViewModel
     @State private var currentDate = Date()
     let timer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
-    init(homeViewModel: HomeViewModel) {
+    init(homeViewModel: HomeViewModel, moviesViewModel: CatalogViewModel, showsViewModel: CatalogViewModel) {
         _homeViewModel = State(initialValue: homeViewModel)
+        _moviesViewModel = State(initialValue: moviesViewModel)
+        _showsViewModel = State(initialValue: showsViewModel)
     }
     
     var body: some View {
@@ -49,6 +53,30 @@ struct MainTabTVView: View {
                 }
             }
             
+            Tab("Filmy", systemImage: "film.fill", value: MainCoordinator.Tab.movies) {
+                NavigationStack(path: coordinator.pathBinding(for: .movies)) {
+                    CatalogTVView(
+                        viewModel: moviesViewModel,
+                        onSelectMedia: coordinator.showMediaDetail
+                    )
+                    .navigationDestination(for: MainCoordinator.Route.self) { route in
+                        destination(for: route)
+                    }
+                }
+            }
+
+            Tab("Seriály", systemImage: "play.rectangle.on.rectangle.fill", value: MainCoordinator.Tab.shows) {
+                NavigationStack(path: coordinator.pathBinding(for: .shows)) {
+                    CatalogTVView(
+                        viewModel: showsViewModel,
+                        onSelectMedia: coordinator.showMediaDetail
+                    )
+                    .navigationDestination(for: MainCoordinator.Route.self) { route in
+                        destination(for: route)
+                    }
+                }
+            }
+
             Tab("tabs.library", systemImage: "books.vertical.fill", value: MainCoordinator.Tab.library) {
                 NavigationStack(path: coordinator.pathBinding(for: .library)) {
                     LibraryTVView(
@@ -86,10 +114,26 @@ struct MainTabTVView: View {
         }
         .overlay {
             if coordinator.isLoadingStreams {
-                ProgressView()
+                ProgressView {
+                    if let message = coordinator.loadingMessage {
+                        Text(message)
+                    }
+                }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(.ultraThinMaterial)
             }
+        }
+        .alert(
+            "Přehrávání se nezdařilo",
+            isPresented: Binding(
+                get: { coordinator.errorMessage != nil },
+                set: { if !$0 { coordinator.errorMessage = nil } }
+            ),
+            presenting: coordinator.errorMessage
+        ) { _ in
+            Button("OK", role: .cancel) {}
+        } message: { message in
+            Text(message)
         }
         .environmentObject(coordinator)
         .fullScreenCover(isPresented: $coordinator.isPresentingPlayer, onDismiss: {
@@ -166,6 +210,7 @@ struct MainTabTVView: View {
         vm.autoSkipIntro = settingsManager.playback.autoSkipIntro
 
         let media = coordinator.selectedMedia
+        vm.subtitle = media?.secondaryLabel
         let isLiveChannel = media?.itemType == .channel
         vm.isLive = isLiveChannel
 

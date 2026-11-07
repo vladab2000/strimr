@@ -9,6 +9,10 @@ struct PlayerTimelineView: View {
     var skipIntroStart: Double?
     var skipIntroEnd: Double?
     var skipTitlesStart: Double?
+    /// tvOS: stisk na časové ose (systémový přehrávač tím pozastavuje/spouští)
+    var onSelect: (() -> Void)? = nil
+    /// tvOS: ikona pauzy u času pod přehrávací hlavou
+    var isPaused = false
 
     private var sliderUpperBound: Double {
         max(duration ?? 0, position, playbackPosition, 1)
@@ -48,6 +52,7 @@ struct PlayerTimelineView: View {
                     skipIntroStart: skipIntroStart,
                     skipIntroEnd: skipIntroEnd,
                     skipTitlesStart: skipTitlesStart,
+                    onSelect: onSelect,
                 )
             #else
                 ZStack {
@@ -58,14 +63,38 @@ struct PlayerTimelineView: View {
                 }
             #endif
 
-            HStack {
-                Text(elapsedText)
-                Spacer()
-                Text(remainingText)
-            }
-            .font(.footnote.monospacedDigit())
-            .foregroundStyle(.white.opacity(0.9))
-            .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+            #if os(tvOS)
+                // Uplynulý čas jede s přehrávací hlavou (jako systémový přehrávač)
+                GeometryReader { proxy in
+                    let width = proxy.size.width
+                    let progress = sliderUpperBound > 0 ? min(max(position / sliderUpperBound, 0), 1) : 0
+                    ZStack(alignment: .trailing) {
+                        HStack(spacing: 8) {
+                            Text(elapsedText)
+                            if isPaused {
+                                Image(systemName: "pause.circle")
+                            }
+                        }
+                        .fixedSize()
+                        .position(x: min(max(width * progress, 50), max(width - 190, 50)), y: proxy.size.height / 2)
+
+                        Text(remainingText)
+                    }
+                    .frame(width: width, height: proxy.size.height)
+                }
+                .frame(height: 30)
+                .font(.footnote.monospacedDigit().weight(.semibold))
+                .foregroundStyle(.white.opacity(0.9))
+            #else
+                HStack {
+                    Text(elapsedText)
+                    Spacer()
+                    Text(remainingText)
+                }
+                .font(.footnote.monospacedDigit())
+                .foregroundStyle(.white.opacity(0.9))
+                .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+            #endif
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 8)

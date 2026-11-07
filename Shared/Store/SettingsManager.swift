@@ -32,6 +32,10 @@ final class SettingsManager {
         settings.contentSource
     }
 
+    var catalogFilter: CatalogFilter {
+        settings.catalogFilter
+    }
+
     func setTvProvider(_ provider: ProviderType) {
         settings.tvProvider = provider
         persist()
@@ -39,6 +43,11 @@ final class SettingsManager {
 
     func setContentSource(_ source: ContentSource) {
         settings.contentSource = source
+        persist()
+    }
+
+    func setCatalogFilter(_ filter: CatalogFilter) {
+        settings.catalogFilter = filter
         persist()
     }
 

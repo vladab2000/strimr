@@ -22,12 +22,9 @@ struct PlayerTVView: View {
     @State private var awaitingMediaLoad = false
     @State private var timelinePosition = 0.0
     @State private var activeSettingsSheet: PlayerSettingsSheet?
-    @State private var seekFeedback: SeekFeedback?
-    @State private var seekFeedbackWorkItem: DispatchWorkItem?
     @FocusState private var focusedPlayerSurface: PlayerFocusTarget?
 
     private let controlsHideDelay: TimeInterval = 3.0
-    private let seekFeedbackDelay: TimeInterval = 1.2
 
     private var seekBackwardInterval: Double {
         Double(settingsManager.playback.seekBackwardSeconds)
@@ -102,6 +99,7 @@ struct PlayerTVView: View {
                 if controlsVisible {
                     PlayerControlsTVView(
                         title: bindableViewModel.title,
+                        subtitle: bindableViewModel.subtitle,
                         isPaused: bindableViewModel.isPaused,
                         supportsHDR: supportsHDR,
                         position: timelineBinding,
@@ -112,11 +110,7 @@ struct PlayerTVView: View {
                         onShowAudioSettings: showAudioSettings,
                         onShowSubtitleSettings: showSubtitleSettings,
                         onShowSpeedSettings: showSpeedSettings,
-                        onSeekBackward: { jump(by: -seekBackwardInterval) },
                         onPlayPause: togglePlayPause,
-                        onSeekForward: { jump(by: seekForwardInterval) },
-                        seekBackwardSeconds: settingsManager.playback.seekBackwardSeconds,
-                        seekForwardSeconds: settingsManager.playback.seekForwardSeconds,
                         onScrubbingChanged: handleScrubbing(editing:),
                         onUserInteraction: { showControls(temporarily: true) },
                         isLive: bindableViewModel.isLive,
@@ -130,10 +124,6 @@ struct PlayerTVView: View {
                 if bindableViewModel.showSkipIntroButton && !bindableViewModel.autoSkipIntro {
                     skipIntroButton
                         .transition(.move(edge: .trailing).combined(with: .opacity))
-                }
-
-                if let seekFeedback {
-                    seekFeedbackOverlay(seekFeedback)
                 }
             }
         }
@@ -152,7 +142,6 @@ struct PlayerTVView: View {
             viewModel.stopKeepalive()
             viewModel.handleStop()
             hideControlsWorkItem?.cancel()
-            seekFeedbackWorkItem?.cancel()
             playerCoordinator.destruct()
         }
         .onPlayPauseCommand {
@@ -321,14 +310,11 @@ struct PlayerTVView: View {
         showControls(temporarily: true)
     }
 
-    private func jump(by seconds: Double) {
-        playerCoordinator.seek(by: seconds)
-        showControls(temporarily: true)
-    }
-
+    /// Skok šipkou bez zobrazeného ovládání — zobrazí ovládání s časovou osou (fokus na ní, další šipky posouvají)
     private func quickSeek(by seconds: Double) {
         playerCoordinator.seek(by: seconds)
-        showSeekFeedback(forward: seconds > 0, seconds: Int(abs(seconds)))
+        timelinePosition = min(max(viewModel.position + seconds, 0), viewModel.duration ?? .greatestFiniteMagnitude)
+        showControls(temporarily: true)
     }
 
     private func handleMediaLoaded() {
@@ -381,6 +367,11 @@ struct PlayerTVView: View {
         hideControlsWorkItem?.cancel()
 
         let workItem = DispatchWorkItem {
+            // Při pauze zůstává ovládání zobrazené (jako systémový přehrávač)
+            guard !viewModel.isPaused || activeSettingsSheet != nil else {
+                scheduleControlsHide()
+                return
+            }
             withAnimation(.easeInOut) {
                 controlsVisible = false
             }
@@ -390,56 +381,20 @@ struct PlayerTVView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + controlsHideDelay, execute: workItem)
     }
 
-    private func seekFeedbackOverlay(_ feedback: SeekFeedback) -> some View {
-        VStack {
-            Spacer()
-            HStack(spacing: 12) {
-                Image(systemName: feedback.systemImage)
-                    .font(.title2.weight(.semibold))
-                Text(feedback.text)
-                    .font(.title3.weight(.semibold))
-            }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 18)
-            .padding(.vertical, 12)
-            .background(.black.opacity(0.7), in: Capsule(style: .continuous))
-            .overlay(
-                Capsule(style: .continuous)
-                    .stroke(Color.white.opacity(0.15), lineWidth: 1),
-            )
-            Spacer()
-        }
-        .padding(.bottom, 120)
-    }
-
     private func handleMoveCommand(_ direction: MoveCommandDirection) {
         switch direction {
         case .up:
             showControls(temporarily: true)
+        // Vlevo/vpravo bez zobrazeného ovládání = skok zpět/vpřed (i během přehrávání)
         case .left:
-            guard !controlsVisible, !viewModel.isLive, viewModel.isPaused else { return }
+            guard !controlsVisible, !viewModel.isLive else { return }
             quickSeek(by: -seekBackwardInterval)
         case .right:
-            guard !controlsVisible, !viewModel.isLive, viewModel.isPaused else { return }
+            guard !controlsVisible, !viewModel.isLive else { return }
             quickSeek(by: seekForwardInterval)
         default:
             break
         }
-    }
-
-    private func showSeekFeedback(forward: Bool, seconds: Int) {
-        let feedback = SeekFeedback(forward: forward, seconds: seconds)
-        seekFeedbackWorkItem?.cancel()
-        seekFeedback = feedback
-
-        let workItem = DispatchWorkItem {
-            withAnimation(.easeInOut) {
-                seekFeedback = nil
-            }
-        }
-
-        seekFeedbackWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + seekFeedbackDelay, execute: workItem)
     }
 }
 
@@ -461,22 +416,6 @@ private enum PlayerSettingsSheet: String, Identifiable {
         case .speed:
             "player.settings.speed"
         }
-    }
-}
-
-private struct SeekFeedback: Equatable {
-    let forward: Bool
-    let seconds: Int
-
-    var text: String {
-        if forward {
-            return String(localized: "player.controls.skipForwardSeconds \(seconds)")
-        }
-        return String(localized: "player.controls.rewindSeconds \(seconds)")
-    }
-
-    var systemImage: String {
-        forward ? "goforward" : "gobackward"
     }
 }
 

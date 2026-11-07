@@ -5,9 +5,13 @@ struct MainTabView: View {
     @Environment(WatchHistoryManager.self) var watchHistoryManager
     @StateObject var coordinator = MainCoordinator()
     @State var homeViewModel: HomeViewModel
+    @State var moviesViewModel: CatalogViewModel
+    @State var showsViewModel: CatalogViewModel
 
-    init(homeViewModel: HomeViewModel) {
+    init(homeViewModel: HomeViewModel, moviesViewModel: CatalogViewModel, showsViewModel: CatalogViewModel) {
         _homeViewModel = State(initialValue: homeViewModel)
+        _moviesViewModel = State(initialValue: moviesViewModel)
+        _showsViewModel = State(initialValue: showsViewModel)
     }
 
     var body: some View {
@@ -57,6 +61,30 @@ struct MainTabView: View {
                 }
             }
 
+            Tab("Filmy", systemImage: "film.fill", value: MainCoordinator.Tab.movies) {
+                NavigationStack(path: coordinator.pathBinding(for: .movies)) {
+                    CatalogListView(
+                        viewModel: moviesViewModel,
+                        onSelectMedia: coordinator.showMediaDetail
+                    )
+                    .navigationDestination(for: MainCoordinator.Route.self) {
+                        destination(for: $0)
+                    }
+                }
+            }
+
+            Tab("Seriály", systemImage: "play.rectangle.on.rectangle.fill", value: MainCoordinator.Tab.shows) {
+                NavigationStack(path: coordinator.pathBinding(for: .shows)) {
+                    CatalogListView(
+                        viewModel: showsViewModel,
+                        onSelectMedia: coordinator.showMediaDetail
+                    )
+                    .navigationDestination(for: MainCoordinator.Route.self) {
+                        destination(for: $0)
+                    }
+                }
+            }
+
             Tab("tabs.more", systemImage: "ellipsis.circle", value: MainCoordinator.Tab.more) {
                 NavigationStack(path: coordinator.pathBinding(for: .more)) {
                     SettingsView()
@@ -65,11 +93,27 @@ struct MainTabView: View {
         }
         .overlay {
             if coordinator.isLoadingStreams {
-                ProgressView()
+                ProgressView {
+                    if let message = coordinator.loadingMessage {
+                        Text(message)
+                    }
+                }
                     .controlSize(.large)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(.ultraThinMaterial)
             }
+        }
+        .alert(
+            "Přehrávání se nezdařilo",
+            isPresented: Binding(
+                get: { coordinator.errorMessage != nil },
+                set: { if !$0 { coordinator.errorMessage = nil } }
+            ),
+            presenting: coordinator.errorMessage
+        ) { _ in
+            Button("OK", role: .cancel) {}
+        } message: { message in
+            Text(message)
         }
         .environmentObject(coordinator)
         .fullScreenCover(isPresented: $coordinator.isPresentingPlayer, onDismiss: {

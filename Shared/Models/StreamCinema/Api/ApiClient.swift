@@ -24,6 +24,11 @@ struct ApiClient {
         try await fetch(path: "stream/resolve", queryItems: [URLQueryItem(name: "url", value: urlPath)])
     }
 
+    /// Žánry pro filtr seznamů (CatalogFilter.genre), které poskytovatel umí
+    static func fetchCatalogGenres(source: ContentSource) async throws -> [CatalogGenre] {
+        try await fetch(path: "catalog/genres", queryItems: [URLQueryItem(name: "source", value: source.rawValue)])
+    }
+
     // MARK: - Search
 
     static func fetchSearch(text: String, type: String, source: ContentSource) async throws -> [Media] {
@@ -156,9 +161,9 @@ struct ApiClient {
 
         let (data, response) = try await URLSession.shared.data(from: url)
         
-        // Kontrola HTTP statusu
+        // Kontrola HTTP statusu — chyba se zprávou ze serveru ({"error":{"message":…}})
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
-            throw URLError(.badServerResponse)
+            throw ApiError(statusCode: (response as? HTTPURLResponse)?.statusCode ?? 0, data: data)
         }
 
         // Speciální případ pro String (např. fetchStream)
@@ -286,5 +291,26 @@ struct ApiClient {
 
     private static func dateString(for date: Date) -> String {
         dateFormatter.string(from: date)
+    }
+}
+
+/// Chyba API se zprávou ze serveru (UserFriendlyException), jinak obecná hláška s HTTP kódem
+struct ApiError: LocalizedError {
+    let statusCode: Int
+    let message: String?
+
+    init(statusCode: Int, data: Data) {
+        self.statusCode = statusCode
+        struct Body: Decodable {
+            struct Info: Decodable { let message: String? }
+            let error: Info?
+        }
+        let serverMessage = (try? JSONDecoder().decode(Body.self, from: data))?.error?.message
+        // Neošetřená výjimka na serveru vrací jen klíč "InternalServerErrorMessage"
+        message = serverMessage == "InternalServerErrorMessage" ? nil : serverMessage
+    }
+
+    var errorDescription: String? {
+        message ?? "Chyba serveru (HTTP \(statusCode))"
     }
 }

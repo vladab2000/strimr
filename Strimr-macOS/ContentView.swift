@@ -6,7 +6,11 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             Color("Background").ignoresSafeArea()
-            MainTabMacView(homeViewModel: HomeViewModel(settingsManager: settingsManager))
+            MainTabMacView(
+                homeViewModel: HomeViewModel(),
+                moviesViewModel: CatalogViewModel(kind: .movies, settingsManager: settingsManager),
+                showsViewModel: CatalogViewModel(kind: .shows, settingsManager: settingsManager),
+            )
         }
     }
 }

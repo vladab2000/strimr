@@ -29,37 +29,12 @@ struct HomeMacView: View {
                     }
                 }
 
-                if !viewModel.latestVideos.isEmpty {
-                    MediaHubSection(title: String(localized: "home.latestVideos")) {
-                        MediaCarousel(
-                            layout: .portrait,
-                            items: viewModel.latestVideos,
-                            showsLabels: true,
-                            onSelectMedia: onSelectMedia,
-                        )
-                    }
-                }
-
-                if !viewModel.latestShows.isEmpty {
-                    MediaHubSection(title: String(localized: "home.latestShows")) {
-                        MediaCarousel(
-                            layout: .portrait,
-                            items: viewModel.latestShows,
-                            showsLabels: true,
-                            onSelectMedia: onSelectMedia,
-                        )
-                    }
-                }
-
                 if viewModel.isLoading, !viewModel.hasContent {
                     ProgressView("home.loading")
                         .frame(maxWidth: .infinity)
                 }
 
-                if let errorMessage = viewModel.errorMessage {
-                    Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.red)
-                } else if !viewModel.hasContent, !viewModel.isLoading {
+                if !viewModel.hasContent, !viewModel.isLoading {
                     Text("common.empty.nothingToShow")
                         .foregroundStyle(.secondary)
                 }
