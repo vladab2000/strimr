@@ -133,9 +133,9 @@ class TVOSDatePickerViewController: UIViewController, UITableViewDelegate, UITab
         shortFormatter.dateFormat = "d. M."
         let shortDate = shortFormatter.string(from: date)
 
-        if cal.isDate(date, inSameDayAs: today) { return "Dnes · \(shortDate)" }
+        if cal.isDate(date, inSameDayAs: today) { return "\(String(localized: "epg.day.today")) · \(shortDate)" }
         if let yesterday = cal.date(byAdding: .day, value: -1, to: today),
-           cal.isDate(date, inSameDayAs: yesterday) { return "Včera · \(shortDate)" }
+           cal.isDate(date, inSameDayAs: yesterday) { return "\(String(localized: "epg.day.yesterday")) · \(shortDate)" }
 
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "cs_CZ")

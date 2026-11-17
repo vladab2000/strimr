@@ -48,6 +48,23 @@ final class SettingsViewModel {
         )
     }
 
+    let audioLanguageOptions = TrackLanguage.audioOptions
+    let subtitleLanguageOptions = TrackLanguage.subtitleOptions
+
+    var preferredAudioLanguageBinding: Binding<String> {
+        Binding(
+            get: { self.settingsManager.playback.preferredAudioLanguage },
+            set: { self.settingsManager.setPreferredAudioLanguage($0) },
+        )
+    }
+
+    var preferredSubtitleLanguageBinding: Binding<String> {
+        Binding(
+            get: { self.settingsManager.playback.preferredSubtitleLanguage },
+            set: { self.settingsManager.setPreferredSubtitleLanguage($0) },
+        )
+    }
+
     var subtitleScaleBinding: Binding<Int> {
         Binding(
             get: { self.settingsManager.playback.subtitleScale },
@@ -59,14 +76,6 @@ final class SettingsViewModel {
         Binding(
             get: { self.settingsManager.tvProvider },
             set: { self.settingsManager.setTvProvider($0) },
-        )
-    }
-
-    /// Poskytovatel pro hledání (Filmy a Seriály mají řadu pro každý zdroj)
-    var contentSourceBinding: Binding<ContentSource> {
-        Binding(
-            get: { self.settingsManager.contentSource },
-            set: { self.settingsManager.setContentSource($0) },
         )
     }
 }

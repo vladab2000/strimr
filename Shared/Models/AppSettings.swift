@@ -7,6 +7,9 @@ struct PlaybackSettings: Codable, Equatable {
     var seekForwardSeconds = 10
     var player = PlaybackPlayer.mpv
     var subtitleScale = 100
+    /// Preferovaný jazyk zvuku a titulků (TrackLanguage: "" = neměnit, "off" = titulky vypnout)
+    var preferredAudioLanguage = "cs"
+    var preferredSubtitleLanguage = "cs"
 
     init() {}
 
@@ -18,6 +21,8 @@ struct PlaybackSettings: Codable, Equatable {
         seekForwardSeconds = try container.decodeIfPresent(Int.self, forKey: .seekForwardSeconds) ?? 10
         player = try container.decodeIfPresent(PlaybackPlayer.self, forKey: .player) ?? .mpv
         subtitleScale = try container.decodeIfPresent(Int.self, forKey: .subtitleScale) ?? 100
+        preferredAudioLanguage = try container.decodeIfPresent(String.self, forKey: .preferredAudioLanguage) ?? "cs"
+        preferredSubtitleLanguage = try container.decodeIfPresent(String.self, forKey: .preferredSubtitleLanguage) ?? "cs"
     }
 }
 
@@ -26,6 +31,8 @@ struct AppSettings: Codable, Equatable {
     var tvProvider: ProviderType = ProviderType.selectableCases.first ?? .sweetTV
     var contentSource: ContentSource = .streamCinema
     var catalogFilter = CatalogFilter()
+    /// Zvuk a titulky naposledy zvolené u seriálu (klíč = id seriálu)
+    var seriesTracks: [String: TrackChoice] = [:]
 
     init() {}
 
@@ -35,5 +42,6 @@ struct AppSettings: Codable, Equatable {
         tvProvider = try container.decodeIfPresent(ProviderType.self, forKey: .tvProvider) ?? ProviderType.selectableCases.first ?? .sweetTV
         contentSource = try container.decodeIfPresent(ContentSource.self, forKey: .contentSource) ?? .streamCinema
         catalogFilter = try container.decodeIfPresent(CatalogFilter.self, forKey: .catalogFilter) ?? CatalogFilter()
+        seriesTracks = try container.decodeIfPresent([String: TrackChoice].self, forKey: .seriesTracks) ?? [:]
     }
 }

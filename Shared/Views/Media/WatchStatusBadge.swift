@@ -12,13 +12,17 @@ struct WatchStatusBadge: View {
 
     var body: some View {
         Group {
-            if let remaining = media.remainingUnwatchedEpisodes {
-                badge {
-                    Text("\(remaining)")
-                }
-            } else if media.isFullyWatched {
+            if media.isFullyWatched {
                 badge {
                     Image(systemName: "checkmark")
+                }
+            } else if media.itemType == .tvshow, let watched = media.watchedEpisodes, watched > 0 {
+                // Seriál: počet zhlédnutých epizod
+                badge {
+                    HStack(spacing: 4) {
+                        Image(systemName: "eye.fill")
+                        Text(verbatim: "\(watched)")
+                    }
                 }
             }
         }

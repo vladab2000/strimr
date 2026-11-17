@@ -21,6 +21,7 @@ struct CatalogListView: View {
             VStack(alignment: .leading, spacing: 24) {
                 CatalogFilterBar(
                     genres: viewModel.genres,
+            sortOptions: viewModel.sortOptions,
                     filter: viewModel.catalogFilter,
                     onChange: viewModel.setCatalogFilter,
                 )
@@ -33,7 +34,11 @@ struct CatalogListView: View {
                                 items: row.items,
                                 showsLabels: true,
                                 onSelectMedia: onSelectMedia,
+                                onReachEnd: { viewModel.loadMore(row.source) },
+                                isLoadingMore: row.isLoadingMore,
                             )
+                            // Nový seznam (jiná kategorie) od začátku — jinak by zůstala pozice rolování ze starého
+                            .id("\(row.id)-\(viewModel.rowsVersion)")
                         }
                     }
                 }

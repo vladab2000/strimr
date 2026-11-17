@@ -3,6 +3,7 @@ import Libmpv
 
 #if canImport(UIKit)
 import UIKit
+import OSLog
 
 /// warning: metal API validation has been disabled to ignore crash when playing HDR videos.
 /// Edit Scheme -> Run -> Diagnostics -> Metal API Validation -> Turn it off
@@ -76,7 +77,7 @@ final class MPVPlayerViewController: UIViewController {
     func setupMpv() {
         mpv = mpv_create()
         guard let mpv else {
-            print("failed creating context\n")
+            Log.player.error("MPV: failed creating context")
             exit(1)
         }
 
@@ -359,23 +360,27 @@ final class MPVPlayerViewController: UIViewController {
                         DispatchQueue.main.async {
                             self.playDelegate?.playbackEnded()
                         }
+                    } else if reason == MPV_END_FILE_REASON_ERROR {
+                        let message = endFileData.map { String(cString: mpv_error_string($0.pointee.error)) }
+                        Log.player.error("MPV playback failed: \(message ?? "unknown", privacy: .public)")
+                        updateIdleTimer(isPlaying: false)
+                        DispatchQueue.main.async {
+                            self.playDelegate?.playbackFailed(message)
+                        }
                     }
                 case MPV_EVENT_FILE_LOADED:
                     DispatchQueue.main.async {
                         self.playDelegate?.fileLoaded()
                     }
                 case MPV_EVENT_SHUTDOWN:
-                    print("event: shutdown\n")
+                    Log.player.debug("MPV event: shutdown")
                     destruct()
                 case MPV_EVENT_LOG_MESSAGE:
                     let msg = UnsafeMutablePointer<mpv_event_log_message>(OpaquePointer(event!.pointee.data))
-                    print(
-                        "[\(String(cString: (msg!.pointee.prefix)!))] \(String(cString: (msg!.pointee.level)!)): \(String(cString: (msg!.pointee.text)!))",
-                        terminator: "",
-                    )
+                    Log.player.debug("MPV [\(String(cString: (msg!.pointee.prefix)!), privacy: .public)] \(String(cString: (msg!.pointee.level)!), privacy: .public): \(String(cString: (msg!.pointee.text)!).trimmingCharacters(in: .newlines), privacy: .public)")
                 default:
                     let eventName = mpv_event_name(event!.pointee.event_id)
-                    print("event: \(String(cString: eventName!))")
+                    Log.player.debug("MPV event: \(String(cString: eventName!), privacy: .public)")
                 }
             }
         }
@@ -447,7 +452,7 @@ final class MPVPlayerViewController: UIViewController {
 
     private func checkError(_ status: CInt) {
         if status < 0 {
-            print("MPV API error: \(String(cString: mpv_error_string(status)))\n")
+            Log.player.error("MPV API error: \(String(cString: mpv_error_string(status)), privacy: .public)")
         }
     }
 }

@@ -45,9 +45,13 @@ struct CatalogTVView: View {
     private var filterBar: some View {
         CatalogFilterBar(
             genres: viewModel.genres,
+            sortOptions: viewModel.sortOptions,
             filter: viewModel.catalogFilter,
             onChange: viewModel.setCatalogFilter,
         )
+        // Oblast fokusu přes celou šířku — šipka nahoru z dlaždice vpravo vybere lištu, ne horní menu
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .focusSection()
     }
 
     @ViewBuilder
@@ -60,7 +64,11 @@ struct CatalogTVView: View {
                         items: row.items,
                         showsLabels: false,
                         onSelectMedia: onSelectMedia,
+                        onReachEnd: { viewModel.loadMore(row.source) },
+                        isLoadingMore: row.isLoadingMore,
                     )
+                    // Nový seznam (jiná kategorie) od začátku — jinak by zůstala pozice rolování ze starého
+                    .id("\(row.id)-\(viewModel.rowsVersion)")
                 }
             }
         }

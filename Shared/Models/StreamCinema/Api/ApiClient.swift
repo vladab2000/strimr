@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 struct ApiClient {
     //static let baseURL = URL(string: "http://192.168.88.136:5020/api/")!
@@ -43,6 +44,11 @@ struct ApiClient {
 
     static func fetchContinueWatching() async throws -> [Media] {
         try await fetch(path: "watch")
+    }
+
+    /// Zhlédnuté a rozkoukané epizody seriálu (podle Media.parentId), nejnovější první
+    static func fetchSeriesWatch(seriesId: String) async throws -> [Media] {
+        try await fetch(path: "watch/series", queryItems: [URLQueryItem(name: "id", value: seriesId)])
     }
 
     static func createWatch(media: Media) async throws {
@@ -180,7 +186,7 @@ struct ApiClient {
         do {
             return try decoder.decode(T.self, from: data)
         } catch {
-            print("Chyba dekódování na \(path): \(String(data: data, encoding: .utf8) ?? "no data")")
+            Log.api.error("Decoding failed for \(path, privacy: .public): \(String(data: data, encoding: .utf8) ?? "no data", privacy: .public)")
             throw error
         }
     }
@@ -204,7 +210,7 @@ struct ApiClient {
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
             let errorMsg = String(data: data, encoding: .utf8) ?? "Neznámá chyba"
-            print("API Error [\(statusCode)]: \(errorMsg)")
+            Log.api.error("API error [\(statusCode)]: \(errorMsg, privacy: .public)")
             throw URLError(.badServerResponse)
         }
     }
@@ -265,7 +271,7 @@ struct ApiClient {
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
             let errorMsg = String(data: data, encoding: .utf8) ?? "Neznámá chyba"
-            print("API Error [\(statusCode)]: \(errorMsg)")
+            Log.api.error("API error [\(statusCode)]: \(errorMsg, privacy: .public)")
             throw URLError(.badServerResponse)
         }
 
@@ -298,19 +304,26 @@ struct ApiClient {
 struct ApiError: LocalizedError {
     let statusCode: Int
     let message: String?
+    /// Kód chyby ze serveru (např. "OnePlay:ConfirmLimitedPlay" — přehrání je potřeba potvrdit)
+    let code: String?
 
     init(statusCode: Int, data: Data) {
         self.statusCode = statusCode
         struct Body: Decodable {
-            struct Info: Decodable { let message: String? }
+            struct Info: Decodable {
+                let message: String?
+                let code: String?
+            }
             let error: Info?
         }
-        let serverMessage = (try? JSONDecoder().decode(Body.self, from: data))?.error?.message
+        let info = (try? JSONDecoder().decode(Body.self, from: data))?.error
+        code = info?.code
+        let serverMessage = info?.message
         // Neošetřená výjimka na serveru vrací jen klíč "InternalServerErrorMessage"
         message = serverMessage == "InternalServerErrorMessage" ? nil : serverMessage
     }
 
     var errorDescription: String? {
-        message ?? "Chyba serveru (HTTP \(statusCode))"
+        message ?? String(format: String(localized: "api.error.server"), statusCode)
     }
 }

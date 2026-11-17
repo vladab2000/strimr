@@ -2,6 +2,7 @@ import AVFoundation
 import AVKit
 import Foundation
 import Observation
+import OSLog
 
 struct AVPlayerMetadata {
     var title: String?
@@ -25,12 +26,14 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
     @ObservationIgnored var onPropertyChange: ((PlayerProperty, Any?) -> Void)?
     @ObservationIgnored var onPlaybackEnded: (() -> Void)?
     @ObservationIgnored var onMediaLoaded: (() -> Void)?
+    @ObservationIgnored var onPlaybackFailed: ((String?) -> Void)?
 
     @ObservationIgnored private var timeObserverToken: Any?
     @ObservationIgnored private var statusObservation: NSKeyValueObservation?
     @ObservationIgnored private var timeControlObservation: NSKeyValueObservation?
     @ObservationIgnored private var durationObservation: NSKeyValueObservation?
     @ObservationIgnored private var endObserver: NSObjectProtocol?
+    @ObservationIgnored private var failedObserver: NSObjectProtocol?
     @ObservationIgnored private var backgroundObserver: NSObjectProtocol?
     @ObservationIgnored private var foregroundObserver: NSObjectProtocol?
     @ObservationIgnored private var cachedAudioGroup: AVMediaSelectionGroup?
@@ -301,6 +304,7 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
         let propertyChange = onPropertyChange
         let mediaLoaded = onMediaLoaded
         let playbackEnded = onPlaybackEnded
+        let playbackFailed = onPlaybackFailed
 
         // Periodic time observer (0.5s)
         let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
@@ -347,7 +351,21 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
                     self?.cachedAudioGroup = try? await item.asset.loadMediaSelectionGroup(for: .audible)
                     self?.cachedSubtitleGroup = try? await item.asset.loadMediaSelectionGroup(for: .legible)
                     mediaLoaded?()
+                } else if item.status == .failed {
+                    playbackFailed?(item.error?.localizedDescription)
                 }
+            }
+        }
+
+        // Přehrávání přerušené uprostřed (výpadek spojení)
+        failedObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemFailedToPlayToEndTime,
+            object: item,
+            queue: .main
+        ) { notification in
+            let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
+            Task { @MainActor in
+                playbackFailed?(error?.localizedDescription)
             }
         }
 
@@ -365,17 +383,17 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
         NotificationCenter.default.addObserver(forName: .AVPlayerItemNewErrorLogEntry, object: item, queue: .main) { _ in
             guard let errorLog = player.currentItem?.errorLog() else { return }
             for entry in errorLog.events {
-                print("Chyba přehrávání: \(entry.errorComment ?? "Neznámá chyba")")
-                print("Doména chyby: \(entry.errorDomain)")
-                print("Kód chyby: \(entry.errorStatusCode)")
+                Log.player.error("AVPlayer error: \(entry.errorComment ?? "unknown", privacy: .public)")
+                Log.player.error("AVPlayer error domain: \(entry.errorDomain, privacy: .public)")
+                Log.player.error("AVPlayer error code: \(entry.errorStatusCode)")
             }
         }
 
         NotificationCenter.default.addObserver(forName: .AVPlayerItemNewAccessLogEntry, object: player.currentItem, queue: .main) { _ in
             guard let accessLog = player.currentItem?.accessLog() else { return }
             for entry in accessLog.events {
-                print("Indikovaný bitrate: \(entry.indicatedBitrate)")
-                print("Počet záseků (stalls): \(entry.numberOfStalls)")
+                Log.player.debug("Indicated bitrate: \(entry.indicatedBitrate)")
+                Log.player.debug("Stalls: \(entry.numberOfStalls)")
             }
         }
 
@@ -418,7 +436,7 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
             return
         }
         backgroundEntryDate = nil
-        print("Wake: aplikace spala \(Int(Date().timeIntervalSince(bgDate)))s — restartuji přehrávač")
+        Log.player.info("Wake: app slept \(Int(Date().timeIntervalSince(bgDate)))s — restarting player")
         play(url, seekPosition: nil, metadata: currentMetadata)
     }
 
@@ -456,7 +474,7 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
         guard lastKnownPeakBitrate > 0 else { return }
 
         let ratio = indicated / lastKnownPeakBitrate
-        print("Bitrate monitor: indicated=\(Int(indicated)) peak=\(Int(lastKnownPeakBitrate)) ratio=\(String(format: "%.2f", ratio))")
+        Log.player.debug("Bitrate monitor: indicated=\(Int(indicated)) peak=\(Int(self.lastKnownPeakBitrate)) ratio=\(ratio)")
 
         if ratio < Self.lowBitrateThresholdFraction {
             if lowBitrateStartDate == nil {
@@ -464,7 +482,7 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
             }
 
             let elapsed = Date().timeIntervalSince(lowBitrateStartDate!)
-            print("Bitrate monitor: low bitrate detected for \(Int(elapsed))s")
+            Log.player.info("Bitrate monitor: low bitrate for \(Int(elapsed))s")
 
             if elapsed >= Self.lowBitrateDuration {
                 resetBitrateAdaptation()
@@ -476,7 +494,7 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
 
     // Po 30s na nízké kvalitě odstraníme omezení a dáme AVPlayer šanci přehodnotit
     private func resetBitrateAdaptation() {
-        print("Bitrate reset: vynucené přehodnocení ABR")
+        Log.player.info("Bitrate reset: forcing ABR re-evaluation")
         lowBitrateStartDate = nil
         lastKnownPeakBitrate = 0
         player?.currentItem?.preferredPeakBitRate = 0
@@ -503,6 +521,10 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
         if let observer = endObserver {
             NotificationCenter.default.removeObserver(observer)
             endObserver = nil
+        }
+        if let observer = failedObserver {
+            NotificationCenter.default.removeObserver(observer)
+            failedObserver = nil
         }
         if let observer = backgroundObserver {
             NotificationCenter.default.removeObserver(observer)

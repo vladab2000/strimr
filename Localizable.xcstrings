@@ -4,6 +4,774 @@
     "" : {
 
     },
+    "api.error.server" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chyba serveru (HTTP %ld)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server error (HTTP %ld)"
+          }
+        }
+      }
+    },
+    "catalog.audio.all" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bez rozlišení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Any"
+          }
+        }
+      }
+    },
+    "catalog.audio.dub" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dabing"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dubbed"
+          }
+        }
+      }
+    },
+    "catalog.audio.tit" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Titulky"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subtitles"
+          }
+        }
+      }
+    },
+    "catalog.filter.allGenres" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Všechny kategorie"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All categories"
+          }
+        }
+      }
+    },
+    "catalog.filter.audio" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jazyk"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Language"
+          }
+        }
+      }
+    },
+    "catalog.filter.category" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kategorie"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Category"
+          }
+        }
+      }
+    },
+    "catalog.filter.sort" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Řazení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sort"
+          }
+        }
+      }
+    },
+    "catalog.sort.newest" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nejnovější"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Newest"
+          }
+        }
+      }
+    },
+    "catalog.sort.rating" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nejlépe hodnocené"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Top rated"
+          }
+        }
+      }
+    },
+    "catalog.sort.today" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Top dnes"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Top today"
+          }
+        }
+      }
+    },
+    "catalog.sort.unsupported" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "bez řazení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "default order"
+          }
+        }
+      }
+    },
+    "catalog.sort.views" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nejsledovanější"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Most watched"
+          }
+        }
+      }
+    },
+    "catalog.sort.year" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podle roku"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "By year"
+          }
+        }
+      }
+    },
+    "common.actions.cancel" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zrušit"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        }
+      }
+    },
+    "common.actions.close" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zavřít"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close"
+          }
+        }
+      }
+    },
+    "contentSource.all" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vše"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All"
+          }
+        }
+      }
+    },
+    "epg.day.today" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dnes"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today"
+          }
+        }
+      }
+    },
+    "epg.day.tomorrow" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zítra"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tomorrow"
+          }
+        }
+      }
+    },
+    "epg.day.yesterday" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Včera"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yesterday"
+          }
+        }
+      }
+    },
+    "epg.history.empty.description" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro program „%@“ nebyly nalezeny žádné záznamy v archivu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No archive recordings were found for „%@“."
+          }
+        }
+      }
+    },
+    "epg.history.empty.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Žádné výsledky"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No results"
+          }
+        }
+      }
+    },
+    "epg.history.error" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nepodařilo se načíst výsledky"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to load results"
+          }
+        }
+      }
+    },
+    "epg.history.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Historické výskyty v archivu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Archive airings"
+          }
+        }
+      }
+    },
+    "home.continueWatching.remove" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odebrat z Pokračovat v přehrávání"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove from Continue Watching"
+          }
+        }
+      }
+    },
+    "home.library" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moje knihovna"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "My Library"
+          }
+        }
+      }
+    },
+    "media.badge.limitedPlay" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Z limitu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limited"
+          }
+        }
+      }
+    },
+    "media.detail.continue" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokračovat %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue %@"
+          }
+        }
+      }
+    },
+    "media.detail.nextEpisode" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Další díl %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next episode %@"
+          }
+        }
+      }
+    },
+    "media.detail.watchedEpisodes" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zhlédnuto %ld z %ld"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watched %ld of %ld"
+          }
+        }
+      }
+    },
+    "player.confirm.play" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přehrát"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Play"
+          }
+        }
+      }
+    },
+    "player.confirm.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Potvrzení přehrání"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm playback"
+          }
+        }
+      }
+    },
+    "player.error.invalidStream" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server vrátil neplatnou adresu streamu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The server returned an invalid stream address."
+          }
+        }
+      }
+    },
+    "player.error.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přehrávání se nezdařilo"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Playback failed"
+          }
+        }
+      }
+    },
+    "player.nextEpisode.countdown" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Další díl za %ld s"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next episode in %ld s"
+          }
+        }
+      }
+    },
+    "player.nextEpisode.playNow" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přehrát"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Play now"
+          }
+        }
+      }
+    },
+    "player.preparing" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Připravuji přehrávání…"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparing playback…"
+          }
+        }
+      }
+    },
+    "player.status.failed" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přehrávání se přerušilo"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Playback was interrupted"
+          }
+        }
+      }
+    },
+    "player.status.loading" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Načítám…"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading…"
+          }
+        }
+      }
+    },
+    "player.status.recovering" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obnovuji přehrávání… (%ld/%ld)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reconnecting… (%ld/%ld)"
+          }
+        }
+      }
+    },
+    "player.status.retry" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zkusit znovu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try again"
+          }
+        }
+      }
+    },
+    "player.status.stalled" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stream přestal odpovídat."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The stream stopped responding."
+          }
+        }
+      }
+    },
+    "settings.playback.audioLanguage" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preferovaný jazyk zvuku"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preferred audio language"
+          }
+        }
+      }
+    },
+    "settings.playback.language.keep" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neměnit"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Don't change"
+          }
+        }
+      }
+    },
+    "settings.playback.language.off" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vypnuto"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off"
+          }
+        }
+      }
+    },
+    "settings.playback.subtitleLanguage" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preferované titulky"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preferred subtitles"
+          }
+        }
+      }
+    },
+    "tabs.movies" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filmy"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Movies"
+          }
+        }
+      }
+    },
+    "tabs.shows" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seriály"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TV Shows"
+          }
+        }
+      }
+    },
     "–" : {
       "comment" : "A dash used to separate time information in a program detail view.",
       "isCommentAutoGenerated" : true
@@ -12,21 +780,59 @@
       "comment" : "A separator between different stream details.",
       "isCommentAutoGenerated" : true
     },
-    "%lld" : {
-      "comment" : "A badge displaying the number of unwatched episodes in a media item. The argument is the number of unwatched episodes.",
-      "isCommentAutoGenerated" : true
-    },
     "channels.empty.description" : {
       "comment" : "A description displayed when a user has no channels in their library.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "V nastavení vyberte poskytovatele televize."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select a TV provider in Settings."
+          }
+        }
+      }
     },
     "channels.empty.title" : {
       "comment" : "The title of a view that shows when a user has no channels.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Žádné kanály"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No channels"
+          }
+        }
+      }
     },
     "channels.error.stream" : {
       "comment" : "Error message displayed when there is an issue resolving a live stream URL.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Živé vysílání se nepodařilo spustit."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to start the live stream."
+          }
+        }
+      }
     },
     "common.actions.done" : {
       "localizations" : {
@@ -122,27 +928,57 @@
     },
     "epg.error.stream" : {
       "comment" : "Error message displayed when resolving a stream URL fails.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Záznam z archivu se nepodařilo spustit."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to start the archive recording."
+          }
+        }
+      }
     },
     "epg.play.archive" : {
       "comment" : "A button title for playing a program from an archive.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přehrát z archivu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Play from archive"
+          }
+        }
+      }
     },
     "epg.play.live" : {
       "comment" : "A button label that says \"Play Live\".",
-      "isCommentAutoGenerated" : true
-    },
-    "Filmy" : {
-      "comment" : "A tab for movies.",
-      "isCommentAutoGenerated" : true
-    },
-    "Historické výskyty v archivu" : {
-      "comment" : "A title of a view that shows historical program information.",
-      "isCommentAutoGenerated" : true
-    },
-    "Hledání" : {
-      "comment" : "A section in the settings view.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sledovat živě"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch live"
+          }
+        }
+      }
     },
     "home.continueWatching" : {
       "comment" : "Title for the section that lists the user's \"Continue Watching\" media.",
@@ -214,14 +1050,6 @@
         }
       }
     },
-    "Jazyk" : {
-      "comment" : "A label for the audio filter.",
-      "isCommentAutoGenerated" : true
-    },
-    "Kategorie" : {
-      "comment" : "A label for the genre picker.",
-      "isCommentAutoGenerated" : true
-    },
     "Key" : {
       "extractionState" : "manual"
     },
@@ -233,34 +1061,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Přidat do knihovny"
-          }
-        }
-      }
-    },
-    "library.empty.description" : {
-      "comment" : "A description displayed when a user has not added any movies or shows to their library.",
-      "isCommentAutoGenerated" : true,
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Knihovna je prázdná"
-          }
-        }
-      }
-    },
-    "library.empty.title" : {
-      "comment" : "The title of a view that indicates that a library section is empty.",
-      "isCommentAutoGenerated" : true
-    },
-    "library.movies" : {
-      "comment" : "Title for the section of the library view dedicated to movies.",
-      "isCommentAutoGenerated" : true,
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Oblíbené filmy"
           }
         }
       }
@@ -300,21 +1100,17 @@
         }
       }
     },
-    "library.shows" : {
-      "comment" : "Title of the section in the library view that lists the user's favorite TV shows.",
+    "LIVE" : {
+      "comment" : "A label displayed underneath a live stream.",
       "isCommentAutoGenerated" : true,
       "localizations" : {
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Oblíbené seriály"
+            "value" : "ŽIVĚ"
           }
         }
       }
-    },
-    "LIVE" : {
-      "comment" : "A label displayed underneath a live stream.",
-      "isCommentAutoGenerated" : true
     },
     "livetv.category.all" : {
       "localizations" : {
@@ -512,7 +1308,15 @@
     },
     "OK" : {
       "comment" : "The text of a button that dismisses an alert.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
     },
     "player.action.goToLive" : {
       "localizations" : {
@@ -580,6 +1384,12 @@
     },
     "player.controls.rotation.lock" : {
       "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zamknout otáčení"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -590,6 +1400,12 @@
     },
     "player.controls.rotation.unlock" : {
       "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odemknout otáčení"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -760,37 +1576,95 @@
         }
       }
     },
-    "Poskytovatel pro hledání" : {
-      "comment" : "A label for the search provider picker.",
-      "isCommentAutoGenerated" : true
-    },
-    "Přehrávání se nezdařilo" : {
-      "comment" : "A title for an alert that occurs when a stream fails to play.",
-      "isCommentAutoGenerated" : true
-    },
-    "Pro program \"%@\" nebyly nalezeny žádné záznamy v archivu." : {
-      "comment" : "A message that appears when there are no matching results in the archive.",
-      "isCommentAutoGenerated" : true
-    },
     "provider.antikTV" : {
       "comment" : "Name of the \"Antik TV\" media provider.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antik TV"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antik TV"
+          }
+        }
+      }
     },
     "provider.antikWebTV" : {
       "comment" : "Display name for the \"Antik Web TV\" provider.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antik Web TV"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antik Web TV"
+          }
+        }
+      }
     },
     "provider.none" : {
       "comment" : "Display name for the \"None\" provider type.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Žádný"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "None"
+          }
+        }
+      }
     },
     "provider.onePlay" : {
       "comment" : "Display name for the \"OnePlay\" provider.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OnePlay"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OnePlay"
+          }
+        }
+      }
     },
     "provider.sweetTV" : {
       "comment" : "Display name for the SweetTV provider.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SWEET.TV"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SWEET.TV"
+          }
+        }
+      }
     },
     "search.badge.episode" : {
       "localizations" : {
@@ -1032,10 +1906,6 @@
         }
       }
     },
-    "Seriály" : {
-      "comment" : "A tab for browsing TV shows.",
-      "isCommentAutoGenerated" : true
-    },
     "settings.playback.autoPlayNext" : {
       "localizations" : {
         "cs" : {
@@ -1054,7 +1924,21 @@
     },
     "settings.playback.autoSkipIntro" : {
       "comment" : "A toggle that enables or disables automatically skipping the intro of a video.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automaticky přeskakovat úvod"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skip intro automatically"
+          }
+        }
+      }
     },
     "settings.playback.fastForward" : {
       "localizations" : {
@@ -1106,6 +1990,12 @@
     },
     "settings.playback.player.externalWarning.message" : {
       "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Při použití externího přehrávače se nemusí ukládat pozice ani stav zhlédnutí. Infuse může vyžadovat předplatné."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1116,6 +2006,12 @@
     },
     "settings.playback.player.externalWarning.title" : {
       "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upozornění na externí přehrávač"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1126,6 +2022,12 @@
     },
     "settings.playback.player.infuse" : {
       "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Infuse (externí)"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1264,11 +2166,39 @@
     },
     "settings.tv.provider" : {
       "comment" : "A picker view label for selecting a TV provider.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Poskytovatel televize"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TV provider"
+          }
+        }
+      }
     },
     "settings.tv.section" : {
       "comment" : "A section header in the settings view related to TV providers.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Televize"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Television"
+          }
+        }
+      }
     },
     "streamSelection.noStreams" : {
       "comment" : "A message displayed when a movie has no available streams.",
@@ -1326,7 +2256,15 @@
     },
     "Strimr" : {
       "comment" : "The title of the app.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strimr"
+          }
+        }
+      }
     },
     "tabs.home" : {
       "localizations" : {
@@ -1340,18 +2278,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Home"
-          }
-        }
-      }
-    },
-    "tabs.library" : {
-      "comment" : "The title of the tab in the tab bar for the library section of the app.",
-      "isCommentAutoGenerated" : true,
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Knihovna"
           }
         }
       }
@@ -1403,10 +2329,6 @@
           }
         }
       }
-    },
-    "Žádné výsledky" : {
-      "comment" : "A message that indicates that there are no results.",
-      "isCommentAutoGenerated" : true
     }
   },
   "version" : "1.1"

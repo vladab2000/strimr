@@ -5,6 +5,7 @@ import SwiftUI
 struct HomeTVView: View {
     @Environment(MediaFocusModel.self) private var focusModel
     @Environment(WatchHistoryManager.self) private var watchHistoryManager
+    @Environment(FavoritesManager.self) private var favoritesManager
     @Environment(\.scenePhase) private var scenePhase
 
     @State var viewModel: HomeViewModel
@@ -19,7 +20,9 @@ struct HomeTVView: View {
     }
 
     var body: some View {
-        MediaHeroPageTVView(heroMedia: viewModel.continueWatching.first, pageMedia: viewModel.continueWatching) {
+        let pageMedia = viewModel.continueWatching + libraryItems
+
+        MediaHeroPageTVView(heroMedia: pageMedia.first, pageMedia: pageMedia) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 32) {
                     if !viewModel.continueWatching.isEmpty {
@@ -27,6 +30,17 @@ struct HomeTVView: View {
                             MediaCarousel(
                                 layout: .landscape,
                                 items: viewModel.continueWatching,
+                                showsLabels: false,
+                                onSelectMedia: onSelectMedia,
+                            )
+                        }
+                    }
+
+                    if !libraryItems.isEmpty {
+                        MediaHubSection(title: String(localized: "home.library")) {
+                            MediaCarousel(
+                                layout: .portrait,
+                                items: libraryItems,
                                 showsLabels: false,
                                 onSelectMedia: onSelectMedia,
                             )
@@ -58,6 +72,11 @@ struct HomeTVView: View {
                 Task { await viewModel.reload() }
             }
         }
+    }
+
+    /// Filmy a seriály z knihovny (oblíbené)
+    private var libraryItems: [Media] {
+        watchHistoryManager.applyWatchOverrides(to: favoritesManager.favorites.filter { $0.itemType == .movie || $0.itemType == .tvshow })
     }
 }
 

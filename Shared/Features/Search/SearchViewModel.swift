@@ -66,6 +66,8 @@ final class SearchViewModel {
 
     @ObservationIgnored private let settingsManager: SettingsManager
     @ObservationIgnored private var searchTask: Task<Void, Never>?
+    /// Poslední naplánované hledání — dřívější (zrušené) hledání už nesmí měnit výsledky ani indikátor
+    @ObservationIgnored private var searchGeneration = 0
 
     init(settingsManager: SettingsManager) {
         self.settingsManager = settingsManager
@@ -102,11 +104,17 @@ final class SearchViewModel {
 
     private func scheduleSearch(immediate: Bool) {
         searchTask?.cancel()
+        searchGeneration += 1
+        let generation = searchGeneration
 
         guard hasQuery, activeFilter != nil else {
             resetState()
             return
         }
+
+        // Indikátor hned, i během čekání na dopsání dotazu
+        isLoading = true
+        errorMessage = nil
 
         searchTask = Task { [weak self] in
             if !immediate {
@@ -114,14 +122,19 @@ final class SearchViewModel {
             }
 
             guard !Task.isCancelled else { return }
-            await self?.performSearch()
+            await self?.performSearch(generation: generation)
         }
     }
 
-    private func performSearch() async {
+    private func performSearch(generation: Int) async {
         isLoading = true
         errorMessage = nil
-        defer { isLoading = false }
+        // Zrušené hledání může doběhnout až po spuštění nového — indikátor schová jen poslední hledání
+        defer {
+            if generation == searchGeneration {
+                isLoading = false
+            }
+        }
 
         do {
             guard let filter = activeFilter else { return }
@@ -137,14 +150,14 @@ final class SearchViewModel {
                 result = try await ApiClient.fetchSearch(
                     text: trimmedQuery,
                     type: filter.apiType,
-                    source: settingsManager.contentSource
+                    source: .all // všechny zdroje, výsledek nese štítek zdroje
                 )
             }
 
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled, generation == searchGeneration else { return }
             items = result
         } catch {
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled, generation == searchGeneration else { return }
             items = []
             errorMessage = error.localizedDescription
         }

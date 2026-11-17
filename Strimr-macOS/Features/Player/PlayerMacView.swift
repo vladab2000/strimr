@@ -53,10 +53,16 @@ struct PlayerMacView: View {
                     )
                 },
                 onPlaybackEnded: {
-                    dismissPlayer()
+                    // Konec epizody → další díl (pokud je), jinak zavřít
+                    if !bindableViewModel.handlePlaybackEnded() {
+                        dismissPlayer()
+                    }
                 },
                 onMediaLoaded: {
                     handleMediaLoaded()
+                },
+                onPlaybackFailed: { message in
+                    bindableViewModel.handlePlaybackFailed(message)
                 },
             )
             .ignoresSafeArea()
@@ -70,9 +76,27 @@ struct PlayerMacView: View {
                         controlsVisible ? hideControls() : showControls(temporarily: true)
                     }
 
-                if bindableViewModel.isBuffering {
+                if bindableViewModel.isBuffering, bindableViewModel.status == .playing {
                     bufferingOverlay
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                }
+
+                PlayerStatusOverlay(
+                    status: bindableViewModel.status,
+                    onRetry: { bindableViewModel.retry() },
+                    onClose: { dismissPlayer() },
+                )
+
+                if let secondsLeft = bindableViewModel.nextEpisodeCountdown, let label = bindableViewModel.nextEpisodeLabel {
+                    NextEpisodeOverlay(
+                        label: label,
+                        secondsLeft: secondsLeft,
+                        onPlayNow: { bindableViewModel.playNextEpisode() },
+                        onCancel: { bindableViewModel.cancelNextEpisode() },
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    .padding(32)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
 
                 if controlsVisible {
@@ -107,6 +131,7 @@ struct PlayerMacView: View {
             showControls(temporarily: true)
             playerCoordinator.setPlaybackRate(playbackRate)
             startPlayback(url: bindableViewModel.streamURL)
+            viewModel.onReload = { _ in reloadStream() }
             viewModel.startKeepalive()
         }
         .onDisappear {
@@ -203,11 +228,13 @@ struct PlayerMacView: View {
     private func selectAudioTrack(_ id: Int?) {
         selectedAudioTrackID = id
         playerCoordinator.selectAudioTrack(id: id)
+        rememberSelectedTracks()
     }
 
     private func selectSubtitleTrack(_ id: Int?) {
         selectedSubtitleTrackID = id
         playerCoordinator.selectSubtitleTrack(id: id)
+        rememberSelectedTracks()
     }
 
     private func selectPlaybackRate(_ rate: Float) {
@@ -224,12 +251,48 @@ struct PlayerMacView: View {
     private func handleMediaLoaded() {
         guard awaitingMediaLoad else { return }
         awaitingMediaLoad = false
+        viewModel.handleMediaLoaded()
+        applyPreferredTracks()
         refreshTracks()
 
         if let resume = viewModel.resumePosition, resume > 0 {
             playerCoordinator.seek(to: resume)
             viewModel.resumePosition = nil
         }
+    }
+
+    /// Jazyk zvuku a titulků podle zapamatované volby seriálu nebo nastavení
+    private func applyPreferredTracks() {
+        let selection = viewModel.preferredTracks(in: playerCoordinator.trackList())
+        if let audioID = selection.audioID {
+            selectedAudioTrackID = audioID
+            playerCoordinator.selectAudioTrack(id: audioID)
+        }
+        switch selection.subtitle {
+        case .keep:
+            break
+        case .off:
+            selectedSubtitleTrackID = nil
+            playerCoordinator.selectSubtitleTrack(id: nil)
+        case let .track(id):
+            selectedSubtitleTrackID = id
+            playerCoordinator.selectSubtitleTrack(id: id)
+        }
+    }
+
+    /// Ruční volba stopy — u seriálu se zapamatuje pro další díly
+    private func rememberSelectedTracks() {
+        viewModel.rememberTrackChoice(
+            audio: audioTracks.first { $0.id == selectedAudioTrackID },
+            subtitle: subtitleTracks.first { $0.id == selectedSubtitleTrackID },
+        )
+    }
+
+    /// Po výpadku znovu načte stream (pozici nastaví handleMediaLoaded z viewModel.resumePosition)
+    private func reloadStream() {
+        awaitingMediaLoad = true
+        playerCoordinator.play(viewModel.streamURL)
+        playerCoordinator.addExternalSubtitles(viewModel.externalSubtitles)
     }
 
     private func dismissPlayer() {
@@ -364,7 +427,7 @@ struct PlayerMacView: View {
                         onSelectSubtitle(nil)
                     } label: {
                         HStack {
-                            Text("player.settings.off")
+                            Text("player.settings.subtitles.off")
                             Spacer()
                             if selectedSubtitleTrackID == nil {
                                 Image(systemName: "checkmark")

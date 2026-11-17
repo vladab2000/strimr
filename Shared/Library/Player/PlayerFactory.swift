@@ -46,6 +46,8 @@ enum PlayerFactory {
         onPropertyChange: @escaping (PlayerProperty, Any?) -> Void,
         onPlaybackEnded: @escaping () -> Void,
         onMediaLoaded: @escaping () -> Void,
+        // MPV a AVPlayer; VLC chyby nehlásí
+        onPlaybackFailed: @escaping (String?) -> Void = { _ in },
     ) -> AnyView {
         switch selection {
         case .mpv:
@@ -60,7 +62,8 @@ enum PlayerFactory {
                         onPropertyChange(property, data)
                     }
                     .onPlaybackEnded(onPlaybackEnded)
-                    .onMediaLoaded(onMediaLoaded),
+                    .onMediaLoaded(onMediaLoaded)
+                    .onPlaybackFailed(onPlaybackFailed),
             )
             #else
             guard let mpvCoordinator = coordinator as? MPVPlayerView.Coordinator else {
@@ -73,7 +76,8 @@ enum PlayerFactory {
                         onPropertyChange(property, data)
                     }
                     .onPlaybackEnded(onPlaybackEnded)
-                    .onMediaLoaded(onMediaLoaded),
+                    .onMediaLoaded(onMediaLoaded)
+                    .onPlaybackFailed(onPlaybackFailed),
             )
             #endif
         case .vlc:
@@ -101,7 +105,8 @@ enum PlayerFactory {
                         onPropertyChange(property, data)
                     }
                     .onPlaybackEnded(onPlaybackEnded)
-                    .onMediaLoaded(onMediaLoaded),
+                    .onMediaLoaded(onMediaLoaded)
+                    .onPlaybackFailed(onPlaybackFailed),
             )
             #endif
         case .avPlayer:
@@ -116,7 +121,8 @@ enum PlayerFactory {
                         onPropertyChange(property, data)
                     }
                     .onPlaybackEnded(onPlaybackEnded)
-                    .onMediaLoaded(onMediaLoaded),
+                    .onMediaLoaded(onMediaLoaded)
+                    .onPlaybackFailed(onPlaybackFailed),
             )
             #else
             guard let mpvCoordinator = coordinator as? MPVPlayerViewMac.Coordinator else {
@@ -129,7 +135,8 @@ enum PlayerFactory {
                         onPropertyChange(property, data)
                     }
                     .onPlaybackEnded(onPlaybackEnded)
-                    .onMediaLoaded(onMediaLoaded),
+                    .onMediaLoaded(onMediaLoaded)
+                    .onPlaybackFailed(onPlaybackFailed),
             )
             #endif
         }

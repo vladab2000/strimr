@@ -1,17 +1,19 @@
 import SwiftUI
 
-/// Volba kategorie a jazyka (dabing / titulky / bez rozlišení) na stránkách Filmy a Seriály
+/// Volba kategorie, jazyka (dabing / titulky / bez rozlišení) a řazení na stránkách Filmy a Seriály
 struct CatalogFilterBar: View {
     let genres: [CatalogGenre]
+    /// Řazení, která umí aspoň jeden zdroj stránky
+    var sortOptions: [CatalogSort] = CatalogSort.allCases
     let filter: CatalogFilter
     let onChange: (CatalogFilter) -> Void
 
-    private static let allGenresTitle = "Všechny kategorie"
+    private static var allGenresTitle: String { String(localized: "catalog.filter.allGenres") }
 
     var body: some View {
         HStack(spacing: 12) {
             Menu {
-                Picker("Kategorie", selection: genreBinding) {
+                Picker("catalog.filter.category", selection: genreBinding) {
                     Text(Self.allGenresTitle).tag(String?.none)
                     ForEach(genres) { genre in
                         Text(genre.name).tag(Optional(genre.id))
@@ -26,7 +28,7 @@ struct CatalogFilterBar: View {
             #endif
 
             Menu {
-                Picker("Jazyk", selection: audioBinding) {
+                Picker("catalog.filter.audio", selection: audioBinding) {
                     ForEach(CatalogAudio.allCases) { audio in
                         Text(audio.displayName).tag(audio)
                     }
@@ -38,6 +40,22 @@ struct CatalogFilterBar: View {
             #if os(macOS)
             .fixedSize()
             #endif
+
+            if sortOptions.count > 1 {
+                Menu {
+                    Picker("catalog.filter.sort", selection: sortBinding) {
+                        ForEach(sortOptions) { sort in
+                            Text(sort.displayName).tag(sort)
+                        }
+                    }
+                    .pickerStyle(.inline)
+                } label: {
+                    Label(filter.sort.displayName, systemImage: "arrow.up.arrow.down")
+                }
+                #if os(macOS)
+                .fixedSize()
+                #endif
+            }
 
             Spacer(minLength: 12)
         }
@@ -57,6 +75,17 @@ struct CatalogFilterBar: View {
             set: { genre in
                 var updated = filter
                 updated.genre = genre
+                onChange(updated)
+            },
+        )
+    }
+
+    private var sortBinding: Binding<CatalogSort> {
+        Binding(
+            get: { filter.sort },
+            set: { sort in
+                var updated = filter
+                updated.sort = sort
                 onChange(updated)
             },
         )

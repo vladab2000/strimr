@@ -34,6 +34,11 @@ struct MediaDetailTVView: View {
 
                         if bindableViewModel.media.itemType == .movie || bindableViewModel.media.itemType == .tvshow {
                             HStack(alignment: .center, spacing: 16) {
+                                if let title = bindableViewModel.continueTitle, let episode = bindableViewModel.continueEpisode {
+                                    SeriesContinueButton(title: title) {
+                                        onSelectMedia(episode)
+                                    }
+                                }
                                 favoriteButton
                                 watchedButton
                             }
@@ -77,10 +82,11 @@ struct MediaDetailTVView: View {
     /// Priority: focused episode/season > selected season > main media.
     private var heroMedia: Media {
         if let focused = focusedMedia {
-            return focused
+            // Seriál samotný vždy aktuální (po načtení sezón ho server doplní o popis a obrázky)
+            return focused.id == viewModel.media.id ? viewModel.media : viewModel.heroMedia(for: focused)
         }
         if let selectedSeason = viewModel.selectedSeason {
-            return selectedSeason
+            return viewModel.heroMedia(for: selectedSeason)
         }
         return viewModel.media
     }
@@ -136,6 +142,11 @@ struct MediaDetailTVView: View {
     private var seasonsSection: some View {
         VStack(alignment: .leading, spacing: 20) {
             seasonSelector
+            if let watchedText = viewModel.watchedEpisodesText {
+                Text(watchedText)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
             episodesRow
         }
     }

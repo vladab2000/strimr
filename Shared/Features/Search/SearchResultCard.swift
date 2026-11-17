@@ -32,6 +32,9 @@ struct SearchResultCard: View {
 
                         Spacer(minLength: 8)
 
+                        if let source = media.contentSource {
+                            SourceBadge(source: source)
+                        }
                         TypeBadge(type: media.itemType)
                     }
 
@@ -56,6 +59,34 @@ struct SearchResultCard: View {
             )
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// Štítek zdroje výsledku (hledá se přes všechny zdroje)
+private struct SourceBadge: View {
+    let source: ContentSource
+
+    var body: some View {
+        Text(source.displayName)
+            .font(.caption)
+            .fontWeight(.semibold)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                Capsule(style: .continuous)
+                    .strokeBorder(color.opacity(0.6)),
+            )
+            .foregroundStyle(color)
+    }
+
+    private var color: Color {
+        switch source {
+        case .streamCinema: .blue
+        case .bombuj: .red
+        case .uzi: .yellow
+        case .oneplay: .purple
+        case .all: .gray
+        }
     }
 }
 

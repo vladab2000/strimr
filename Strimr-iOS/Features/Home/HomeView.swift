@@ -3,6 +3,7 @@ import SwiftUI
 @MainActor
 struct HomeView: View {
     @Environment(WatchHistoryManager.self) private var watchHistoryManager
+    @Environment(FavoritesManager.self) private var favoritesManager
     @Environment(\.scenePhase) private var scenePhase
     @State var viewModel: HomeViewModel
     let onSelectMedia: (Media) -> Void
@@ -29,12 +30,23 @@ struct HomeView: View {
                     }
                 }
 
-                if viewModel.isLoading, !viewModel.hasContent {
+                if !libraryItems.isEmpty {
+                    MediaHubSection(title: String(localized: "home.library")) {
+                        MediaCarousel(
+                            layout: .portrait,
+                            items: libraryItems,
+                            showsLabels: true,
+                            onSelectMedia: onSelectMedia,
+                        )
+                    }
+                }
+
+                if viewModel.isLoading, !hasContent {
                     ProgressView("home.loading")
                         .frame(maxWidth: .infinity)
                 }
 
-                if !viewModel.hasContent, !viewModel.isLoading {
+                if !hasContent, !viewModel.isLoading {
                     Text("common.empty.nothingToShow")
                         .foregroundStyle(.secondary)
                 }
@@ -62,5 +74,14 @@ struct HomeView: View {
         .refreshable {
             await viewModel.reload()
         }
+    }
+
+    /// Filmy a seriály z knihovny (oblíbené)
+    private var libraryItems: [Media] {
+        watchHistoryManager.applyWatchOverrides(to: favoritesManager.favorites.filter { $0.itemType == .movie || $0.itemType == .tvshow })
+    }
+
+    private var hasContent: Bool {
+        viewModel.hasContent || !libraryItems.isEmpty
     }
 }

@@ -38,6 +38,11 @@ struct MPVPlayerView: UIViewControllerRepresentable {
         return self
     }
 
+    func onPlaybackFailed(_ handler: @escaping (String?) -> Void) -> Self {
+        coordinator.onPlaybackFailed = handler
+        return self
+    }
+
     func onMediaLoaded(_ handler: @escaping () -> Void) -> Self {
         coordinator.onMediaLoaded = handler
         return self
@@ -53,6 +58,7 @@ struct MPVPlayerView: UIViewControllerRepresentable {
         @ObservationIgnored var playbackRate: Float = 1.0
         @ObservationIgnored var onPropertyChange: ((MPVPlayerViewController, PlayerProperty, Any?) -> Void)?
         @ObservationIgnored var onPlaybackEnded: (() -> Void)?
+        @ObservationIgnored var onPlaybackFailed: ((String?) -> Void)?
         @ObservationIgnored var onMediaLoaded: (() -> Void)?
         /// Externí titulky čekající na načtení videa (sub-add funguje až po MPV_EVENT_FILE_LOADED)
         @ObservationIgnored var pendingSubtitles: [ExternalSubtitle] = []
@@ -118,6 +124,10 @@ struct MPVPlayerView: UIViewControllerRepresentable {
 
         func playbackEnded() {
             onPlaybackEnded?()
+        }
+
+        func playbackFailed(_ message: String?) {
+            onPlaybackFailed?(message)
         }
 
         func fileLoaded() {

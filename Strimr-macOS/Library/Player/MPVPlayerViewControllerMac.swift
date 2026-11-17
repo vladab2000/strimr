@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import Libmpv
+import OSLog
 
 final class MPVPlayerViewControllerMac: NSViewController {
     var metalLayer = MetalLayer()
@@ -98,7 +99,7 @@ final class MPVPlayerViewControllerMac: NSViewController {
     func setupMpv() {
         mpv = mpv_create()
         guard let mpv else {
-            print("failed creating context\n")
+            Log.player.error("MPV: failed creating context")
             exit(1)
         }
 
@@ -307,17 +308,23 @@ final class MPVPlayerViewControllerMac: NSViewController {
                         DispatchQueue.main.async {
                             self.playDelegate?.playbackEnded()
                         }
+                    } else if reason == MPV_END_FILE_REASON_ERROR {
+                        let message = endFileData.map { String(cString: mpv_error_string($0.pointee.error)) }
+                        Log.player.error("MPV playback failed: \(message ?? "unknown", privacy: .public)")
+                        DispatchQueue.main.async {
+                            self.playDelegate?.playbackFailed(message)
+                        }
                     }
                 case MPV_EVENT_FILE_LOADED:
                     DispatchQueue.main.async {
                         self.playDelegate?.fileLoaded()
                     }
                 case MPV_EVENT_SHUTDOWN:
-                    print("event: shutdown\n")
+                    Log.player.debug("MPV event: shutdown")
                     destruct()
                 default:
                     let eventName = mpv_event_name(event!.pointee.event_id)
-                    print("event: \(String(cString: eventName!))")
+                    Log.player.debug("MPV event: \(String(cString: eventName!), privacy: .public)")
                 }
             }
         }
@@ -410,7 +417,7 @@ final class MPVPlayerViewControllerMac: NSViewController {
 
     private func checkError(_ status: CInt) {
         if status < 0 {
-            print("MPV API error: \(String(cString: mpv_error_string(status)))\n")
+            Log.player.error("MPV API error: \(String(cString: mpv_error_string(status)), privacy: .public)")
         }
     }
 }

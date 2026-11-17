@@ -44,6 +44,9 @@ struct MediaCard: View {
             .onPlayPauseCommand(perform: onTap)
         #endif
             .onTapGesture(perform: onTap)
+            .contextMenu {
+                MediaContextMenu(media: media)
+            }
     }
 
     private var artwork: some View {
@@ -59,6 +62,9 @@ struct MediaCard: View {
         )
         .overlay(alignment: .topTrailing) {
             WatchStatusBadge(media: media)
+        }
+        .overlay(alignment: .topLeading) {
+            LimitedPlayBadge(media: media)
         }
         #if os(tvOS)
         .overlay {

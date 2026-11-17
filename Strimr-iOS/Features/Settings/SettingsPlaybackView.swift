@@ -45,6 +45,18 @@ struct SettingsPlaybackView: View {
                     }
                 }
 
+                Picker("settings.playback.audioLanguage", selection: viewModel.preferredAudioLanguageBinding) {
+                    ForEach(viewModel.audioLanguageOptions, id: \.self) { code in
+                        Text(TrackLanguage.displayName(code)).tag(code)
+                    }
+                }
+
+                Picker("settings.playback.subtitleLanguage", selection: viewModel.preferredSubtitleLanguageBinding) {
+                    ForEach(viewModel.subtitleLanguageOptions, id: \.self) { code in
+                        Text(TrackLanguage.displayName(code)).tag(code)
+                    }
+                }
+
                 Picker("settings.playback.subtitleScale", selection: viewModel.subtitleScaleBinding) {
                     ForEach(viewModel.subtitleScaleOptions, id: \.self) { scale in
                         Text("settings.playback.scale \(scale)").tag(scale)

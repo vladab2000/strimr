@@ -25,7 +25,7 @@ struct ProgramHistoryView: View {
                         .bold()
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
-                    Text("Historické výskyty v archivu")
+                    Text("epg.history.title")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
@@ -43,9 +43,9 @@ struct ProgramHistoryView: View {
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else if results.isEmpty {
                         ContentUnavailableView(
-                            "Žádné výsledky",
+                            "epg.history.empty.title",
                             systemImage: "tv.slash",
-                            description: Text("Pro program \"\(program.title)\" nebyly nalezeny žádné záznamy v archivu.")
+                            description: Text(String(format: String(localized: "epg.history.empty.description"), program.title))
                         )
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
@@ -73,13 +73,15 @@ struct ProgramHistoryView: View {
         errorMessage = nil
         do {
             let all = try await ApiClient.fetchProgramSearch(text: program.title, providerType: providerType)
+            // Hledání najde název i v popisu jiných pořadů — přednost mají vysílání se stejným názvem
+            let sameTitle = all.filter { $0.title.caseInsensitiveCompare(program.title) == .orderedSame }
             // Seřadíme sestupně — nejnovější záznamy nahoře, filtrujeme jen minulé
             let now = Date()
-            results = all
+            results = (sameTitle.isEmpty ? all : sameTitle)
                 .filter { ($0.programEnd ?? .distantFuture) < now }
                 .sorted { ($0.programStart ?? .distantPast) > ($1.programStart ?? .distantPast) }
         } catch {
-            errorMessage = "Nepodařilo se načíst výsledky"
+            errorMessage = String(localized: "epg.history.error")
         }
         isLoading = false
     }

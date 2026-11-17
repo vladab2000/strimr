@@ -37,6 +37,11 @@ struct AVPlayerSwiftUIView: UIViewControllerRepresentable {
         coordinator.onMediaLoaded = handler
         return self
     }
+
+    func onPlaybackFailed(_ handler: @escaping (String?) -> Void) -> Self {
+        coordinator.onPlaybackFailed = handler
+        return self
+    }
 }
 
 #endif

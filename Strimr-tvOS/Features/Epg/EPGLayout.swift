@@ -6,7 +6,6 @@
 //
 
 import UIKit
-import OSLog
 
 class EPGAbsoluteLayout: UICollectionViewLayout {
     
@@ -53,10 +52,6 @@ class EPGAbsoluteLayout: UICollectionViewLayout {
         let numberOfSections = collectionView.numberOfSections
 
         for section in 0..<numberOfSections {
-
-            var minX: CGFloat = 999999999		
-            var maxX: CGFloat = 0
-
             let channel = channels[section]
             guard let programs = sequentialEPG[channel.id] else { continue }
 
@@ -73,22 +68,12 @@ class EPGAbsoluteLayout: UICollectionViewLayout {
                 let attributes = UICollectionViewLayoutAttributes(forCellWith: IndexPath(item: item, section: section))
                 attributes.frame = CGRect(x: startPosition, y: yPosition, width: endPosition - startPosition, height: rowHeight)
                 layoutCache[IndexPath(item: item, section: section)] = attributes
-                minX = min(minX, startPosition)
-                maxX = max(maxX, endPosition)
                 maxRightEdge = max(maxRightEdge, endPosition)
-                if section != 0 { continue }
-                print("program \(program.name) start=\(start), end=\(end)")
             }
-            print("prepare→ section=\(section) minX=\(Int(minX)) maxX=\(Int(maxX)) from \(dateForXOffset(minX)) to \(dateForXOffset(maxX))")
         }
 
         let totalHeight = CGFloat(numberOfSections) * (rowHeight + rowSpacing)
         contentSize = CGSize(width: maxRightEdge, height: totalHeight)
-
-        let now = Date()
-        let nowX = xOffsetForDate(now)
-        let coversNow = layoutCache.values.filter { $0.frame.minX <= nowX && $0.frame.maxX >= nowX }.count
-        print("prepare→ cache=\(layoutCache.count) nowX=\(Int(nowX)) coversNow=\(coversNow)")
     }
     
     // Tato metoda vrací cílový posun (offset) mřížky po změně fokusu
@@ -119,23 +104,7 @@ class EPGAbsoluteLayout: UICollectionViewLayout {
     }
     
     override func layoutAttributesForElements(in rect: CGRect) -> [UICollectionViewLayoutAttributes]? {
-        let result = layoutCache.values.filter { $0.frame.intersects(rect) }
-
-        if result.isEmpty, !layoutCache.isEmpty {
-            let xMatch = layoutCache.values.filter {
-                $0.frame.minX < rect.maxX && $0.frame.maxX > rect.minX
-            }.count
-            let yMatch = layoutCache.values.filter {
-                $0.frame.minY < rect.maxY && $0.frame.maxY > rect.minY
-            }.count
-            print("NO MATCH — rect=\(rect) xMatch=\(xMatch) yMatch=\(yMatch)")
-/*            for (indexPath, attributes) in layoutCache {
-                if indexPath.section != 0 { continue }
-                print("\t[\(indexPath)] \(attributes.frame)")
-            }*/
-        }
-
-        return result
+        layoutCache.values.filter { $0.frame.intersects(rect) }
     }
     
     override func layoutAttributesForItem(at indexPath: IndexPath) -> UICollectionViewLayoutAttributes? {

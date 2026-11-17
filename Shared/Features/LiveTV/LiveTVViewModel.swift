@@ -37,7 +37,11 @@ final class LiveTVViewModel {
     var mode: LiveTVMode = .channels
     var selectedDate: Date = .now
     var selectedProgram: Media? = nil
-    var selectedChannel: Media? = nil
+    var selectedChannel: Media? = nil {
+        didSet {
+            if let id = selectedChannel?.id { AppStateStore.lastChannelId = id }
+        }
+    }
     var selectedCategory: ChannelCategory? = nil
 
     var baseDate: Date {
@@ -79,6 +83,14 @@ final class LiveTVViewModel {
         async let categoriesLoad: () = manager.loadCategories()
         async let channelsLoad: () = manager.loadChannels()
         _ = await (categoriesLoad, channelsLoad)
+        restoreSelectedChannel()
+    }
+
+    /// Po novém spuštění vybere kanál z minula (iOS / macOS; tvOS EPG si ho obnoví sám)
+    private func restoreSelectedChannel() {
+        guard selectedChannel == nil, let id = AppStateStore.lastChannelId,
+              let channel = channels.first(where: { $0.id == id }) else { return }
+        selectChannel(channel)
     }
 
     func reload() async {
@@ -89,25 +101,30 @@ final class LiveTVViewModel {
         manager.reloadIfProviderChanged()
     }
 
-    /// Refreshes programs if the calendar day has changed (e.g. after device sleep).
-    func refreshIfDayChanged() {
-        //TODO: Doplnění chybějích dnů do programu, aby bylo vždy načteno 14 dní epg
-/*        var calendar = Calendar.current
-        calendar.timeZone = TimeZone(abbreviation: "UTC")!
-        let today = calendar.startOfDay(for: .now)
-        let selectedDay = calendar.startOfDay(for: selectedDate)
+    /// Den (UTC), ke kterému jsou načtené programy. Časová osa EPG začíná na "dnes − 7 dní" a programy
+    /// jsou uložené vůči dnešku — po probuzení v jiný den by nesouhlasily, proto se načtou znovu.
+    @ObservationIgnored private var programsDay = LiveTVViewModel.utcToday()
 
-        guard today != selectedDay else { return }
+    /// Po probuzení zařízení: změnil-li se den, zahodí programy (načtou se znovu pro viditelnou oblast)
+    @discardableResult
+    func refreshIfDayChanged() -> Bool {
+        let today = Self.utcToday()
+        guard today != programsDay else { return false }
+        programsDay = today
 
         selectedDate = .now
         selectedProgram = nil
         manager.resetAllPrograms()
-
-        // Reload programs for all visible channels
         if let channel = selectedChannel {
             loadProgramsIfNeeded(for: channel)
-            selectedProgram = nil
-        }*/
+        }
+        return true
+    }
+
+    private static func utcToday() -> Date {
+        var calendar = Calendar.current
+        calendar.timeZone = TimeZone(abbreviation: "UTC")!
+        return calendar.startOfDay(for: .now)
     }
 
     func dateChanged() {

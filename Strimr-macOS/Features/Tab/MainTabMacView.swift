@@ -25,14 +25,11 @@ struct MainTabMacView: View {
                 Label("tabs.liveTV", systemImage: "tv.and.mediabox")
                     .tag(MainCoordinator.Tab.channels)
 
-                Label("Filmy", systemImage: "film.fill")
+                Label("tabs.movies", systemImage: "film.fill")
                     .tag(MainCoordinator.Tab.movies)
 
-                Label("Seriály", systemImage: "play.rectangle.on.rectangle.fill")
+                Label("tabs.shows", systemImage: "play.rectangle.on.rectangle.fill")
                     .tag(MainCoordinator.Tab.shows)
-
-                Label("tabs.library", systemImage: "books.vertical.fill")
-                    .tag(MainCoordinator.Tab.library)
 
                 Label("tabs.search", systemImage: "magnifyingglass")
                     .tag(MainCoordinator.Tab.search)
@@ -62,15 +59,6 @@ struct MainTabMacView: View {
                         onSelectMedia: coordinator.showMediaDetail,
                     )
                     .id(isMovies)
-                    .navigationDestination(for: MainCoordinator.Route.self) { route in
-                        destination(for: route)
-                    }
-                }
-            case .library:
-                NavigationStack(path: coordinator.pathBinding(for: .library)) {
-                    LibraryMacView(
-                        onSelectMedia: coordinator.showMediaDetail,
-                    )
                     .navigationDestination(for: MainCoordinator.Route.self) { route in
                         destination(for: route)
                     }
@@ -111,7 +99,7 @@ struct MainTabMacView: View {
             }
         }
         .alert(
-            "Přehrávání se nezdařilo",
+            "player.error.title",
             isPresented: Binding(
                 get: { coordinator.errorMessage != nil },
                 set: { if !$0 { coordinator.errorMessage = nil } }
@@ -121,6 +109,19 @@ struct MainTabMacView: View {
             Button("OK", role: .cancel) {}
         } message: { message in
             Text(message)
+        }
+        .alert(
+            "player.confirm.title",
+            isPresented: Binding(
+                get: { coordinator.playbackConfirmation != nil },
+                set: { if !$0 { coordinator.playbackConfirmation = nil } }
+            ),
+            presenting: coordinator.playbackConfirmation
+        ) { confirmation in
+            Button("player.confirm.play") { confirmation.onConfirm() }
+            Button("common.actions.cancel", role: .cancel) {}
+        } message: { confirmation in
+            Text(confirmation.message)
         }
         .environmentObject(coordinator)
         .onChange(of: selectedTab) { _, newTab in
@@ -132,7 +133,7 @@ struct MainTabMacView: View {
             selectedTab = newTab
         }
         .sheet(isPresented: $coordinator.isPresentingPlayer, onDismiss: {
-            coordinator.resetPlayer()
+            coordinator.playerDidDismiss()
             Task { await watchHistoryManager.load() }
         }) {
             if let streamURL = coordinator.selectedStreamURL, let sessionId = coordinator.selectedSessionId {
@@ -200,7 +201,16 @@ struct MainTabMacView: View {
                     )
                 }
             }
+
+            vm.onMarkWatched = {
+                guard let media else { return }
+                Task { @MainActor in
+                    await manager.setWatched(media: media, watched: true)
+                }
+            }
         }
+        coordinator.configureNextEpisode(for: vm, media: media, enabled: settingsManager.playback.autoPlayNextEpisode)
+        coordinator.configureTrackPreferences(for: vm, media: media, settingsManager: settingsManager)
         return vm
     }
 }

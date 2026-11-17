@@ -1,8 +1,9 @@
 import Foundation
 import Observation
 
-/// Stránka Filmy / Seriály: řada dlaždic pro každý zdroj (Bombuj, uzi.la) s filtrem kategorie a jazyka.
-/// Filtr je společný pro obě stránky (uložený v nastavení).
+/// Stránka Filmy / Seriály: řada dlaždic pro každý zdroj (Bombuj, uzi.la, OnePlay) s filtrem kategorie a jazyka.
+/// Filtr je společný pro obě stránky (uložený v nastavení). Řada se načte po první stránce,
+/// další stránky se dočítají při rolování (loadMore).
 @MainActor
 @Observable
 final class CatalogViewModel {
@@ -12,8 +13,8 @@ final class CatalogViewModel {
 
         var title: String {
             switch self {
-            case .movies: "Filmy"
-            case .shows: "Seriály"
+            case .movies: String(localized: "tabs.movies")
+            case .shows: String(localized: "tabs.shows")
             }
         }
 
@@ -28,19 +29,30 @@ final class CatalogViewModel {
     struct Row: Identifiable {
         let source: ContentSource
         var items: [Media]
+        /// Poslední načtená stránka seznamu
+        var page = 1
+        var hasMore = true
+        var isLoadingMore = false
+        /// Zdroj umí vybrané řazení; jinak výchozí pořadí s poznámkou u názvu řady
+        var sortSupported = true
 
         var id: String { source.rawValue }
-        var title: String { source.displayName }
+        var title: String {
+            sortSupported ? source.displayName : "\(source.displayName) · \(String(localized: "catalog.sort.unsupported"))"
+        }
     }
 
-    /// Zdroje v pořadí řad na stránce
-    static let sources: [ContentSource] = [.bombuj, .uzi]
+    /// Zdroje v pořadí řad na stránce (OnePlay jen s nastaveným poskytovatelem na serveru, jinak prázdná řada)
+    static let sources: [ContentSource] = [.bombuj, .uzi, .oneplay]
 
     let kind: Kind
     var rows: [Row] = []
     var genres: [CatalogGenre] = []
     var isLoading = false
     var errorMessage: String?
+    /// Zvyšuje se po každém novém načtení řad (změna filtru, obnovení) — řady se vytvoří znovu a začnou první
+    /// položkou; dočítání dalších stránek ho nemění
+    private(set) var rowsVersion = 0
 
     var watchHistoryManager: WatchHistoryManager?
 
@@ -48,6 +60,9 @@ final class CatalogViewModel {
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     /// Filtr, se kterým jsou načtené řady (druhá stránka mohla filtr mezitím změnit)
     @ObservationIgnored private var loadedFilter: CatalogFilter?
+    @ObservationIgnored private var loadMoreTasks: [ContentSource: Task<Void, Never>] = [:]
+    /// Zvyšuje se při každém novém načtení řad — dočtená stránka ze starého seznamu se zahodí
+    @ObservationIgnored private var generation = 0
 
     init(kind: Kind, settingsManager: SettingsManager) {
         self.kind = kind
@@ -62,6 +77,12 @@ final class CatalogViewModel {
         rows.contains { !$0.items.isEmpty }
     }
 
+    /// Řazení v menu: jen ta, která umí aspoň jeden zdroj stránky
+    var sortOptions: [CatalogSort] {
+        let supported = Self.sources.reduce(into: Set<CatalogSort>()) { $0.formUnion($1.supportedSorts(series: kind == .shows)) }
+        return CatalogSort.allCases.filter(supported.contains)
+    }
+
     func load() async {
         await loadGenres()
         guard rows.isEmpty || loadedFilter != settingsManager.catalogFilter else { return }
@@ -70,6 +91,9 @@ final class CatalogViewModel {
 
     func reload() async {
         loadTask?.cancel()
+        loadMoreTasks.values.forEach { $0.cancel() }
+        loadMoreTasks = [:]
+        generation += 1
         let task = Task { [weak self] in
             guard let self else { return }
             await fetchRows()
@@ -85,9 +109,42 @@ final class CatalogViewModel {
         Task { await reload() }
     }
 
+    /// Dočte další stránku řady (volá se při dorolování ke konci)
+    func loadMore(_ source: ContentSource) {
+        guard !isLoading, loadMoreTasks[source] == nil,
+              let index = rows.firstIndex(where: { $0.source == source }),
+              rows[index].hasMore, !rows[index].isLoadingMore,
+              let filter = loadedFilter else { return }
+
+        rows[index].isLoadingMore = true
+        let page = rows[index].page + 1
+        let path = filter.apply(to: kind.path(for: source), page: page)
+        let generation = generation
+
+        loadMoreTasks[source] = Task { [weak self] in
+            let result = try? await ApiClient.fetchMenu(urlPath: path)
+            guard let self, generation == self.generation else { return }
+            loadMoreTasks[source] = nil
+            guard let index = rows.firstIndex(where: { $0.source == source }) else { return }
+            rows[index].isLoadingMore = false
+
+            // Chyba: zkusí se znovu při dalším dorolování
+            guard let result else { return }
+
+            // Prázdná stránka nebo jen už známé položky (web za poslední stránkou vrací poslední) = konec
+            let known = Set(rows[index].items.map(\.id))
+            let newItems = result.filter { $0.itemType.isSupported && !known.contains($0.id) }
+            rows[index].page = page
+            rows[index].hasMore = !newItems.isEmpty
+            rows[index].items += watchHistoryManager?.applyWatchOverrides(to: newItems) ?? newItems
+        }
+    }
+
     func refreshWatchStatus() {
         guard let manager = watchHistoryManager else { return }
-        rows = rows.map { Row(source: $0.source, items: manager.applyWatchOverrides(to: $0.items)) }
+        for index in rows.indices {
+            rows[index].items = manager.applyWatchOverrides(to: rows[index].items)
+        }
     }
 
     /// Kategorie, které umí aspoň jeden ze zdrojů; neznámá uložená kategorie se zruší
@@ -116,7 +173,7 @@ final class CatalogViewModel {
             for (index, source) in Self.sources.enumerated() {
                 group.addTask {
                     do {
-                        let items = try await ApiClient.fetchMenu(urlPath: filter.apply(to: kind.path(for: source)))
+                        let items = try await ApiClient.fetchMenu(urlPath: filter.apply(to: kind.path(for: source), page: 1))
                         return (index, .success(items))
                     } catch {
                         return (index, .failure(error))
@@ -134,9 +191,15 @@ final class CatalogViewModel {
 
         rows = Self.sources.enumerated().map { index, source in
             let items = (try? results[index]?.get()) ?? []
-            return Row(source: source, items: items.filter { $0.itemType.isSupported })
+            return Row(
+                source: source,
+                items: items.filter { $0.itemType.isSupported },
+                hasMore: !items.isEmpty,
+                sortSupported: source.supportedSorts(series: kind == .shows).contains(filter.sort),
+            )
         }
         loadedFilter = filter
+        rowsVersion += 1
 
         if results.values.allSatisfy({ if case .failure = $0 { true } else { false } }),
            case let .failure(error)? = results[0]

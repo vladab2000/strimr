@@ -81,6 +81,26 @@ final class SettingsManager {
         persist()
     }
 
+    func setPreferredAudioLanguage(_ language: String) {
+        settings.playback.preferredAudioLanguage = language
+        persist()
+    }
+
+    func setPreferredSubtitleLanguage(_ language: String) {
+        settings.playback.preferredSubtitleLanguage = language
+        persist()
+    }
+
+    func seriesTrackChoice(for seriesId: String) -> TrackChoice? {
+        settings.seriesTracks[seriesId]
+    }
+
+    func setSeriesTrackChoice(_ choice: TrackChoice, for seriesId: String) {
+        guard settings.seriesTracks[seriesId] != choice else { return }
+        settings.seriesTracks[seriesId] = choice
+        persist()
+    }
+
     func updatePlayback(_ transform: (inout PlaybackSettings) -> Void) {
         transform(&settings.playback)
         persist()

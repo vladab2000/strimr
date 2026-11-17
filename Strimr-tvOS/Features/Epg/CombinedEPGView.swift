@@ -303,7 +303,6 @@ struct CombinedEPGView: View {
     // MARK: - EPG data loading
 
     private func loadEPGData(for targetDate: Date, completion: @escaping () -> Void) {
-//        print("loadEPGData STARTED")
         guard let viewModel else { completion(); return }
         let channels = viewModel.channels
         guard !channels.isEmpty else { completion(); return }
@@ -329,7 +328,6 @@ struct CombinedEPGView: View {
             }
         }
         group.notify(queue: .main) {
-//            print("loadEPGData COMPLETE")
             completion()
         }
     }
@@ -369,9 +367,9 @@ struct CombinedEPGView: View {
         let cal = Calendar.current
         let dayDiff = cal.dateComponents([.day], from: cal.startOfDay(for: Date()), to: cal.startOfDay(for: viewingDate)).day ?? 0
         switch dayDiff {
-        case 0:  return "Dnes"
-        case -1: return "Včera"
-        case 1:  return "Zítra"
+        case 0:  return String(localized: "epg.day.today")
+        case -1: return String(localized: "epg.day.yesterday")
+        case 1:  return String(localized: "epg.day.tomorrow")
         default:
             let formatter = DateFormatter()
             formatter.dateFormat = "E d. M."

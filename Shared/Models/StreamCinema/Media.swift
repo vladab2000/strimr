@@ -25,9 +25,20 @@ struct Media: Codable, Hashable, Identifiable {
     var isFavorite: Bool?
     let updatedUtc: Date?
 
+    /// Epizoda: seriál, ke kterému patří — ukládá se s historií sledování (pokračování, další díl)
+    var parentId: String?
+    var parentUrl: String?
+
+    /// Seriál: počet zhlédnutých epizod (doplní server z historie sledování)
+    var watchedEpisodes: Int?
+
+    /// OnePlay: titul mimo plán — přehraje se jen z omezeného počtu přehrání zdarma (false = v plánu, zdarma)
+    var limitedPlay: Bool?
+
     enum CodingKeys: String, CodingKey {
         case kind, id, name, description, url, art, details
         case watchPosition, watchCompleted, isFavorite, updatedUtc
+        case parentId, parentUrl, watchedEpisodes, limitedPlay
     }
 
     // MARK: - Custom Codable for polymorphic details
@@ -45,6 +56,10 @@ struct Media: Codable, Hashable, Identifiable {
         watchCompleted = try container.decodeIfPresent(Bool.self, forKey: .watchCompleted)
         isFavorite = try container.decodeIfPresent(Bool.self, forKey: .isFavorite)
         updatedUtc = try container.decodeIfPresent(Date.self, forKey: .updatedUtc)
+        parentId = try container.decodeIfPresent(String.self, forKey: .parentId)
+        parentUrl = try container.decodeIfPresent(String.self, forKey: .parentUrl)
+        watchedEpisodes = try container.decodeIfPresent(Int.self, forKey: .watchedEpisodes)
+        limitedPlay = try container.decodeIfPresent(Bool.self, forKey: .limitedPlay)
 
         // Polymorphic details decoding based on kind
         switch kind {
@@ -84,6 +99,8 @@ struct Media: Codable, Hashable, Identifiable {
         watchCompleted: Bool?,
         isFavorite: Bool?,
         updatedUtc: Date?,
+        parentId: String? = nil,
+        parentUrl: String? = nil,
     ) {
         self.kind = kind
         self.id = id
@@ -96,6 +113,8 @@ struct Media: Codable, Hashable, Identifiable {
         self.watchCompleted = watchCompleted
         self.isFavorite = isFavorite
         self.updatedUtc = updatedUtc
+        self.parentId = parentId
+        self.parentUrl = parentUrl
     }
 
     // MARK: - Computed: type
@@ -200,7 +219,7 @@ struct Media: Codable, Hashable, Identifiable {
         case .movie, .episode:
             return watchCompleted ?? false
         case .tvshow, .season:
-            return watchCompleted ?? false  //TODO: Implementovat počet epizod a sériií + počet shlédnutých
+            return watchCompleted ?? false
         default:
             return false
         }
@@ -225,8 +244,12 @@ struct Media: Codable, Hashable, Identifiable {
         return String(format: "S%02dE%02d", season, episode)
     }
 
-    var remainingUnwatchedEpisodes: Int? {
-        return nil   //TODO: Implementovat počet epizod a sériií + počet shlédnutých
+    /// Epizoda s vazbou na seriál (pro uložení do historie a dohledání dalšího dílu)
+    func withParent(_ series: Media) -> Media {
+        var copy = self
+        copy.parentId = series.id
+        copy.parentUrl = series.url
+        return copy
     }
     
     // MARK: - Computed: lang (inlined from MediaLangItem)

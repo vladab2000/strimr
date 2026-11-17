@@ -12,6 +12,8 @@ class EPGCell: UICollectionViewCell {
     let titleLabel = UILabel()
     let timeLabel = UILabel()
     var programId: String?
+    /// Zobrazený pořad — index buňky může do přepočítaných dat ukazovat jinam, než co buňka zobrazuje
+    private(set) var program: Media?
     private(set) var isPlaceholder = false
     private var normalBackgroundColor: UIColor = UIColor(white: 0.2, alpha: 1)
     
@@ -61,6 +63,7 @@ class EPGCell: UICollectionViewCell {
     
     func configure(with program: Media) {
         self.programId = program.id
+        self.program = program
         isPlaceholder = false
         titleLabel.text = program.title
 
@@ -78,6 +81,7 @@ class EPGCell: UICollectionViewCell {
 
     func configurePlaceholder() {
         programId = nil
+        program = nil
         isPlaceholder = true
         titleLabel.text = nil
         timeLabel.text = nil

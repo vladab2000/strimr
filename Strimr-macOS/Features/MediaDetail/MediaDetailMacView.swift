@@ -33,8 +33,15 @@ struct MediaDetailMacView: View {
                         .padding(.horizontal, 16)
 
                     if vm.media.itemType == .movie || vm.media.itemType == .tvshow {
-                        favoriteButton
-                            .padding(.horizontal, 16)
+                        HStack(spacing: 12) {
+                            if let title = vm.continueTitle, let episode = vm.continueEpisode {
+                                SeriesContinueButton(title: title) {
+                                    onSelectMedia(episode)
+                                }
+                            }
+                            favoriteButton
+                        }
+                        .padding(.horizontal, 16)
                     }
 
                     if let summary = vm.media.summary, !summary.isEmpty {
@@ -174,6 +181,13 @@ struct MediaDetailMacView: View {
     @ViewBuilder
     private var seasonsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if let watchedText = viewModel.watchedEpisodesText {
+                Text(watchedText)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 16)
+            }
+
             if !viewModel.seasons.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {

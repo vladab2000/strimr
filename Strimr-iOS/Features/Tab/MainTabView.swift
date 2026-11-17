@@ -29,17 +29,6 @@ struct MainTabView: View {
                 }
             }
 
-            Tab("tabs.library", systemImage: "books.vertical.fill", value: MainCoordinator.Tab.library) {
-                NavigationStack(path: coordinator.pathBinding(for: .library)) {
-                    LibraryView(
-                        onSelectMedia: coordinator.showMediaDetail
-                    )
-                    .navigationDestination(for: MainCoordinator.Route.self) {
-                        destination(for: $0)
-                    }
-                }
-            }
-
             Tab("tabs.search", systemImage: "magnifyingglass", value: MainCoordinator.Tab.search, role: .search) {
                 NavigationStack(path: coordinator.pathBinding(for: .search)) {
                     SearchView(
@@ -61,7 +50,7 @@ struct MainTabView: View {
                 }
             }
 
-            Tab("Filmy", systemImage: "film.fill", value: MainCoordinator.Tab.movies) {
+            Tab("tabs.movies", systemImage: "film.fill", value: MainCoordinator.Tab.movies) {
                 NavigationStack(path: coordinator.pathBinding(for: .movies)) {
                     CatalogListView(
                         viewModel: moviesViewModel,
@@ -73,7 +62,7 @@ struct MainTabView: View {
                 }
             }
 
-            Tab("Seriály", systemImage: "play.rectangle.on.rectangle.fill", value: MainCoordinator.Tab.shows) {
+            Tab("tabs.shows", systemImage: "play.rectangle.on.rectangle.fill", value: MainCoordinator.Tab.shows) {
                 NavigationStack(path: coordinator.pathBinding(for: .shows)) {
                     CatalogListView(
                         viewModel: showsViewModel,
@@ -104,7 +93,7 @@ struct MainTabView: View {
             }
         }
         .alert(
-            "Přehrávání se nezdařilo",
+            "player.error.title",
             isPresented: Binding(
                 get: { coordinator.errorMessage != nil },
                 set: { if !$0 { coordinator.errorMessage = nil } }
@@ -115,9 +104,22 @@ struct MainTabView: View {
         } message: { message in
             Text(message)
         }
+        .alert(
+            "player.confirm.title",
+            isPresented: Binding(
+                get: { coordinator.playbackConfirmation != nil },
+                set: { if !$0 { coordinator.playbackConfirmation = nil } }
+            ),
+            presenting: coordinator.playbackConfirmation
+        ) { confirmation in
+            Button("player.confirm.play") { confirmation.onConfirm() }
+            Button("common.actions.cancel", role: .cancel) {}
+        } message: { confirmation in
+            Text(confirmation.message)
+        }
         .environmentObject(coordinator)
         .fullScreenCover(isPresented: $coordinator.isPresentingPlayer, onDismiss: {
-            coordinator.resetPlayer()
+            coordinator.playerDidDismiss()
             Task { await watchHistoryManager.load() }
         }) {
             if let streamURL = coordinator.selectedStreamURL, let sessionId = coordinator.selectedSessionId {
@@ -196,6 +198,8 @@ struct MainTabView: View {
                 }
             }
         }
+        coordinator.configureNextEpisode(for: vm, media: media, enabled: settingsManager.playback.autoPlayNextEpisode)
+        coordinator.configureTrackPreferences(for: vm, media: media, settingsManager: settingsManager)
         return vm
     }
 }

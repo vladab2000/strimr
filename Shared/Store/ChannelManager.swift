@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import OSLog
 
 /// Centralized manager for TV channels.
 @MainActor
@@ -137,10 +138,6 @@ final class ChannelManager {
                 }
 
                 epgCache[channel.id]?[dayStart] = programs
-                let sorted = programs.compactMap(\.programStart).sorted()
-                let first = sorted.first.map { "\($0)" } ?? "nil"
-                let last = sorted.last.map { "\($0)" } ?? "nil"
-                print("API[\(dayStart) ch=\(channelId.prefix(4))] → \(programs.count) programs \(first)…\(last)")
                 mergeProgramsSafely(programs, for: channelId)
                 rebuildSequentialEPG(for: channelId)
                 completion?(.fetched)
@@ -149,7 +146,7 @@ final class ChannelManager {
                 if Task.isCancelled {
                     completion?(.canceled)
                 } else {
-                    print("API FETCH ERROR [\(channelId) \(dayStart)]: \(error)")
+                    Log.epg.error("Programs fetch failed [\(channelId, privacy: .public) \(dayStart, privacy: .public)]: \(error.localizedDescription, privacy: .public)")
                     completion?(.error)
                 }
             }
@@ -186,17 +183,26 @@ final class ChannelManager {
     private func rebuildSequentialEPG(for channelId: String) {
         var calendar = Calendar.current
         calendar.timeZone = TimeZone(abbreviation: "UTC")!
-        let today = calendar.startOfDay(for: Date())
-        let dayRange = -10...10
-        let totalCapacity = 1000
+        sequentialEPGByChannel[channelId] = Self.buildSequence(
+            from: epgCache[channelId] ?? [:],
+            today: calendar.startOfDay(for: Date()),
+            todayIndexOffset: todayIndexOffset,
+        )
+    }
 
-        var sequence = [Media?](repeating: nil, count: totalCapacity)
+    /// Sekvence pořadů kanálu pro mřížku EPG: index `todayIndexOffset` = první pořad dneška (UTC),
+    /// dnešek a další dny dopředu, předchozí dny zpětně. Pořad přes půlnoc (v obou dnech) jen jednou.
+    nonisolated static func buildSequence(
+        from channelCache: [Date: [Media]],
+        today: Date,
+        todayIndexOffset: Int,
+        dayRange: ClosedRange<Int> = -10...10,
+        capacity: Int = 1000,
+    ) -> [Media?] {
+        var calendar = Calendar.current
+        calendar.timeZone = TimeZone(abbreviation: "UTC")!
 
-        guard let channelCache = epgCache[channelId] else {
-            sequentialEPGByChannel[channelId] = sequence
-            return
-        }
-
+        var sequence = [Media?](repeating: nil, count: capacity)
         var seenProgramStarts = Set<Date>()
 
         // Dnešek a budoucí dny (od indexu todayIndexOffset dopředu)
@@ -229,18 +235,7 @@ final class ChannelManager {
             }
         }
 
-        let now = Date()
-        let inCacheNow = channelCache.values.flatMap { $0 }.filter {
-            guard let s = $0.programStart, let e = $0.programEnd else { return false }
-            return s <= now && e > now
-        }.count
-        let inSeqNow = sequence.compactMap { $0 }.filter {
-            guard let s = $0.programStart, let e = $0.programEnd else { return false }
-            return s <= now && e > now
-        }.count
-        print("rebuildEPG[\(channelId.prefix(4))]: inCacheNow=\(inCacheNow) inSeqNow=\(inSeqNow)")
-
-        sequentialEPGByChannel[channelId] = sequence
+        return sequence
     }
 
     /// Vrátí aktuálně vysílaný pořad pro daný kanál.

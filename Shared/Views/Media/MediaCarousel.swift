@@ -7,6 +7,9 @@ struct MediaCarousel: View {
     let items: [Media]
     let showsLabels: Bool
     let onSelectMedia: (Media) -> Void
+    /// Volá se, když se při rolování objeví některá z posledních dlaždic (dočtení další stránky)
+    var onReachEnd: (() -> Void)? = nil
+    var isLoadingMore = false
 
     #if os(tvOS)
     @FocusState private var focusedID: Media.ID?
@@ -23,6 +26,15 @@ struct MediaCarousel: View {
                         .focused($focusedID, equals: item.id)
                         .id(item.id)
                     #endif
+                        .onAppear {
+                            reachEndIfNeeded(item)
+                        }
+                }
+
+                if isLoadingMore {
+                    ProgressView()
+                        .frame(maxHeight: .infinity)
+                        .padding(.horizontal, 24)
                 }
             }
             #if os(tvOS)
@@ -52,6 +64,15 @@ struct MediaCarousel: View {
         }
         #endif
     }
+
+    private func reachEndIfNeeded(_ item: Media) {
+        guard let onReachEnd,
+              let index = items.firstIndex(where: { $0.id == item.id }),
+              index >= items.count - Self.reachEndThreshold else { return }
+        onReachEnd()
+    }
+
+    private static let reachEndThreshold = 6
 
     @ViewBuilder
     private func card(for media: Media) -> some View {

@@ -17,6 +17,16 @@
 		E9E4DB4F2EF4534E0035147A /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = E97F3FC22ED9E12000CA6E05 /* Localizable.xcstrings */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		800A5289F8A31F80769B7CD3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E98A13B12ED8CBAD002F98B2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA000006000000000000AA06;
+			remoteInfo = "Strimr-macOS";
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXCopyFilesBuildPhase section */
 		E98AE9B12F009FE30062F372 /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -43,6 +53,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		4C65452B093944DC899159B5 /* StrimrTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StrimrTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA000004000000000000AA04 /* Strimr-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Strimr-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		E97F3FC22ED9E12000CA6E05 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		E98A13B92ED8CBAD002F98B2 /* Strimr-iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Strimr-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -90,6 +101,11 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		42210A4C93EBA6D84FDE29EA /* StrimrTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = StrimrTests;
+			sourceTree = "<group>";
+		};
 		AA000008000000000000AA08 /* Strimr-macOS */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -155,6 +171,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F5DFAE2E946434E44971227F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -169,6 +192,7 @@
 				E9C448F42EF3034900D2895B /* Strimr-tvOS */,
 				E9C448FE2EF3063500D2895B /* Frameworks */,
 				E98A13BA2ED8CBAD002F98B2 /* Products */,
+				42210A4C93EBA6D84FDE29EA /* StrimrTests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -178,6 +202,7 @@
 				E98A13B92ED8CBAD002F98B2 /* Strimr-iOS.app */,
 				AA000004000000000000AA04 /* Strimr-macOS.app */,
 				E9C448F32EF3034900D2895B /* Strimr-tvOS.app */,
+				4C65452B093944DC899159B5 /* StrimrTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -218,6 +243,27 @@
 			productName = "Strimr-macOS";
 			productReference = AA000004000000000000AA04 /* Strimr-macOS.app */;
 			productType = "com.apple.product-type.application";
+		};
+		D2FCE0E2E56B214FDAC2CE15 /* StrimrTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1535092BC89090F7455F260C /* Build configuration list for PBXNativeTarget "StrimrTests" */;
+			buildPhases = (
+				DE00D5999558306BF54E20E0 /* Sources */,
+				F5DFAE2E946434E44971227F /* Frameworks */,
+				887FFBF4979401F6C4D2800C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FD2CE01B851BDA1ACD3314BE /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				42210A4C93EBA6D84FDE29EA /* StrimrTests */,
+			);
+			name = StrimrTests;
+			productName = StrimrTests;
+			productReference = 4C65452B093944DC899159B5 /* StrimrTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		E98A13B82ED8CBAD002F98B2 /* Strimr-iOS */ = {
 			isa = PBXNativeTarget;
@@ -283,6 +329,9 @@
 					AA000006000000000000AA06 = {
 						CreatedOnToolsVersion = 26.0.1;
 					};
+					D2FCE0E2E56B214FDAC2CE15 = {
+						TestTargetID = AA000006000000000000AA06;
+					};
 					E98A13B82ED8CBAD002F98B2 = {
 						CreatedOnToolsVersion = 26.0.1;
 					};
@@ -310,11 +359,19 @@
 				AA000006000000000000AA06 /* Strimr-macOS */,
 				E98A13B82ED8CBAD002F98B2 /* Strimr-iOS */,
 				E9C448F22EF3034900D2895B /* Strimr-tvOS */,
+				D2FCE0E2E56B214FDAC2CE15 /* StrimrTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		887FFBF4979401F6C4D2800C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AA00000C000000000000AA0C /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -349,6 +406,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DE00D5999558306BF54E20E0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E98A13B52ED8CBAD002F98B2 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -365,7 +429,56 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		FD2CE01B851BDA1ACD3314BE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "Strimr-macOS";
+			target = AA000006000000000000AA06 /* Strimr-macOS */;
+			targetProxy = 800A5289F8A31F80769B7CD3 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		380A811F2EACC54F4925B0F1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 6HXSYFK6A7;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = barttv.mujrd.cz.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Strimr-macOS.app/Contents/MacOS/Strimr-macOS";
+			};
+			name = Release;
+		};
+		58596A2AE1C9C9AD2D9731BD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 6HXSYFK6A7;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = barttv.mujrd.cz.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Strimr-macOS.app/Contents/MacOS/Strimr-macOS";
+			};
+			name = Debug;
+		};
 		AA00000D000000000000AA0D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReferenceAnchor = E9E70EF02F0D6FD7009C62B3 /* Config */;
@@ -763,6 +876,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		1535092BC89090F7455F260C /* Build configuration list for PBXNativeTarget "StrimrTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				380A811F2EACC54F4925B0F1 /* Release */,
+				58596A2AE1C9C9AD2D9731BD /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		AA00000A000000000000AA0A /* Build configuration list for PBXNativeTarget "Strimr-macOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
