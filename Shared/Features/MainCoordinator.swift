@@ -36,6 +36,8 @@ final class MainCoordinator: ObservableObject {
     @Published var selectedSkipIntroEnd: Double?
     @Published var selectedSkipTitlesStart: Double?
     @Published var selectedExternalSubtitles: [ExternalSubtitle] = []
+    /// Šifrovaný stream (FairPlay) — přehraje ho jen AVPlayer
+    @Published var selectedDrm: StreamDrm?
     @Published var isPresentingPlayer = false
 
     /// Channel context for LiveTV playback (auto-next program)
@@ -202,6 +204,7 @@ final class MainCoordinator: ObservableObject {
         skipIntroEnd: Double? = nil,
         skipTitlesStart: Double? = nil,
         externalSubtitles: [ExternalSubtitle] = [],
+        drm: StreamDrm? = nil,
         channel: Media? = nil,
         program: Media? = nil
     ) {
@@ -213,6 +216,7 @@ final class MainCoordinator: ObservableObject {
         selectedSkipIntroEnd = skipIntroEnd
         selectedSkipTitlesStart = skipTitlesStart
         selectedExternalSubtitles = externalSubtitles
+        selectedDrm = drm
         selectedChannel = channel
         selectedProgram = program
         isPresentingPlayer = true
@@ -277,6 +281,7 @@ final class MainCoordinator: ObservableObject {
         selectedSkipIntroEnd = nil
         selectedSkipTitlesStart = nil
         selectedExternalSubtitles = []
+        selectedDrm = nil
         selectedChannel = nil
         selectedProgram = nil
         isPresentingPlayer = false

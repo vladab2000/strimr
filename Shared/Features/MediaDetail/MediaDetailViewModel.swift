@@ -22,7 +22,7 @@ final class MediaDetailViewModel {
     }
 
     var heroImageURL: URL? {
-        media.bannerURL
+        media.artURL("banner", width: Media.ArtSize.hero.width, height: Media.ArtSize.hero.height)
     }
 
     var runtimeText: String? {

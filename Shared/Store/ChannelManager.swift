@@ -28,6 +28,8 @@ final class ChannelManager {
     @ObservationIgnored private let settingsManager: SettingsManager
     @ObservationIgnored private var loadChannelTask: Task<Void, Never>?
     @ObservationIgnored private var lastProvider: ProviderType?
+    /// Oblíbené kanály při posledním načtení — jejich změna v nastavení vyžaduje nové načtení
+    @ObservationIgnored private var lastFavorites: [FavoriteChannel] = []
 
     // MARK: - Init
 
@@ -63,6 +65,7 @@ final class ChannelManager {
     func reloadChannels(categoryId: Int? = nil) async {
         loadChannelTask?.cancel()
         lastProvider = provider
+        lastFavorites = settingsManager.favoriteChannels
 
         let task = Task { [weak self] in
             guard let self else { return }
@@ -71,8 +74,11 @@ final class ChannelManager {
             defer { isLoadingChannels = false }
 
             do {
-                let result = try await ApiClient.fetchChannels(providerType: provider, categoryId: categoryId)
+                var result = try await ApiClient.fetchChannels(providerType: provider, categoryId: categoryId)
                 guard !Task.isCancelled else { return }
+                if provider == .favorites {
+                    result = Self.orderedFavorites(result, favorites: settingsManager.favoriteChannels)
+                }
                 channels = result
             } catch {
                 guard !Task.isCancelled else { return }
@@ -87,17 +93,34 @@ final class ChannelManager {
     /// Call on view appear — reloads only if provider changed since last load.
     func reloadIfProviderChanged(categoryId: Int? = nil) {
         let current = settingsManager.tvProvider
-        guard lastProvider != current else { return }
+        let favoritesChanged = current == .favorites && lastFavorites != settingsManager.favoriteChannels
+        guard lastProvider != current || favoritesChanged else { return }
+        lastFavorites = settingsManager.favoriteChannels
         lastProvider = current
         loadChannelTask?.cancel()
         channels = []
         Task { await reloadChannels(categoryId: categoryId) }
     }
 
+    /// Kanály oblíbených v pořadí z nastavení (server vrací všechny kanály)
+    nonisolated static func orderedFavorites(_ channels: [Media], favorites: [FavoriteChannel]) -> [Media] {
+        let byId = Dictionary(channels.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return favorites.compactMap { byId[$0.channelId] }
+    }
+
+    /// Poskytovatel pro přehrávání kanálu: u oblíbených ten zvolený u kanálu
+    func provider(for channel: Media) -> ProviderType {
+        guard provider == .favorites else { return provider }
+        return settingsManager.favorite(channelId: channel.id)?.provider ?? .none
+    }
+
     // MARK: - Programs
     
     /// Cache: [ChannelID: [Datum: [Programy]]]
     private var epgCache: [String: [Date: [Media]]] = [:]
+
+    /// Dny (UTC), pro které server kanálu vrátil prázdný program
+    private var emptyEpgDays: [String: Set<Date>] = [:]
 
     /// Per-channel-per-date loading tasks to avoid duplicate concurrent fetches.
     @ObservationIgnored private var programTasks: [String: Task<Void, Never>] = [:]
@@ -138,8 +161,11 @@ final class ChannelManager {
                 }
 
                 epgCache[channel.id]?[dayStart] = programs
+                if programs.isEmpty {
+                    emptyEpgDays[channelId, default: []].insert(dayStart)
+                }
                 mergeProgramsSafely(programs, for: channelId)
-                rebuildSequentialEPG(for: channelId)
+                rebuildSequentialEPG(for: channelId, channel: channel)
                 completion?(.fetched)
 
             } catch {
@@ -180,11 +206,25 @@ final class ChannelManager {
 
     /// Přepočítá sekvenční EPG pro daný kanál z `epgCache` a uloží do `sequentialEPGByChannel`.
     /// Volá se automaticky po každém načtení nového dne.
-    private func rebuildSequentialEPG(for channelId: String) {
+    private func rebuildSequentialEPG(for channelId: String, channel: Media) {
         var calendar = Calendar.current
         calendar.timeZone = TimeZone(abbreviation: "UTC")!
+        var channelCache = epgCache[channelId] ?? [:]
+
+        // Kanál bez programu (často u AntikTV): prázdné dny vyplní hodinové bloky „Živé vysílání“.
+        // Bez nich by řádek neměl žádnou buňku — fokus by ho šipkami přeskočil a kanál by nešel spustit.
+        // Jen když kanál nemá žádný pořad, aby se bloky nepřekrývaly s pořady přesahujícími z vedlejšího dne.
+        if channelCache.values.allSatisfy(\.isEmpty) {
+            for day in emptyEpgDays[channelId] ?? [] {
+                channelCache[day] = (0..<24).map { hour in
+                    let start = day.addingTimeInterval(TimeInterval(hour * 3600))
+                    return Media.liveBlock(channel: channel, start: start, end: start.addingTimeInterval(3600))
+                }
+            }
+        }
+
         sequentialEPGByChannel[channelId] = Self.buildSequence(
-            from: epgCache[channelId] ?? [:],
+            from: channelCache,
             today: calendar.startOfDay(for: Date()),
             todayIndexOffset: todayIndexOffset,
         )
@@ -192,7 +232,7 @@ final class ChannelManager {
 
     /// Sekvence pořadů kanálu pro mřížku EPG: index `todayIndexOffset` = první pořad dneška (UTC),
     /// dnešek a další dny dopředu, předchozí dny zpětně. Pořad přes půlnoc (v obou dnech) jen jednou.
-    nonisolated static func buildSequence(
+    static func buildSequence(
         from channelCache: [Date: [Media]],
         today: Date,
         todayIndexOffset: Int,
@@ -276,6 +316,7 @@ final class ChannelManager {
     /// Clear all program data (e.g. when changing date or provider).
     func resetAllPrograms() {
         epgCache = [:]
+        emptyEpgDays = [:]
         programsByChannel = [:]
         sequentialEPGByChannel = [:]
         programTasks.values.forEach { $0.cancel() }
@@ -289,7 +330,7 @@ final class ChannelManager {
         do {
             return try await ApiClient.fetchLiveStream(
                 channelId: channel.id,
-                providerType: provider
+                providerType: provider(for: channel)
             )
         } catch {
             debugPrint("Failed to resolve live stream:", error)
@@ -300,9 +341,11 @@ final class ChannelManager {
     /// Resolves a stream URL for an archive program.
     func resolveArchivePlayback(channelId: String, program: Media) async -> Playback? {
         do {
+            let channel = channels.first { $0.id == channelId }
             return try await ApiClient.fetchArchiveStream(
                 channelId: channelId,
-                programId: program.id
+                programId: program.id,
+                providerType: channel.map { provider(for: $0) } ?? provider
             )
         } catch {
             debugPrint("Failed to resolve archive stream:", error)

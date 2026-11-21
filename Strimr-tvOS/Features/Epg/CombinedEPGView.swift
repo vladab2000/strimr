@@ -188,6 +188,7 @@ struct CombinedEPGView: View {
                     }
                 },
                 onProgramLongPressed: { program, _ in
+                    guard !program.isLiveBlock else { return }
                     historyProgram = program
                 },
                 horizontalOffset: $horizontalOffset,
@@ -271,6 +272,18 @@ struct CombinedEPGView: View {
     // MARK: - Program tap
 
     private func handleProgramTap(program: Media, channel: Media) async {
+        // Kanál bez programu — živé vysílání
+        if program.isLiveBlock {
+            guard let playback = await vm.resolveLivePlayback(for: channel) else { return }
+            coordinator.showPlayer(
+                streamURL: ApiClient.playbackURL(sessionId: playback.sessionId),
+                sessionId: playback.sessionId,
+                media: channel,
+                channel: channel
+            )
+            return
+        }
+
         let now = Date.now
         let isNow = (program.programStart ?? .distantFuture) <= now && now < (program.programEnd ?? .distantPast)
         let isPast = (program.programEnd ?? .distantFuture) < now
@@ -282,6 +295,8 @@ struct CombinedEPGView: View {
             let watchRecord = watchHistoryManager.continueWatching.first { $0.id == program.id }
             let resume: Double? = if let pos = watchRecord?.watchPosition, pos > 0, watchRecord?.watchCompleted != true {
                 Double(pos)
+            } else if isNow {
+                0 // právě vysílaný pořad od začátku, ne od živého okraje
             } else {
                 nil
             }

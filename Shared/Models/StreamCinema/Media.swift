@@ -184,34 +184,46 @@ struct Media: Codable, Hashable, Identifiable {
 
     // MARK: - Computed: art URLs
 
-    var thumbURL: URL? {
-        if let thumb = art?["thumb"], let url = URL(string: thumb) { return url }
-        return nil
+    /// Velikost obrázku pro šablony adres s {WIDTH}/{HEIGHT} (OnePlay: obrázky pořadů, loga kanálů).
+    /// 0 = dopočítat podle poměru stran obrázku.
+    enum ArtSize {
+        /// Pozadí hero (2/3 obrazovky, Apple TV 4K)
+        static let hero = (width: 1920, height: 1080)
+        /// Dlaždice, náhledy dílů, Now Playing
+        static let card = (width: 960, height: 540)
+        static let poster = (width: 0, height: 900)
+        /// Logo kanálu (EPG, hero) — výška, šířka podle poměru stran
+        static let logo = (width: 0, height: 240)
     }
 
-    var funartURL: URL? {
-        if let fanart = art?["fanart"], let url = URL(string: fanart) { return url }
-        return nil
+    /// Adresa obrázku z `art`; šablona {WIDTH}/{HEIGHT} se nahradí požadovanou velikostí.
+    func artURL(_ key: String, width: Int, height: Int) -> URL? {
+        guard let raw = art?[key], !raw.isEmpty else { return nil }
+        let value = raw
+            .replacingOccurrences(of: "{WIDTH}", with: String(width))
+            .replacingOccurrences(of: "{HEIGHT}", with: String(height))
+        // Cesta od kořene ("/logos/…") vede na server, ostatní adresy beze změny
+        return value.hasPrefix("/")
+            ? URL(string: value, relativeTo: ApiClient.baseURL)?.absoluteURL
+            : URL(string: value)
     }
 
-    var bannerURL: URL? {
-        if let banner = art?["banner"], let url = URL(string: banner) { return url }
-        return nil
-    }
+    var thumbURL: URL? { artURL("thumb", width: ArtSize.card.width, height: ArtSize.card.height) }
 
-    var posterURL: URL? {
-        if let poster = art?["poster"], let url = URL(string: poster) { return url }
-        return nil
-    }
+    var funartURL: URL? { artURL("fanart", width: ArtSize.card.width, height: ArtSize.card.height) }
 
-    var clearlogoURL: URL? {
-        if let clearlogo = art?["clearlogo"], let url = URL(string: clearlogo) { return url }
-        return nil
-    }
+    var bannerURL: URL? { artURL("banner", width: ArtSize.card.width, height: ArtSize.card.height) }
 
-    var logoURL: URL? {
-        if let logo = art?["logo"], let url = URL(string: logo) { return url }
-        return nil
+    var posterURL: URL? { artURL("poster", width: ArtSize.poster.width, height: ArtSize.poster.height) }
+
+    var clearlogoURL: URL? { artURL("clearlogo", width: ArtSize.logo.width, height: ArtSize.logo.height) }
+
+    var logoURL: URL? { artURL("logo", width: ArtSize.logo.width, height: ArtSize.logo.height) }
+
+    /// Pozadí hero ve velikosti pro celou obrazovku
+    var heroImageURL: URL? {
+        artURL("fanart", width: ArtSize.hero.width, height: ArtSize.hero.height)
+            ?? artURL("thumb", width: ArtSize.hero.width, height: ArtSize.hero.height)
     }
 
     var isFullyWatched: Bool {
@@ -324,6 +336,39 @@ struct Media: Codable, Hashable, Identifiable {
         )
     }
     
+    /// Kanál bez programu (EPG): hodinový blok v mřížce, výběrem se spustí živé vysílání
+    static func liveBlock(channel: Media, start: Date, end: Date) -> Media {
+        Media(
+            kind: .program,
+            id: "\(liveBlockPrefix)\(channel.id):\(Int(start.timeIntervalSince1970))",
+            name: String(localized: "epg.liveBlock.title"),
+            description: String(localized: "epg.liveBlock.description"),
+            url: "",
+            art: channel.art,
+            details: .program(ProgramDetails(
+                year: nil,
+                rating: nil,
+                duration: Int(end.timeIntervalSince(start)),
+                langs: nil,
+                genres: nil,
+                country: nil,
+                start: start,
+                end: end,
+                channelId: channel.id,
+                channelName: channel.name,
+            )),
+            watchPosition: nil,
+            watchCompleted: nil,
+            isFavorite: nil,
+            updatedUtc: nil
+        )
+    }
+
+    private static let liveBlockPrefix = "live-block:"
+
+    /// Blok kanálu bez programu (viz liveBlock) — není to skutečný pořad, nemá archiv
+    var isLiveBlock: Bool { id.hasPrefix(Self.liveBlockPrefix) }
+
     static func createProgramPlaceholder(date: Date) -> Media {
         var calendar = Calendar.current
         calendar.timeZone = TimeZone(abbreviation: "UTC")!

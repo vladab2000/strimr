@@ -73,6 +73,13 @@ class EPGCell: UICollectionViewCell {
             timeLabel.text = "\(formatter.string(from: start)) - \(formatter.string(from: end))"
         }
 
+        if program.isLiveBlock {
+            timeLabel.text = program.description
+            normalBackgroundColor = UIColor(red: 0.16, green: 0.22, blue: 0.32, alpha: 1)
+            contentView.backgroundColor = normalBackgroundColor
+            return
+        }
+
         let now = Date()
         let isPast = (program.programStart ?? .distantFuture) < now
         normalBackgroundColor = isPast ? UIColor(white: 0.2, alpha: 1) : UIColor(white: 0.45, alpha: 1)

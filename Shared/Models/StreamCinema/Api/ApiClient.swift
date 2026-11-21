@@ -88,7 +88,7 @@ struct ApiClient {
         let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? text
         return try await fetch(
             path: "tv/programs/search/\(encoded)",
-            queryItems: [URLQueryItem(name: "providerType", value: String(providerType.rawValue))]
+            queryItems: [URLQueryItem(name: "providerType", value: String(providerType.api.rawValue))]
         )
     }
 
@@ -100,7 +100,7 @@ struct ApiClient {
 
     static func fetchChannels(providerType: ProviderType, categoryId: Int? = nil, favorites: Bool = false) async throws -> [Media] {
         var queryItems = [
-            URLQueryItem(name: "providerType", value: String(providerType.rawValue)),
+            URLQueryItem(name: "providerType", value: String(providerType.api.rawValue)),
         ]
         if let categoryId {
             queryItems.append(URLQueryItem(name: "categoryId", value: String(categoryId)))
@@ -114,7 +114,7 @@ struct ApiClient {
     static func fetchLiveStream(channelId: String, providerType: ProviderType? = nil) async throws -> Playback {
         var queryItems: [URLQueryItem] = []
         if let providerType {
-            queryItems.append(URLQueryItem(name: "providerType", value: String(providerType.rawValue)))
+            queryItems.append(URLQueryItem(name: "providerType", value: String(providerType.api.rawValue)))
         }
         return try await fetch(path: "tv/channels/\(channelId)/live", queryItems: queryItems.isEmpty ? nil : queryItems)
     }
@@ -135,8 +135,10 @@ struct ApiClient {
         try await fetch(path: "tv/channels/\(channelId)/now-next")
     }
 
-    static func fetchArchiveStream(channelId: String, programId: String) async throws -> Playback {
-        try await fetch(path: "tv/channels/\(channelId)/archive/\(programId)")
+    /// Archiv pořadu — server ho vezme od `providerType`, pokud ho má, jinak od jiného poskytovatele podle priority
+    static func fetchArchiveStream(channelId: String, programId: String, providerType: ProviderType? = nil) async throws -> Playback {
+        let queryItems = providerType.map { [URLQueryItem(name: "providerType", value: String($0.api.rawValue))] }
+        return try await fetch(path: "tv/channels/\(channelId)/archive/\(programId)", queryItems: queryItems)
     }
 
     // MARK: - Playback

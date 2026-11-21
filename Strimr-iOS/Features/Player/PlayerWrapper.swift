@@ -6,7 +6,8 @@ struct PlayerWrapper: View {
 
     var body: some View {
         if let internalPlayer = InternalPlaybackPlayer(player: settingsManager.playback.player) {
-            if internalPlayer == .avPlayer {
+            // Šifrovaný stream (FairPlay) umí jen AVPlayer — bez ohledu na zvolený přehrávač
+            if internalPlayer == .avPlayer || viewModel.drm != nil {
                 AVPlayerIOSView(viewModel: viewModel)
                     .transition(.opacity)
             } else {

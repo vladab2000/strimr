@@ -31,8 +31,7 @@ struct MediaHeroBackgroundView: View {
     }
 
     private func loadImage() async {
-        imageURL = media.funartURL
-            ?? media.thumbURL
+        imageURL = media.heroImageURL
     }
 }
 

@@ -36,7 +36,10 @@ struct AVPlayerTVView: View {
         }
         .onAppear {
             awaitingMediaLoad = true
-            coordinator.play(ApiClient.playbackURL(sessionId: viewModel.sessionId), seekPosition: viewModel.resumePosition, metadata: makeMetadata())
+            coordinator.drm = viewModel.drm
+            // Televize přes playback session, filmy a díly (bez session) přímo z vyřešeného streamu
+            let url = viewModel.sessionId.isEmpty ? viewModel.streamURL : ApiClient.playbackURL(sessionId: viewModel.sessionId)
+            coordinator.play(url, seekPosition: viewModel.resumePosition, metadata: makeMetadata())
             configureTransportBarActions()
             viewModel.onSeek = { [coordinator] position in
                 coordinator.seek(to: position)
@@ -70,8 +73,12 @@ struct AVPlayerTVView: View {
                 awaitingMediaLoad = true
                 viewModel.sessionId = next.sessionId
                 viewModel.title = next.title
+                viewModel.startDate = next.metadata.startDate
+                viewModel.endDate = next.metadata.endDate
                 let metadata = next.metadata
                 coordinator.play(ApiClient.playbackURL(sessionId: next.sessionId), seekPosition: 0.0, metadata: metadata)
+                // Další pořad může být právě vysílaný — pak se nabídne „Přejít na živé“
+                configureTransportBarActions()
                 isLoadingNext = false
             } else {
                 isLoadingNext = false
@@ -85,8 +92,13 @@ struct AVPlayerTVView: View {
             onPlayFromBeginning: viewModel.isLive ? nil : { [coordinator] in
                 coordinator.seek(to: 0)
             },
-            onGoToLive: viewModel.onGoToLive != nil ? { handleGoToLive() } : nil
+            onGoToLive: viewModel.onGoToLive != nil && isLiveOrAiring ? { handleGoToLive() } : nil
         )
+    }
+
+    /// „Přejít na živé“ jen u živého vysílání a právě vysílaného pořadu — odvysílaný archiv živé vysílání nemá
+    private var isLiveOrAiring: Bool {
+        viewModel.isLive || (viewModel.endDate ?? .distantPast) > Date.now
     }
 
     private func handleGoToLive() {

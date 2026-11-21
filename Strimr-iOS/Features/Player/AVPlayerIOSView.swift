@@ -30,6 +30,7 @@ struct AVPlayerIOSView: View {
         }
         .onAppear {
             awaitingMediaLoad = true
+            coordinator.drm = viewModel.drm
             coordinator.play(viewModel.streamURL)
             viewModel.onSeek = { [coordinator] position in
                 coordinator.seek(to: position)

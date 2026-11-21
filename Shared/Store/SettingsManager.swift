@@ -41,6 +41,45 @@ final class SettingsManager {
         persist()
     }
 
+    // MARK: - Oblíbené kanály
+
+    var favoriteChannels: [FavoriteChannel] {
+        settings.favoriteChannels
+    }
+
+    func favorite(channelId: String) -> FavoriteChannel? {
+        settings.favoriteChannels.first { $0.channelId == channelId }
+    }
+
+    /// Přidá kanál do oblíbených od daného poskytovatele, je-li tam od jiného, změní poskytovatele;
+    /// je-li tam od stejného, odebere ho
+    func toggleFavorite(channel: Media, provider: ProviderType) {
+        if let index = settings.favoriteChannels.firstIndex(where: { $0.channelId == channel.id }) {
+            if settings.favoriteChannels[index].provider == provider {
+                settings.favoriteChannels.remove(at: index)
+            } else {
+                settings.favoriteChannels[index].provider = provider
+            }
+        } else {
+            settings.favoriteChannels.append(FavoriteChannel(channelId: channel.id, provider: provider, name: channel.name))
+        }
+        persist()
+    }
+
+    func removeFavorite(channelId: String) {
+        settings.favoriteChannels.removeAll { $0.channelId == channelId }
+        persist()
+    }
+
+    /// Posune oblíbený kanál o `offset` míst (záporné = nahoru)
+    func moveFavorite(channelId: String, by offset: Int) {
+        guard let index = settings.favoriteChannels.firstIndex(where: { $0.channelId == channelId }) else { return }
+        let target = index + offset
+        guard settings.favoriteChannels.indices.contains(target) else { return }
+        settings.favoriteChannels.swapAt(index, target)
+        persist()
+    }
+
     func setContentSource(_ source: ContentSource) {
         settings.contentSource = source
         persist()

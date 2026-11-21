@@ -15,7 +15,7 @@ final class StreamSelectionViewModel {
     }
 
     var heroImageURL: URL? {
-        media.bannerURL ?? media.funartURL ?? media.posterURL
+        media.artURL("banner", width: Media.ArtSize.hero.width, height: Media.ArtSize.hero.height) ?? media.artURL("fanart", width: Media.ArtSize.hero.width, height: Media.ArtSize.hero.height) ?? media.posterURL
     }
 
     var yearText: String? {

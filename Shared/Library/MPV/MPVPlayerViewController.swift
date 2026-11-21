@@ -83,7 +83,9 @@ final class MPVPlayerViewController: UIViewController {
 
         // https://mpv.io/manual/stable/#options
         checkError(mpv_request_log_messages(mpv, "no"))
-        checkError(mpv_set_option(mpv, "wid", MPV_FORMAT_INT64, &metalLayer))
+        // "wid" = adresa vrstvy jako int64 (stejné jako dřív &metalLayer, ale bez ukazatele na proměnnou s referencí)
+        var wid = Int64(Int(bitPattern: Unmanaged.passUnretained(metalLayer).toOpaque()))
+        checkError(mpv_set_option(mpv, "wid", MPV_FORMAT_INT64, &wid))
         checkError(mpv_set_option_string(mpv, "vo", "gpu-next"))
         checkError(mpv_set_option_string(mpv, "gpu-api", "vulkan"))
         checkError(mpv_set_option_string(mpv, "gpu-context", "moltenvk"))

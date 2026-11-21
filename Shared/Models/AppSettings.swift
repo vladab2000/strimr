@@ -29,6 +29,8 @@ struct PlaybackSettings: Codable, Equatable {
 struct AppSettings: Codable, Equatable {
     var playback = PlaybackSettings()
     var tvProvider: ProviderType = ProviderType.selectableCases.first ?? .sweetTV
+    /// Oblíbené kanály v pořadí zobrazení (poskytovatel „Oblíbené“)
+    var favoriteChannels: [FavoriteChannel] = []
     var contentSource: ContentSource = .streamCinema
     var catalogFilter = CatalogFilter()
     /// Zvuk a titulky naposledy zvolené u seriálu (klíč = id seriálu)
@@ -39,7 +41,9 @@ struct AppSettings: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         playback = try container.decodeIfPresent(PlaybackSettings.self, forKey: .playback) ?? PlaybackSettings()
-        tvProvider = try container.decodeIfPresent(ProviderType.self, forKey: .tvProvider) ?? ProviderType.selectableCases.first ?? .sweetTV
+        tvProvider = try container.decodeIfPresent(ProviderType.self, forKey: .tvProvider)
+            .flatMap { ProviderType.selectableCases.contains($0) ? $0 : nil } ?? ProviderType.selectableCases.first ?? .sweetTV
+        favoriteChannels = try container.decodeIfPresent([FavoriteChannel].self, forKey: .favoriteChannels) ?? []
         contentSource = try container.decodeIfPresent(ContentSource.self, forKey: .contentSource) ?? .streamCinema
         catalogFilter = try container.decodeIfPresent(CatalogFilter.self, forKey: .catalogFilter) ?? CatalogFilter()
         seriesTracks = try container.decodeIfPresent([String: TrackChoice].self, forKey: .seriesTracks) ?? [:]

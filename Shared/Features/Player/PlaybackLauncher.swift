@@ -13,8 +13,14 @@ struct PlaybackLauncher {
         confirmed: Bool = false
     ) async {
         guard let streamPath = stream.url else { return }
-        // Potvrzené přehrání: server pošle OnePlay souhlas se spotřebou přehrání zdarma
-        let urlPath = confirmed ? streamPath + (streamPath.contains("?") ? "&" : "?") + "confirm=1" : streamPath
+        // Potvrzené přehrání: server pošle OnePlay souhlas se spotřebou přehrání zdarma.
+        // OnePlay: tituly z limitu přehrání jsou jen šifrované — AVPlayer je přehraje s FairPlay (iOS, tvOS)
+        var query: [String] = []
+        if confirmed { query.append("confirm=1") }
+        #if canImport(UIKit)
+        if streamPath.hasPrefix("/oneplay/stream/") { query.append("drm=fairplay") }
+        #endif
+        let urlPath = query.isEmpty ? streamPath : streamPath + (streamPath.contains("?") ? "&" : "?") + query.joined(separator: "&")
 
         // Získání streamu může trvat i několik sekund (uzi.la spouští přehrávač na serveru)
         await MainActor.run {
@@ -51,7 +57,8 @@ struct PlaybackLauncher {
                     skipIntroStart: stream.skipIntroStart,
                     skipIntroEnd: stream.skipIntroEnd,
                     skipTitlesStart: stream.skipTitlesStart,
-                    externalSubtitles: resolved.subtitles ?? []
+                    externalSubtitles: resolved.subtitles ?? [],
+                    drm: resolved.drm
                 )
             }
         } catch let error as ApiError where error.code == Self.confirmLimitedPlayCode && !confirmed {

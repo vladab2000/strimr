@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Nastavení → Televize: poskytovatel živého vysílání a archivu
+/// Nastavení → Televize: poskytovatel živého vysílání a archivu, oblíbené kanály
 @MainActor
 struct SettingsTelevisionView: View {
     @Environment(SettingsManager.self) private var settingsManager
@@ -20,6 +20,14 @@ struct SettingsTelevisionView: View {
                 #if !os(macOS)
                 .pickerStyle(.navigationLink)
                 #endif
+
+                NavigationLink {
+                    FavoriteChannelsView()
+                } label: {
+                    LabeledContent("settings.favorites.title") {
+                        Text("\(settingsManager.favoriteChannels.count)")
+                    }
+                }
             }
         }
         .navigationTitle("settings.tv.section")

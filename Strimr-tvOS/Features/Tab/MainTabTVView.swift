@@ -206,6 +206,7 @@ struct MainTabTVView: View {
         let vm = PlayerViewModel(streamURL: streamURL, sessionId: sessionId, title: coordinator.selectedMedia?.title ?? "")
         vm.resumePosition = coordinator.selectedResumePosition
         vm.externalSubtitles = coordinator.selectedExternalSubtitles
+        vm.drm = coordinator.selectedDrm
         vm.skipIntroStart = coordinator.selectedSkipIntroStart
         vm.skipIntroEnd = coordinator.selectedSkipIntroEnd
         vm.skipTitlesStart = coordinator.selectedSkipTitlesStart
@@ -261,8 +262,8 @@ struct MainTabTVView: View {
                     guard nextIndex < programs.endIndex else { return nil }
 
                     let nextProgram = programs[nextIndex]
-                    // Only auto-play past programs (archive)
-                    guard (nextProgram.programEnd ?? .distantFuture) < Date.now else { return nil }
+                    // Odvysílaný pořad z archivu; právě vysílaný od začátku (stejně jako výběr v EPG) — budoucí ne
+                    guard (nextProgram.programStart ?? .distantFuture) <= Date.now else { return nil }
 
                     guard let playback = await channelMgr.resolveArchivePlayback(channelId: channel.id, program: nextProgram) else { return nil }
 

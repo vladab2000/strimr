@@ -22,6 +22,9 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
     weak var playerViewController: AVPlayerViewController?
 
     @ObservationIgnored var options = PlayerOptions()
+    /// Šifrovaný stream (FairPlay) — klíče přes FairPlayKeyLoader
+    @ObservationIgnored var drm: StreamDrm?
+    @ObservationIgnored private var keyLoader: FairPlayKeyLoader?
     @ObservationIgnored var playbackRate: Float = 1.0
     @ObservationIgnored var onPropertyChange: ((PlayerProperty, Any?) -> Void)?
     @ObservationIgnored var onPlaybackEnded: (() -> Void)?
@@ -43,16 +46,21 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
     @ObservationIgnored private var bitrateMonitorTimer: Timer?
     @ObservationIgnored private var lowBitrateStartDate: Date?
     @ObservationIgnored private var lastKnownPeakBitrate: Double = 0
+    @ObservationIgnored private var lastQualityReloadDate: Date?
 
     // MARK: - Wake restart
     @ObservationIgnored private var currentURL: URL?
     @ObservationIgnored private var currentMetadata: AVPlayerMetadata?
+    /// Pozice požadovaná v play() — u živého streamu se uplatní až po načtení (viz applyLiveSeekIfNeeded)
+    @ObservationIgnored private var requestedSeekPosition: Double?
     @ObservationIgnored private var backgroundEntryDate: Date?
     @ObservationIgnored private var wasPlayingBeforeBackground = false
 
     private static let lowBitrateThresholdFraction = 0.3
     private static let lowBitrateDuration: TimeInterval = 30
     private static let bitrateMonitorInterval: TimeInterval = 10
+    // Nové načtení kvůli nízké kvalitě nejvýš jednou za tuto dobu (při opravdu pomalé síti by se jinak opakovalo)
+    private static let qualityReloadInterval: TimeInterval = 600
     // Minimální doba v pozadí (sekundy) po které restartujeme stream po probuzení
     private static let backgroundRestartThreshold: TimeInterval = 60
 
@@ -73,7 +81,11 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
             ]
 
         let asset = AVURLAsset(url: url, options: options)
+        attachFairPlay(to: asset)
         let item = AVPlayerItem(asset: asset)
+        // Začít na první variantě (server je řadí od nejvyšší kvality). Jinak AVPlayer začne podle odhadu sítě,
+        // který si drží po celou dobu běhu aplikace — po probuzení je nízký a kvalita zůstala nízká až do restartu.
+        item.startsOnFirstEligibleVariant = true
         if let metadata {
             applyMetadata(metadata, to: item)
         }
@@ -85,6 +97,7 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
         playerViewController?.showsTimecodes = true
         #endif
 
+        requestedSeekPosition = seekPosition
         setupObservers(player: avPlayer, item: item)
         if seekPosition != nil {
             seek(to: seekPosition!)
@@ -292,13 +305,33 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
 
     func destruct() {
         currentURL = nil
+        lastQualityReloadDate = nil
         currentMetadata = nil
+        keyLoader?.invalidate()
+        keyLoader = nil
         cleanup()
         player = nil
         playerViewController?.player = nil
     }
 
     // MARK: - Private
+
+    /// FairPlay: certifikát a licence přes server (OnePlay — tituly z limitu přehrání zdarma)
+    private func attachFairPlay(to asset: AVURLAsset) {
+        keyLoader?.invalidate()
+        keyLoader = nil
+        guard let drm, drm.isFairPlay,
+              let certificatePath = drm.certificateUrl,
+              let certificateURL = drm.serverURL(certificatePath),
+              let licenseURL = drm.serverURL(drm.licenseUrl)
+        else { return }
+
+        let loader = FairPlayKeyLoader(certificateURL: certificateURL, licenseURL: licenseURL)
+        let playbackFailed = onPlaybackFailed
+        loader.onError = { message in playbackFailed?(message) }
+        loader.attach(asset)
+        keyLoader = loader
+    }
 
     private func setupObservers(player: AVPlayer, item: AVPlayerItem) {
         let propertyChange = onPropertyChange
@@ -345,6 +378,7 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
         statusObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
             Task { @MainActor in
                 if item.status == .readyToPlay {
+                    self?.applyLiveSeekIfNeeded(item)
                     if item.duration.isNumeric {
                         propertyChange?(.duration, item.duration.seconds)
                     }
@@ -403,9 +437,12 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            guard let self else { return }
-            self.wasPlayingBeforeBackground = self.player?.timeControlStatus == .playing
-            self.backgroundEntryDate = Date()
+            // queue: .main — handler běží na hlavním vlákně
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.wasPlayingBeforeBackground = self.player?.timeControlStatus == .playing
+                self.backgroundEntryDate = Date()
+            }
         }
 
         // Po probuzení: pokud přehrávač běžel a aplikace spala dost dlouho → nová instance AVPlayer
@@ -421,6 +458,23 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
 
         // Periodický monitor bitrate — detekuje pokles kvality během přehrávání
         startBitrateMonitor()
+    }
+
+    // MARK: - Live seek
+
+    /// Právě vysílaný pořad od začátku: stream je živý (neurčitá délka) a AVPlayer začne u živého okraje —
+    /// pozice z play() se před načtením neuplatní. Po načtení se přetočí na začátek dostupného úseku + pozice.
+    private func applyLiveSeekIfNeeded(_ item: AVPlayerItem) {
+        guard let position = requestedSeekPosition else { return }
+        requestedSeekPosition = nil
+        guard !item.duration.isNumeric,
+              let range = item.seekableTimeRanges.last?.timeRangeValue,
+              range.duration.seconds > 0
+        else { return }
+        let start = range.start.seconds
+        let target = min(start + max(position, 0), range.end.seconds)
+        Log.player.info("Live seek: \(target) (seekable \(start)–\(range.end.seconds))")
+        seek(to: target)
     }
 
     // MARK: - Wake restart
@@ -492,12 +546,22 @@ final class AVPlayerCoordinator: NSObject, PlayerCoordinating {
         }
     }
 
-    // Po 30s na nízké kvalitě odstraníme omezení a dáme AVPlayer šanci přehodnotit
+    // Po 30 s na nízké kvalitě načteme stream znovu — nová položka začne na nejvyšší variantě.
+    // AVPlayer sám se z nízké kvality po výpadku sítě (třeba po probuzení) často nevrátí.
     private func resetBitrateAdaptation() {
-        Log.player.info("Bitrate reset: forcing ABR re-evaluation")
         lowBitrateStartDate = nil
         lastKnownPeakBitrate = 0
-        player?.currentItem?.preferredPeakBitRate = 0
+        guard drm == nil,
+              let url = currentURL,
+              let player,
+              let item = player.currentItem,
+              lastQualityReloadDate.map({ Date().timeIntervalSince($0) >= Self.qualityReloadInterval }) ?? true
+        else { return }
+        lastQualityReloadDate = Date()
+        // Živé vysílání (neurčitá délka) od živého okraje, záznam od aktuální pozice
+        let position: Double? = item.duration.isNumeric ? player.currentTime().seconds : nil
+        Log.player.info("Bitrate reset: reloading stream at \(position ?? -1)")
+        play(url, seekPosition: position, metadata: currentMetadata)
     }
 
     private func cleanup() {

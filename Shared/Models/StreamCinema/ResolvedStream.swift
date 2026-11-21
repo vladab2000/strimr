@@ -9,6 +9,27 @@ import Foundation
 struct ResolvedStream: Codable {
     let url: String
     let subtitles: [ExternalSubtitle]?
+    /// "hls" / "dash" u šifrovaného streamu (jinak podle url)
+    let type: String?
+    /// DRM (FairPlay pro AVPlayer) — licence a certifikát přes server
+    let drm: StreamDrm?
+}
+
+/// Šifrovaný stream (OnePlay — tituly z limitu přehrání zdarma): adresy na našem serveru, relativní k jeho kořeni
+struct StreamDrm: Codable, Hashable {
+    /// "com.apple.fps" (FairPlay), "com.widevine.alpha" (jen web)
+    let keySystem: String
+    let licenseUrl: String
+    let certificateUrl: String?
+
+    var isFairPlay: Bool {
+        keySystem == "com.apple.fps"
+    }
+
+    /// Absolutní adresa na serveru API (baseURL je …/api/, adresy začínají /api/…)
+    func serverURL(_ path: String) -> URL? {
+        URL(string: path, relativeTo: ApiClient.baseURL)?.absoluteURL
+    }
 }
 
 struct ExternalSubtitle: Codable, Hashable {

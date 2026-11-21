@@ -143,6 +143,7 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
             if let channel, let start = program?.programStart {
                 lastFocused = ProgramKey(channelId: channel.id, start: start)
                 AppStateStore.lastChannelId = channel.id
+                AppStateStore.lastProgramStart = start
             }
             onProgramFocused?(program, channel)
         }
@@ -250,9 +251,14 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
             collectionView.reloadData()
         }
 
-        // Fokus se přesune na právě vysílaný pořad stejného kanálu — jinak by ho po scrollu na aktuální
-        // čas stáhl zpět pořad, který měl fokus před uspáním (třeba před několika dny).
-        // Po změně dne jsou programy zahozené, takže se to dokončí až po jejich načtení.
+        // Fokus zůstane na pořadu, který ho měl před uspáním. Po změně dne jsou programy zahozené,
+        // proto se pořad nejdřív znovu načte (restoreFocus).
+        if let key = lastFocused, isInTimeline(key.start) {
+            restoreFocus(key)
+            return
+        }
+
+        // Pořad už z časové osy vypadl (starší než 7 dní) — právě vysílaný pořad stejného kanálu
         pendingNowFocusChannelId = lastFocused?.channelId
         applyPendingNowFocus()
 
@@ -264,6 +270,70 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
             self?.setNeedsFocusUpdate()
             self?.updateFocusIfNeeded()
         }
+    }
+
+    /// Načte programy dne pořadu, odroluje na něj a dá mu fokus. Když pořad v datech není
+    /// (program se mezitím změnil), dostane fokus právě vysílaný pořad stejného kanálu.
+    private func restoreFocus(_ key: ProgramKey) {
+        guard let channel = viewModel.channels.first(where: { $0.id == key.channelId }) else {
+            scrollToCurrentTime(animated: false)
+            checkDataOnScroll(collectionView)
+            return
+        }
+
+        // Pořad je v datech pod svým UTC dnem nebo dnem před ním (vysílací den začíná večer)
+        var utcCal = Calendar.current
+        utcCal.timeZone = TimeZone(abbreviation: "UTC")!
+        let day = utcCal.startOfDay(for: key.start)
+        let previousDay = utcCal.date(byAdding: .day, value: -1, to: day)!
+
+        let group = DispatchGroup()
+        for date in [day, previousDay] {
+            group.enter()
+            loadHistoryData(channel: channel, targetDate: date) { group.leave() }
+        }
+
+        group.notify(queue: .main) { [weak self] in
+            guard let self else { return }
+            UIView.performWithoutAnimation {
+                self.collectionView.reloadData()
+            }
+            self.collectionView.layoutIfNeeded()
+
+            if let indexPath = self.indexPath(for: key) {
+                self.lastFocused = key
+                self.focusTarget = key
+                self.scrollToProgram(at: indexPath)
+            } else {
+                self.pendingNowFocusChannelId = key.channelId
+                self.applyPendingNowFocus()
+                self.scrollToCurrentTime(animated: false)
+            }
+            // Načte programy okolí (ostatní kanály v zobrazené oblasti)
+            self.checkDataOnScroll(self.collectionView)
+
+            DispatchQueue.main.async {
+                self.setNeedsFocusUpdate()
+                self.updateFocusIfNeeded()
+            }
+        }
+    }
+
+    /// Odroluje tak, aby byl pořad uprostřed (dlouhý pořad začátkem vlevo)
+    private func scrollToProgram(at indexPath: IndexPath) {
+        var position: UICollectionView.ScrollPosition = [.centeredVertically]
+        if let frame = collectionView.layoutAttributesForItem(at: indexPath)?.frame,
+           frame.width > collectionView.bounds.width {
+            position.insert(.left)
+        } else {
+            position.insert(.centeredHorizontally)
+        }
+        collectionView.scrollToItem(at: indexPath, at: position, animated: false)
+        collectionView.layoutIfNeeded()
+    }
+
+    private func isInTimeline(_ date: Date) -> Bool {
+        date >= epgLayout.timelineStartDate && date <= Date().addingTimeInterval(7 * 24 * 3600)
     }
 
     private func applyPendingNowFocus() {
@@ -364,6 +434,11 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
         let restoreSection = hasScrolledToCurrentTime ? nil : AppStateStore.lastChannelId.flatMap { id in
             viewModel.channels.firstIndex { $0.id == id }
         }
+        // …a je-li uložený i pořad, který byl s fokusem (Apple TV aplikaci ve spánku často ukončí), tak na něj
+        let restoreProgram: ProgramKey? = restoreSection.flatMap { section in
+            guard let start = AppStateStore.lastProgramStart, isInTimeline(start) else { return nil }
+            return ProgramKey(channelId: viewModel.channels[section].id, start: start)
+        }
         let firstSection = restoreSection ?? 0
         let lastSection = min(channelCount - 1, firstSection + visibleRowCount)
 
@@ -394,6 +469,10 @@ class EPGViewController: UIViewController, UICollectionViewDataSource, UICollect
             guard !self.hasScrolledToCurrentTime else { return }
             self.hasScrolledToCurrentTime = true
 
+            if let restoreProgram {
+                self.restoreFocus(restoreProgram)
+                return
+            }
             if let restoreSection {
                 let maxY = max(0, CGFloat(channelCount) * rowTotal - self.collectionView.bounds.height)
                 let y = min(CGFloat(restoreSection) * rowTotal, maxY)

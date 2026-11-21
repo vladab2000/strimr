@@ -6,6 +6,8 @@ import Observation
 final class PlayerViewModel {
     var streamURL: URL
     var sessionId: String
+    /// Šifrovaný stream (FairPlay) — přehrávač musí být AVPlayer
+    var drm: StreamDrm?
     var title: String
     /// Menší řádek nad názvem v ovládání (např. "S01E02 - Název epizody")
     var subtitle: String?
